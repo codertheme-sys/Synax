@@ -836,6 +836,13 @@ function TradePage() {
   const tradingViewTARef = useRef(null);
   const searchInputRef = useRef(null);
   const widgetIdRef = useRef(0);
+  
+  // Trade result modal state
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [activeTrade, setActiveTrade] = useState(null);
+  const [countdown, setCountdown] = useState(0);
+  const [tradeResult, setTradeResult] = useState(null); // 'win' or 'lost'
+  const countdownIntervalRef = useRef(null);
 
   // Set client-side flag to avoid hydration mismatch
   useEffect(() => {
@@ -1395,6 +1402,25 @@ function TradePage() {
         if (profileResult.data) {
           setBalance(parseFloat(profileResult.data.balance || 0));
         }
+        
+        // Show modal and start countdown
+        const tradeData = result.data;
+        setActiveTrade(tradeData);
+        setShowTradeModal(true);
+        setCountdown(timeFrame);
+        setTradeResult(null);
+        
+        // Start countdown
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(countdownIntervalRef.current);
+              setCountdown(0);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
         // Show error as toast instead of throwing
         const errorMessage = result.error || result.details || 'Failed to place trade';
@@ -1439,6 +1465,65 @@ function TradePage() {
       setLoading(false);
     }
   };
+
+  // Handle trade completion
+  const handleCompleteTrade = async (tradeId) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch('/api/trading/binary-auto-complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ trade_id: tradeId }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setTradeResult(result.win_lost);
+        // Refresh balance
+        const profileResult = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', session.user.id)
+          .single();
+        if (profileResult.data) {
+          setBalance(parseFloat(profileResult.data.balance || 0));
+        }
+      } else {
+        console.error('Trade completion error:', result);
+        toast.error(result.error || result.details || 'Failed to complete trade');
+        // Close modal on error
+        setShowTradeModal(false);
+        setActiveTrade(null);
+        setTradeResult(null);
+        setCountdown(0);
+      }
+    } catch (error) {
+      console.error('Error completing trade:', error);
+      toast.error('Failed to complete trade');
+    }
+  };
+
+  // Handle countdown completion - when countdown reaches 0, complete the trade
+  useEffect(() => {
+    if (countdown === 0 && activeTrade?.id && !tradeResult && showTradeModal) {
+      // Countdown finished, complete the trade
+      handleCompleteTrade(activeTrade.id);
+    }
+  }, [countdown, activeTrade, tradeResult, showTradeModal]);
+
+  // Cleanup countdown on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -1924,6 +2009,114 @@ function TradePage() {
         </div>
       </main>
       </div>
+      
+      {/* Trade Result Modal */}
+      {showTradeModal && activeTrade && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+        }} onClick={() => {
+          if (tradeResult) {
+            setShowTradeModal(false);
+            setActiveTrade(null);
+            setTradeResult(null);
+            setCountdown(0);
+          }
+        }}>
+          <div style={{
+            ...cardStyle,
+            padding: '40px',
+            maxWidth: '500px',
+            width: '100%',
+            textAlign: 'center',
+          }} onClick={(e) => e.stopPropagation()}>
+            {!tradeResult ? (
+              <>
+                <h2 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '24px', color: '#ffffff' }}>
+                  Trade Active
+                </h2>
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{ fontSize: '72px', fontWeight: 800, color: '#3b82f6', marginBottom: '16px' }}>
+                    {countdown}
+                  </div>
+                  <div style={{ fontSize: '16px', color: '#9ca3af', marginBottom: '8px' }}>
+                    Time Remaining (seconds)
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#9ca3af' }}>
+                    {activeTrade.side === 'buy' ? 'LONG' : 'SHORT'} {activeTrade.asset_symbol} • ${parseFloat(activeTrade.trade_amount).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{
+                  padding: '16px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  color: '#9ca3af',
+                }}>
+                  Please wait for the trade to complete...
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 style={{ 
+                  fontSize: '32px', 
+                  fontWeight: 700, 
+                  marginBottom: '24px', 
+                  color: tradeResult === 'win' ? '#22c55e' : '#ef4444'
+                }}>
+                  {tradeResult === 'win' ? 'WIN!' : 'LOST'}
+                </h2>
+                <div style={{ marginBottom: '32px' }}>
+                  <div style={{
+                    fontSize: '48px',
+                    marginBottom: '16px',
+                  }}>
+                    {tradeResult === 'win' ? '🎉' : '❌'}
+                  </div>
+                  <div style={{ fontSize: '18px', color: '#9ca3af', marginBottom: '8px' }}>
+                    {activeTrade.side === 'buy' ? 'LONG' : 'SHORT'} {activeTrade.asset_symbol}
+                  </div>
+                  <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 600 }}>
+                    Amount: ${parseFloat(activeTrade.trade_amount).toFixed(2)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowTradeModal(false);
+                    setActiveTrade(null);
+                    setTradeResult(null);
+                    setCountdown(0);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: tradeResult === 'win' 
+                      ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: '#ffffff',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

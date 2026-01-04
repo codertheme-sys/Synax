@@ -974,6 +974,47 @@ function AdminPage() {
     }
   };
 
+  const handleToggleTradeMode = async (userId, currentMode) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const newMode = currentMode === 'win' ? 'lost' : 'win';
+
+      const response = await fetch('/api/admin/set-user-trade-mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          trade_mode: newMode,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success(`Trade mode set to ${newMode.toUpperCase()}`);
+        
+        // Update local state
+        setAllUsers(allUsers.map(u => u.id === userId ? { ...u, trade_win_lost_mode: newMode } : u));
+        
+        if (userDetails && userDetails.id === userId) {
+          setUserDetails({ ...userDetails, trade_win_lost_mode: newMode });
+        }
+        
+        // Refresh admin data
+        await fetchAdminData();
+      } else {
+        toast.error(result.error || 'Failed to update trade mode');
+      }
+    } catch (error) {
+      console.error('Error updating trade mode:', error);
+      toast.error(error.message || 'Failed to update trade mode');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white pb-16">
       <Header />
@@ -1246,6 +1287,7 @@ function AdminPage() {
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Balance</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>KYC Status</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Joined</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Win/Lost</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
@@ -1269,6 +1311,56 @@ function AdminPage() {
                         </td>
                         <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
                           {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ 
+                              fontSize: '12px', 
+                              fontWeight: 600, 
+                              color: (user.trade_win_lost_mode || 'lost') === 'win' ? '#22c55e' : '#ef4444',
+                              textTransform: 'uppercase'
+                            }}>
+                              {(user.trade_win_lost_mode || 'lost') === 'win' ? 'Win' : 'Lost'}
+                            </span>
+                            <label style={{ 
+                              position: 'relative', 
+                              display: 'inline-block', 
+                              width: '44px', 
+                              height: '24px',
+                              cursor: 'pointer'
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={(user.trade_win_lost_mode || 'lost') === 'win'}
+                                onChange={() => handleToggleTradeMode(user.id, user.trade_win_lost_mode || 'lost')}
+                                style={{ opacity: 0, width: 0, height: 0 }}
+                              />
+                              <span style={{
+                                position: 'absolute',
+                                cursor: 'pointer',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: (user.trade_win_lost_mode || 'lost') === 'win' ? '#22c55e' : '#ef4444',
+                                transition: '.4s',
+                                borderRadius: '24px',
+                              }}>
+                                <span style={{
+                                  position: 'absolute',
+                                  content: '""',
+                                  height: '18px',
+                                  width: '18px',
+                                  left: '3px',
+                                  bottom: '3px',
+                                  backgroundColor: '#ffffff',
+                                  transition: '.4s',
+                                  borderRadius: '50%',
+                                  transform: (user.trade_win_lost_mode || 'lost') === 'win' ? 'translateX(20px)' : 'translateX(0)',
+                                }} />
+                              </span>
+                            </label>
+                          </div>
                         </td>
                         <td style={{ padding: '12px' }}>
                           <button
@@ -1373,67 +1465,8 @@ function AdminPage() {
                             {trade.admin_status || 'pending'}
                           </span>
                         </td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {trade.admin_status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setSelectedTrade(trade);
-                                    setShowWinLostModal(true);
-                                  }}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    background: 'rgba(34, 197, 94, 0.2)',
-                                    color: '#4ade80',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const { data: { session } } = await supabase.auth.getSession();
-                                      const response = await fetch('/api/admin/binary-trade-reject', {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json',
-                                          'Authorization': `Bearer ${session.access_token}`,
-                                        },
-                                        body: JSON.stringify({ trade_id: trade.id }),
-                                      });
-                                      const result = await response.json();
-                                      if (result.success) {
-                                        toast.success('Trade rejected');
-                                        fetchAdminData();
-                                      } else {
-                                        toast.error(result.error || 'Failed to reject trade');
-                                      }
-                                    } catch (error) {
-                                      toast.error('Failed to reject trade');
-                                    }
-                                  }}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    background: 'rgba(239, 68, 68, 0.2)',
-                                    color: '#f87171',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Reject
-                                </button>
-                              </>
-                            )}
-                          </div>
+                        <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
+                          — {/* No actions needed - trades are auto-approved */}
                         </td>
                       </tr>
                     ))}

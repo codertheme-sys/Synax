@@ -47,24 +47,88 @@ function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      console.log('🔐 [Forgot Password] Starting password reset request...');
+      console.log('='.repeat(80));
+      console.log('🔐 [Forgot Password] ========== STARTING PASSWORD RESET ==========');
+      console.log('🔐 [Forgot Password] Timestamp:', new Date().toISOString());
       console.log('🔐 [Forgot Password] Email:', email);
+      console.log('🔐 [Forgot Password] Window location:', window.location.href);
+      console.log('🔐 [Forgot Password] Window origin:', window.location.origin);
       console.log('🔐 [Forgot Password] Redirect URL:', `${window.location.origin}/reset-password`);
+      
+      // Check Supabase client
+      console.log('🔐 [Forgot Password] Supabase client exists:', !!supabase);
+      console.log('🔐 [Forgot Password] Supabase auth exists:', !!supabase?.auth);
+      console.log('🔐 [Forgot Password] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET');
+      console.log('🔐 [Forgot Password] Supabase Anon Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+      
+      const startTime = Date.now();
+      console.log('🔐 [Forgot Password] Making API call at:', new Date(startTime).toISOString());
       
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.log('🔐 [Forgot Password] API call completed in:', duration, 'ms');
+      console.log('🔐 [Forgot Password] Completion time:', new Date(endTime).toISOString());
+      
       console.log('🔐 [Forgot Password] Supabase response - data:', data);
+      console.log('🔐 [Forgot Password] Supabase response - data type:', typeof data);
+      console.log('🔐 [Forgot Password] Supabase response - data stringified:', JSON.stringify(data));
       console.log('🔐 [Forgot Password] Supabase response - error:', error);
+      console.log('🔐 [Forgot Password] Supabase response - error type:', typeof error);
+      console.log('🔐 [Forgot Password] Supabase response - error is null:', error === null);
+      console.log('🔐 [Forgot Password] Supabase response - error is undefined:', error === undefined);
 
       if (error) {
-        console.error('❌ [Forgot Password] Password reset error:', error);
-        console.error('❌ [Forgot Password] Error code:', error.code);
-        console.error('❌ [Forgot Password] Error message:', error.message);
-        console.error('❌ [Forgot Password] Error status:', error.status);
-        console.error('❌ [Forgot Password] Full error object:', JSON.stringify(error, null, 2));
-        toast.error(error.message || 'Failed to send password reset email');
+        console.error('='.repeat(80));
+        console.error('❌ [Forgot Password] ========== ERROR DETECTED ==========');
+        console.error('❌ [Forgot Password] Error timestamp:', new Date().toISOString());
+        console.error('❌ [Forgot Password] Error object:', error);
+        console.error('❌ [Forgot Password] Error type:', typeof error);
+        console.error('❌ [Forgot Password] Error constructor:', error?.constructor?.name);
+        console.error('❌ [Forgot Password] Error name:', error?.name);
+        console.error('❌ [Forgot Password] Error message:', error?.message);
+        console.error('❌ [Forgot Password] Error code:', error?.code);
+        console.error('❌ [Forgot Password] Error status:', error?.status);
+        console.error('❌ [Forgot Password] Error statusText:', error?.statusText);
+        console.error('❌ [Forgot Password] Error stack:', error?.stack);
+        
+        // Check all error properties
+        console.error('❌ [Forgot Password] Error keys:', Object.keys(error || {}));
+        console.error('❌ [Forgot Password] Error entries:', Object.entries(error || {}));
+        
+        // Try to stringify with error handling
+        try {
+          console.error('❌ [Forgot Password] Error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        } catch (e) {
+          console.error('❌ [Forgot Password] Could not stringify error:', e);
+        }
+        
+        // Network error details
+        if (error?.status === 504) {
+          console.error('❌ [Forgot Password] ========== 504 TIMEOUT ANALYSIS ==========');
+          console.error('❌ [Forgot Password] This is a Gateway Timeout error');
+          console.error('❌ [Forgot Password] Possible causes:');
+          console.error('❌ [Forgot Password] 1. SMTP server is not responding');
+          console.error('❌ [Forgot Password] 2. SMTP credentials are incorrect');
+          console.error('❌ [Forgot Password] 3. Network connectivity issues');
+          console.error('❌ [Forgot Password] 4. Supabase service is overloaded');
+          console.error('❌ [Forgot Password] 5. Firewall blocking SMTP connection');
+        }
+        
+        console.error('='.repeat(80));
+        
+        // Handle specific error types
+        if (error.status === 504 || error.name === 'AuthRetryableFetchError') {
+          toast.error('Request timeout. Please check your internet connection and try again. If the problem persists, the email service may be temporarily unavailable.');
+        } else if (error.status === 429) {
+          toast.error('Too many requests. Please wait a few minutes and try again.');
+        } else {
+          toast.error(error.message || 'Failed to send password reset email. Please try again later.');
+        }
+        
         setLoading(false);
         return;
       }
@@ -74,12 +138,25 @@ function ForgotPasswordPage() {
       toast.success('Password reset email sent! Please check your inbox.');
       setLoading(false);
     } catch (error) {
+      console.error('='.repeat(80));
+      console.error('❌ [Forgot Password] ========== CATCH BLOCK ERROR ==========');
+      console.error('❌ [Forgot Password] Catch timestamp:', new Date().toISOString());
       console.error('❌ [Forgot Password] Unexpected error:', error);
       console.error('❌ [Forgot Password] Error type:', typeof error);
+      console.error('❌ [Forgot Password] Error constructor:', error?.constructor?.name);
       console.error('❌ [Forgot Password] Error name:', error?.name);
       console.error('❌ [Forgot Password] Error message:', error?.message);
       console.error('❌ [Forgot Password] Error stack:', error?.stack);
-      console.error('❌ [Forgot Password] Full error object:', JSON.stringify(error, null, 2));
+      console.error('❌ [Forgot Password] Error keys:', Object.keys(error || {}));
+      console.error('❌ [Forgot Password] Error entries:', Object.entries(error || {}));
+      
+      try {
+        console.error('❌ [Forgot Password] Error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      } catch (e) {
+        console.error('❌ [Forgot Password] Could not stringify error:', e);
+      }
+      console.error('='.repeat(80));
+      
       toast.error('An error occurred. Please try again.');
       setLoading(false);
     }
@@ -90,8 +167,8 @@ function ForgotPasswordPage() {
       <Header />
       <main className="mx-auto pt-24" style={{ 
         maxWidth: '600px', 
-        paddingLeft: isMobile ? '24px' : '300px', 
-        paddingRight: isMobile ? '24px' : '300px' 
+        paddingLeft: isMobile ? '24px' : '100px', 
+        paddingRight: isMobile ? '24px' : '100px' 
       }}>
         <div style={{ ...cardStyle, padding: '40px' }}>
           {!emailSent ? (

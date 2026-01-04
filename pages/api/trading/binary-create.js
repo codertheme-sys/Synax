@@ -42,10 +42,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid trade amount or price' });
     }
 
-    // KYC check
+    // KYC check and get trade_win_lost_mode
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('balance, kyc_verified, kyc_status')
+      .select('balance, kyc_verified, kyc_status, trade_win_lost_mode')
       .eq('id', user.id)
       .single();
 
@@ -57,6 +57,108 @@ export default async function handler(req, res) {
       return res.status(403).json({ 
         error: 'KYC verification required',
         kyc_required: true 
+      });
+    }
+
+    // Check if user has any active/pending trades
+    // Only check for trades that are truly active (not expired)
+    const now = new Date().toISOString();
+    const { data: activeTrades, error: activeTradesError } = await supabaseAdmin
+      .from('binary_trades')
+      .select('id, status, admin_status, expires_at')
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'active'])
+      .eq('admin_status', 'approved')
+      .gt('expires_at', now); // Only count trades that haven't expired yet
+
+    if (activeTradesError) {
+      console.error('Error checking active trades:', activeTradesError);
+    }
+
+    // Also check for expired active trades and auto-complete them
+    const { data: expiredTrades } = await supabaseAdmin
+      .from('binary_trades')
+      .select('id, status, user_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .eq('admin_status', 'approved')
+      .lte('expires_at', now);
+
+    if (expiredTrades && expiredTrades.length > 0) {
+      // Auto-complete expired trades
+      for (const expiredTrade of expiredTrades) {
+        try {
+          // Get user's trade_win_lost_mode
+          const { data: userProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('trade_win_lost_mode, balance')
+            .eq('id', user.id)
+            .single();
+
+          if (userProfile) {
+            const winLost = userProfile.trade_win_lost_mode || 'lost';
+            
+            // Get trade details
+            const { data: tradeDetails } = await supabaseAdmin
+              .from('binary_trades')
+              .select('*')
+              .eq('id', expiredTrade.id)
+              .single();
+
+            if (tradeDetails) {
+              // Calculate last_price and profit
+              const initialPrice = parseFloat(tradeDetails.initial_price);
+              const randomPercent = 0.005 + Math.random() * 0.005;
+              
+              let lastPrice;
+              if (winLost === 'win') {
+                lastPrice = tradeDetails.side === 'buy' 
+                  ? initialPrice * (1 + randomPercent)
+                  : initialPrice * (1 - randomPercent);
+              } else {
+                lastPrice = tradeDetails.side === 'buy'
+                  ? initialPrice * (1 - randomPercent)
+                  : initialPrice * (1 + randomPercent);
+              }
+              lastPrice = Math.round(lastPrice * 100000000) / 100000000;
+
+              const tradeAmount = parseFloat(tradeDetails.trade_amount);
+              const profitPercentage = parseFloat(tradeDetails.potential_profit_percentage);
+              const profitAmount = winLost === 'win'
+                ? tradeAmount + (tradeAmount * profitPercentage / 100)
+                : tradeAmount - (tradeAmount * profitPercentage / 100);
+
+              // Update balance
+              const currentBalance = parseFloat(userProfile.balance || 0);
+              const newBalance = currentBalance + profitAmount;
+              
+              await supabaseAdmin
+                .from('profiles')
+                .update({ balance: newBalance })
+                .eq('id', user.id);
+
+              // Update trade
+              await supabaseAdmin
+                .from('binary_trades')
+                .update({
+                  status: 'completed',
+                  win_lost: winLost,
+                  last_price: lastPrice,
+                  updated_at: now
+                })
+                .eq('id', expiredTrade.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error auto-completing expired trade:', error);
+        }
+      }
+    }
+
+    if (activeTrades && activeTrades.length > 0) {
+      return res.status(400).json({ 
+        error: 'You already have an active trade. Please wait for it to complete.',
+        active_trades: activeTrades.length
       });
     }
 
@@ -81,7 +183,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update balance' });
     }
 
-    // Create binary trade record
+    // Create binary trade record - automatically approved, status is active
     const expiresAtValue = expires_at || new Date(Date.now() + time_frame * 1000).toISOString();
     
     const { data: trade, error: tradeError } = await supabaseAdmin
@@ -98,8 +200,8 @@ export default async function handler(req, res) {
         trade_amount: parseFloat(trade_amount),
         initial_price: parseFloat(initial_price),
         expires_at: expiresAtValue,
-        admin_status: 'pending',
-        status: 'pending',
+        admin_status: 'approved', // Auto-approved (no admin approval needed)
+        status: 'active', // Active immediately
       })
       .select()
       .single();
