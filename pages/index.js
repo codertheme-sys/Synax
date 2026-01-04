@@ -18,6 +18,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const slides = [
     {
       title: 'Seize every opportunity in gold and crypto',
@@ -402,7 +403,7 @@ export default function Home() {
       {/* Two-box section below slider - Side by side on desktop, stacked on mobile */}
       <section className="bg-[#0b0c1a] py-16 pt-32 border-none" style={{ marginTop: '80px' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-stretch" data-reveal>
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-stretch" style={{ display: 'flex', flexDirection: window.innerWidth >= 1024 ? 'row' : 'column' }} data-reveal>
             {/* Photo Box - Top on mobile, Left on desktop */}
             <div className="flex-1 overflow-hidden bg-[#0f1124] min-h-[300px] lg:min-h-[500px] flex items-center justify-center border-none rounded-lg" data-reveal>
               <img

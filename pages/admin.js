@@ -535,8 +535,8 @@ function PaymentsTab({ adminData, onRefresh }) {
           marginBottom: '16px',
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px', marginBottom: '16px' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>
               {item.profiles?.email || item.user_id}
             </div>
@@ -563,50 +563,62 @@ function PaymentsTab({ adminData, onRefresh }) {
               Date: <span style={{ color: '#ffffff' }}>{item.created_at ? new Date(item.created_at).toLocaleString('en-US') : 'N/A'}</span>
             </div>
           </div>
-          {paymentTab === 'pending' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                onClick={() => handleApprove(item.id, type)}
-                disabled={isProcessing || item.status !== 'pending'}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  background: isProcessing || item.status !== 'pending' 
-                    ? 'rgba(16, 185, 129, 0.3)' 
-                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
-                }}
-              >
-                {isProcessing ? 'Processing...' : 'Approve'}
-              </button>
-              <button
-                onClick={() => handleReject(item.id, type)}
-                disabled={isProcessing || item.status !== 'pending'}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  background: isProcessing || item.status !== 'pending'
-                    ? 'rgba(239, 68, 68, 0.3)'
-                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
-                }}
-              >
-                {isProcessing ? 'Processing...' : 'Reject'}
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
+            {/* Large amount display on the right */}
+            <div style={{
+              fontSize: '48px',
+              fontWeight: 700,
+              color: isDeposit ? '#22c55e' : '#ef4444',
+              textAlign: 'right',
+              lineHeight: '1',
+            }}>
+              ${parseFloat(item.amount || 0).toFixed(2)}
             </div>
-          )}
+            {paymentTab === 'pending' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  onClick={() => handleApprove(item.id, type)}
+                  disabled={isProcessing || item.status !== 'pending'}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    background: isProcessing || item.status !== 'pending' 
+                      ? 'rgba(16, 185, 129, 0.3)' 
+                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                    opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
+                  }}
+                >
+                  {isProcessing ? 'Processing...' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => handleReject(item.id, type)}
+                  disabled={isProcessing || item.status !== 'pending'}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    background: isProcessing || item.status !== 'pending'
+                      ? 'rgba(239, 68, 68, 0.3)'
+                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                    opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
+                  }}
+                >
+                  {isProcessing ? 'Processing...' : 'Reject'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         {isDeposit && receiptUrl && (
           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
@@ -914,18 +926,25 @@ function AdminPage() {
         .select('*')
         .eq('user_id', user.id);
 
-      // Fetch KYC documents
-      const { data: kycDocuments } = await supabase
-        .from('kyc_documents')
+      // Fetch user deposits
+      const { data: deposits } = await supabase
+        .from('deposits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // Fetch user withdrawals
+      const { data: withdrawals } = await supabase
+        .from('withdrawals')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       setUserDetails({
         trades: trades || [],
-        subscriptions: subscriptions || [],
         portfolio: portfolio || [],
-        kycDocuments: kycDocuments || [],
+        deposits: deposits || [],
+        withdrawals: withdrawals || [],
         balance: user.balance || 0,
       });
     } catch (error) {
@@ -1829,9 +1848,111 @@ function AdminPage() {
                   )}
                 </div>
 
+                {/* Deposits Section */}
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Deposits ({userDetails.deposits?.length || 0})</h3>
+                  {userDetails.deposits && userDetails.deposits.length > 0 ? (
+                    <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Amount</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Coin</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Network</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Status</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userDetails.deposits.map((deposit) => {
+                            const coinNetwork = deposit.transaction_id?.split(':') || [];
+                            const coin = coinNetwork[0] || deposit.payment_provider || 'N/A';
+                            const network = coinNetwork[1] || 'N/A';
+                            return (
+                              <tr key={deposit.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                <td style={{ padding: '12px', color: '#4ade80', fontWeight: 600 }}>${parseFloat(deposit.amount || 0).toFixed(2)}</td>
+                                <td style={{ padding: '12px', color: '#ffffff' }}>{coin}</td>
+                                <td style={{ padding: '12px', color: '#ffffff' }}>{network}</td>
+                                <td style={{ padding: '12px' }}>
+                                  <span style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    background: deposit.status === 'completed' ? 'rgba(34, 197, 94, 0.15)' : deposit.status === 'pending' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: deposit.status === 'completed' ? '#4ade80' : deposit.status === 'pending' ? '#fbbf24' : '#f87171',
+                                  }}>
+                                    {deposit.status || 'pending'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
+                                  {deposit.created_at ? new Date(deposit.created_at).toLocaleDateString() : 'N/A'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No deposits found</div>
+                  )}
+                </div>
+
+                {/* Withdrawals Section */}
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Withdrawals ({userDetails.withdrawals?.length || 0})</h3>
+                  {userDetails.withdrawals && userDetails.withdrawals.length > 0 ? (
+                    <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Amount</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Coin</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Network</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Status</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userDetails.withdrawals.map((withdrawal) => {
+                            const coinNetwork = withdrawal.wallet_address?.split(':') || [];
+                            const coin = coinNetwork[0] || 'N/A';
+                            const network = coinNetwork[1] || 'N/A';
+                            return (
+                              <tr key={withdrawal.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                <td style={{ padding: '12px', color: '#ef4444', fontWeight: 600 }}>${parseFloat(withdrawal.amount || 0).toFixed(2)}</td>
+                                <td style={{ padding: '12px', color: '#ffffff' }}>{coin}</td>
+                                <td style={{ padding: '12px', color: '#ffffff' }}>{network}</td>
+                                <td style={{ padding: '12px' }}>
+                                  <span style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    background: withdrawal.status === 'completed' ? 'rgba(34, 197, 94, 0.15)' : withdrawal.status === 'pending' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: withdrawal.status === 'completed' ? '#4ade80' : withdrawal.status === 'pending' ? '#fbbf24' : '#f87171',
+                                  }}>
+                                    {withdrawal.status || 'pending'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
+                                  {withdrawal.created_at ? new Date(withdrawal.created_at).toLocaleDateString() : 'N/A'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No withdrawals found</div>
+                  )}
+                </div>
+
                 {/* Trades Section */}
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Trades ({userDetails.trades.length})</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Trades ({userDetails.trades?.length || 0})</h3>
                   {userDetails.trades && userDetails.trades.length > 0 ? (
                     <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
@@ -1875,93 +1996,6 @@ function AdminPage() {
                   )}
                 </div>
 
-                {/* KYC Documents Section */}
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>KYC Documents ({userDetails.kycDocuments?.length || 0})</h3>
-                  {userDetails.kycDocuments && userDetails.kycDocuments.length > 0 ? (
-                    <div className="space-y-4">
-                      {userDetails.kycDocuments.map((doc) => (
-                        <div 
-                          key={doc.id} 
-                          style={{
-                            padding: '16px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                          }}
-                        >
-                          <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
-                              {doc.document_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Document'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                              Uploaded: {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
-                            </div>
-                          </div>
-                          {doc.document_url && doc.document_url !== 'pending_upload' ? (
-                            <div>
-                              <ReceiptViewer receiptUrl={doc.document_url} />
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>
-                              Document upload pending
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No KYC documents found</div>
-                  )}
-                </div>
-
-                {/* Earn Subscriptions Section */}
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Earn Subscriptions ({userDetails.subscriptions.length})</h3>
-                  {userDetails.subscriptions && userDetails.subscriptions.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Product</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Amount</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>APY</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Status</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {userDetails.subscriptions.map((sub) => (
-                            <tr key={sub.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                              <td style={{ padding: '12px', color: '#ffffff' }}>{sub.product_name || 'N/A'}</td>
-                              <td style={{ padding: '12px', color: '#ffffff' }}>
-                                {parseFloat(sub.amount || 0).toFixed(8)} {sub.asset_symbol || ''}
-                              </td>
-                              <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(sub.apy || 0).toFixed(2)}%</td>
-                              <td style={{ padding: '12px' }}>
-                                <span style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  background: sub.status === 'active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(251, 191, 36, 0.15)',
-                                  color: sub.status === 'active' ? '#4ade80' : '#fbbf24',
-                                }}>
-                                  {sub.status || 'pending'}
-                                </span>
-                              </td>
-                              <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
-                                {sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'N/A'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No subscriptions found</div>
-                  )}
-                </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No data available</div>
