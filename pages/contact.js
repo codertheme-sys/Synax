@@ -222,8 +222,7 @@ export default function ContactPage() {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center',
+                objectFit: 'fill',
               }}
               onError={(e) => {
                 e.target.style.display = 'none';
