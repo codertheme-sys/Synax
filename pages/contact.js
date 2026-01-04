@@ -209,7 +209,7 @@ export default function ContactPage() {
             style={{
               ...cardStyle,
               width: '1000px',
-              height: '350px',
+              height: '400px',
               padding: '0',
               overflow: 'hidden',
               position: 'relative',
@@ -222,7 +222,8 @@ export default function ContactPage() {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain',
+                objectFit: 'cover',
+                objectPosition: 'center',
               }}
               onError={(e) => {
                 e.target.style.display = 'none';
