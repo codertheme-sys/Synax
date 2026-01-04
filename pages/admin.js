@@ -914,10 +914,18 @@ function AdminPage() {
         .select('*')
         .eq('user_id', user.id);
 
+      // Fetch KYC documents
+      const { data: kycDocuments } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
       setUserDetails({
         trades: trades || [],
         subscriptions: subscriptions || [],
         portfolio: portfolio || [],
+        kycDocuments: kycDocuments || [],
         balance: user.balance || 0,
       });
     } catch (error) {
@@ -1864,6 +1872,46 @@ function AdminPage() {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No trades found</div>
+                  )}
+                </div>
+
+                {/* KYC Documents Section */}
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>KYC Documents ({userDetails.kycDocuments?.length || 0})</h3>
+                  {userDetails.kycDocuments && userDetails.kycDocuments.length > 0 ? (
+                    <div className="space-y-4">
+                      {userDetails.kycDocuments.map((doc) => (
+                        <div 
+                          key={doc.id} 
+                          style={{
+                            padding: '16px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                          }}
+                        >
+                          <div style={{ marginBottom: '12px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
+                              {doc.document_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Document'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              Uploaded: {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
+                            </div>
+                          </div>
+                          {doc.document_url && doc.document_url !== 'pending_upload' ? (
+                            <div>
+                              <ReceiptViewer receiptUrl={doc.document_url} />
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>
+                              Document upload pending
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No KYC documents found</div>
                   )}
                 </div>
 
