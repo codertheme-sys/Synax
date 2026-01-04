@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
@@ -16,6 +16,18 @@ function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,22 +47,39 @@ function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      console.log('🔐 [Forgot Password] Starting password reset request...');
+      console.log('🔐 [Forgot Password] Email:', email);
+      console.log('🔐 [Forgot Password] Redirect URL:', `${window.location.origin}/reset-password`);
+      
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
+      console.log('🔐 [Forgot Password] Supabase response - data:', data);
+      console.log('🔐 [Forgot Password] Supabase response - error:', error);
+
       if (error) {
-        console.error('Password reset error:', error);
+        console.error('❌ [Forgot Password] Password reset error:', error);
+        console.error('❌ [Forgot Password] Error code:', error.code);
+        console.error('❌ [Forgot Password] Error message:', error.message);
+        console.error('❌ [Forgot Password] Error status:', error.status);
+        console.error('❌ [Forgot Password] Full error object:', JSON.stringify(error, null, 2));
         toast.error(error.message || 'Failed to send password reset email');
         setLoading(false);
         return;
       }
 
+      console.log('✅ [Forgot Password] Password reset email sent successfully');
       setEmailSent(true);
       toast.success('Password reset email sent! Please check your inbox.');
       setLoading(false);
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('❌ [Forgot Password] Unexpected error:', error);
+      console.error('❌ [Forgot Password] Error type:', typeof error);
+      console.error('❌ [Forgot Password] Error name:', error?.name);
+      console.error('❌ [Forgot Password] Error message:', error?.message);
+      console.error('❌ [Forgot Password] Error stack:', error?.stack);
+      console.error('❌ [Forgot Password] Full error object:', JSON.stringify(error, null, 2));
       toast.error('An error occurred. Please try again.');
       setLoading(false);
     }
@@ -59,7 +88,11 @@ function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white pb-16">
       <Header />
-      <main className="max-w-md mx-auto px-6 lg:px-8 pt-24">
+      <main className="mx-auto pt-24" style={{ 
+        maxWidth: '600px', 
+        paddingLeft: isMobile ? '24px' : '300px', 
+        paddingRight: isMobile ? '24px' : '300px' 
+      }}>
         <div style={{ ...cardStyle, padding: '40px' }}>
           {!emailSent ? (
             <>
