@@ -81,17 +81,37 @@
 3. Şifre belirleyin
 4. Email hesabını oluşturun
 
-### Adım 3: SMTP Ayarlarını Alma
-Namecheap size şu SMTP bilgilerini verecek:
+### Adım 3: SMTP Ayarlarını Bulma ve Alma
 
-**Genellikle Namecheap SMTP Ayarları:**
-- **SMTP Host:** `mail.privateemail.com` veya `smtp.privateemail.com`
-- **SMTP Port:** `587` (TLS) veya `465` (SSL)
+**Namecheap Private Email SMTP Ayarları:**
+
+Namecheap Private Email için SMTP ayarları genellikle şunlardır:
+
+- **SMTP Host:** `mail.privateemail.com`
+- **SMTP Port:** `587` (TLS/STARTTLS) veya `465` (SSL)
 - **SMTP User:** Tam email adresiniz (örn: `support@synax.vip`)
 - **SMTP Password:** Email hesabınızın şifresi
-- **SMTP From:** `support@synax.vip` (veya oluşturduğunuz email)
+- **SMTP From:** `support@synax.vip`
 
-**Not:** Namecheap'in size verdiği tam SMTP bilgilerini kullanın.
+**SMTP Ayarlarını Namecheap'te Bulma:**
+
+1. **Yöntem 1 - Email Client Settings:**
+   - Private Email sayfasında (resim 3'teki gibi) mailbox'ınıza tıklayın
+   - **"Email Client Settings"** veya **"Configure Email Client"** sekmesine bakın
+   - Orada SMTP ayarları gösterilir
+
+2. **Yöntem 2 - Webmail:**
+   - **"Open Webmail"** butonuna tıklayın
+   - Webmail içinde **Settings** → **Email Accounts** → **Outgoing Server (SMTP)**
+   - SMTP ayarları orada gösterilir
+
+3. **Yöntem 3 - Genel Ayarlar:**
+   - Namecheap Private Email için genellikle `mail.privateemail.com` kullanılır
+   - Port `587` (TLS) veya `465` (SSL) deneyin
+   - Username: Tam email adresiniz (`support@synax.vip`)
+   - Password: Email hesabınızın şifresi
+
+**Detaylı rehber için:** `NAMECHEAP-SMTP-AYARLARI-BULMA.md` dosyasına bakın.
 
 ---
 
