@@ -2,16 +2,24 @@
 
 ## 1. Namecheap Private Email SMTP Ayarları
 
-Namecheap Private Email için SMTP ayarları genellikle şunlardır:
+**⚠️ ÖNEMLİ:** Resimlerde görünen "localhost" ayarları email client (Outlook, Thunderbird) için. Web uygulaması için farklı ayarlar kullanılmalı!
 
-### Standart SMTP Ayarları (Namecheap Private Email)
+### Web Uygulaması İçin SMTP Ayarları (Namecheap Private Email)
 
 **SMTP Server (Outgoing Mail):**
-- **SMTP Host:** `mail.privateemail.com`
+- **SMTP Host:** `mail.privateemail.com` ⚠️ (localhost DEĞİL!)
 - **SMTP Port:** `587` (TLS/STARTTLS) veya `465` (SSL)
 - **SMTP Username:** Tam email adresiniz (örn: `support@synax.vip`)
 - **SMTP Password:** Email hesabınızın şifresi
 - **Encryption:** TLS (port 587) veya SSL (port 465)
+
+**❌ YANLIŞ (Email Client için):**
+- Server name: `localhost` ← Bu sadece email client için!
+- Port: `25` ← Bu genellikle localhost için
+
+**✅ DOĞRU (Web Uygulaması için):**
+- SMTP Host: `mail.privateemail.com`
+- SMTP Port: `587` veya `465`
 
 **IMAP Server (Incoming Mail - Opsiyonel):**
 - **IMAP Host:** `mail.privateemail.com`
