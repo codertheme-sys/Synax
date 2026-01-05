@@ -100,7 +100,7 @@ This is an automated response. Please do not reply to this email.
     const smtpPort = process.env.SMTP_PORT;
     const smtpUser = process.env.SMTP_USER;
     const smtpPassword = process.env.SMTP_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || 'synaxcustomerservice@hotmail.com';
+    const smtpFrom = process.env.SMTP_FROM || 'support@synax.vip';
 
     // Debug: Log SMTP configuration (without password)
     console.log('=== SMTP Configuration Check ===');
