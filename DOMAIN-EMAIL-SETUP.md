@@ -13,28 +13,46 @@
 4. Domain adınızı girin: `synax.vip`
 5. **"Add"** butonuna tıklayın
 
-### Adım 3: DNS Kayıtlarını Yapılandırma
-Vercel size DNS kayıtlarını gösterecek. Namecheap'te şu kayıtları ekleyin:
+### Adım 3: DNS Kayıtlarını Bulma ve Yapılandırma
+
+**Vercel'de DNS Kayıtlarını Bulma:**
+1. Domain ekledikten sonra, domain kartında **"Invalid Configuration"** yazısı görünecek
+2. Domain kartına tıklayın veya **"Edit"** butonuna tıklayın
+3. Sayfanın altına kaydırın - DNS kayıtları genellikle **"DNS Configuration"** bölümünde gösterilir
+4. Veya domain'in yanındaki **"..."** (üç nokta) menüsüne tıklayın → **"View DNS Records"**
+5. Vercel size şu bilgileri gösterecek:
+   - **A Record** (root domain için) - IP adresi
+   - **CNAME Record** (www için) - CNAME değeri
+   - **VEYA** sadece CNAME kayıtları
+
+**⚠️ ÖNEMLİ:** Vercel'in size gösterdiği **tam değerleri** not edin ve kullanın!
 
 **Namecheap DNS Ayarları:**
 1. Namecheap hesabınıza giriş yapın
 2. Domain listesinden `synax.vip` seçin
 3. **"Advanced DNS"** sekmesine gidin
-4. Vercel'in verdiği kayıtları ekleyin:
+4. **Mevcut kayıtları silin:**
+   - ❌ `www` → `parkingpage.namecheap.com.` (CNAME) - SİL
+   - ❌ `@` → `http://www.synax.vip/` (URL Redirect) - SİL
+5. **Vercel'in verdiği kayıtları ekleyin:**
 
-**A Record (Root Domain için):**
-- Type: `A Record`
-- Host: `@`
-- Value: Vercel'in verdiği IP adresi (genellikle `76.76.21.21`)
-- TTL: `Automatic`
+**A Record (Root Domain için - eğer Vercel verdi ise):**
+- **"ADD NEW RECORD"** butonuna tıklayın
+- Type: `A Record` seçin
+- Host: `@` yazın
+- Value: Vercel'in verdiği IP adresini yazın (örn: `76.76.21.21`)
+- TTL: `Automatic` veya `30 min`
+- Kaydet (✓ işaretine tıklayın)
 
 **CNAME Record (www için):**
-- Type: `CNAME Record`
-- Host: `www`
-- Value: `cname.vercel-dns.com`
-- TTL: `Automatic`
+- **"ADD NEW RECORD"** butonuna tıklayın
+- Type: `CNAME Record` seçin
+- Host: `www` yazın
+- Value: Vercel'in verdiği CNAME değerini yazın (örn: `cname.vercel-dns.com`)
+- TTL: `Automatic` veya `30 min`
+- Kaydet (✓ işaretine tıklayın)
 
-**Not:** Vercel'in verdiği tam DNS kayıtlarını kullanın. Yukarıdakiler örnektir.
+**Detaylı rehber için:** `VERCEL-DNS-KAYITLARI-BULMA.md` dosyasına bakın.
 
 ### Adım 4: DNS Propagation Bekleme
 - DNS değişiklikleri 24-48 saat içinde yayılır
