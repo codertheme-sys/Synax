@@ -195,3 +195,4 @@ SMTP Password: [şifre]
 4. **Username tam email adresi olmalı:** `support@synax.vip`
 5. **Password email hesabının şifresi olmalı**
 
+

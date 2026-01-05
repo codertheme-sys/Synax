@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     if (!profile.kyc_verified || profile.kyc_status !== 'approved') {
       return res.status(403).json({ 
-        error: 'KYC verification required',
+        error: 'KYC verification is required. Please complete your KYC verification to start trading.',
         kyc_required: true 
       });
     }

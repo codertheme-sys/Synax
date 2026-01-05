@@ -213,3 +213,4 @@ DNS kayıtlarının yayılıp yayılmadığını kontrol edin:
 3. **Mevcut kayıtları silmeden yeni kayıt eklemeyin** - Çakışma olabilir
 4. **TTL değerini "Automatic" bırakabilirsiniz** - Namecheap otomatik ayarlar
 
+

@@ -37,3 +37,4 @@ ALTER TABLE binary_trades ENABLE ROW LEVEL SECURITY;
 
 
 
+

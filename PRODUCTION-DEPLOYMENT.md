@@ -405,3 +405,4 @@ Synax platformunuz artık canlıda!
 
 **🚀 Platformunuz hazır!**
 
+
