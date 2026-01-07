@@ -76,6 +76,8 @@ function HomePage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [earnProducts, setEarnProducts] = useState([]);
+  const [converts, setConverts] = useState([]);
+  const [tradeHistory, setTradeHistory] = useState([]);
   
   // Modal states
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -244,7 +246,7 @@ function HomePage() {
           });
           setPositions(formattedPositions);
 
-          // Fetch binary trades for recent orders
+          // Fetch binary trades for recent trades
           const { data: binaryTradesData } = await supabase
             .from('binary_trades')
             .select('*')
@@ -252,7 +254,7 @@ function HomePage() {
             .order('created_at', { ascending: false })
             .limit(10);
 
-          // Format recent orders (binary trades)
+          // Format recent trades (binary trades)
           const formattedOrders = (binaryTradesData || []).map(o => {
             const date = new Date(o.created_at);
             const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -340,6 +342,43 @@ function HomePage() {
             }
           } catch (err) {
             console.error('Error fetching alerts:', err);
+          }
+
+          // Fetch convert history
+          try {
+            const { data: convertData, error: convertError } = await supabase
+              .from('convert_history')
+              .select('*')
+              .eq('user_id', currentUser.id)
+              .order('created_at', { ascending: false })
+              .limit(10);
+            
+            if (convertError) {
+              console.error('Error fetching convert history:', convertError);
+            } else {
+              setConverts(convertData || []);
+            }
+          } catch (err) {
+            console.error('Error fetching convert history:', err);
+          }
+
+          // Fetch trade history (binary trades)
+          try {
+            const { data: tradesData, error: tradesError } = await supabase
+              .from('binary_trades')
+              .select('*')
+              .eq('user_id', currentUser.id)
+              .eq('status', 'completed')
+              .order('created_at', { ascending: false })
+              .limit(20);
+            
+            if (tradesError) {
+              console.error('Error fetching trade history:', tradesError);
+            } else {
+              setTradeHistory(tradesData || []);
+            }
+          } catch (err) {
+            console.error('Error fetching trade history:', err);
           }
 
           // Fetch user's subscribed earn products
@@ -867,19 +906,21 @@ function HomePage() {
             boxShadow: '0 0 30px rgba(139, 92, 246, 0.15), inset 0 0 30px rgba(139, 92, 246, 0.05)',
           }} className="flex flex-col gap-3" data-reveal>
             <div className="flex items-center justify-between">
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Alerts</h2>
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Converts History</h2>
             </div>
             <div className="space-y-2" style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              {alerts.length === 0 ? (
+              {converts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
-                  No alerts. Create alerts on the Trade page.
+                  No convert operations yet. Convert your coins to USDT from the Assets page.
                 </div>
               ) : (
-                alerts.map((a) => {
-                  const conditionText = `${a.asset_symbol} ${a.condition_operator} $${parseFloat(a.condition_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                converts.map((c) => {
+                  const date = new Date(c.created_at);
+                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <div
-                      key={a.id}
+                      key={c.id}
                       style={{
                         background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -899,36 +940,27 @@ function HomePage() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{a.asset_symbol}</span>
+                        <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{c.asset_symbol} → USDT</span>
                         <span style={{
                           fontSize: '10px',
                           padding: '3px 8px',
                           borderRadius: '8px',
                           fontWeight: 700,
                           border: '1px solid',
-                          background: a.status === 'active'
-                            ? 'rgba(34, 197, 94, 0.2)'
-                            : a.status === 'triggered'
-                            ? 'rgba(251, 191, 36, 0.2)'
-                            : 'rgba(107, 114, 128, 0.2)',
-                          color: a.status === 'active'
-                            ? '#4ade80'
-                            : a.status === 'triggered'
-                            ? '#fbbf24'
-                            : '#9ca3af',
-                          borderColor: a.status === 'active'
-                            ? 'rgba(34, 197, 94, 0.4)'
-                            : a.status === 'triggered'
-                            ? 'rgba(251, 191, 36, 0.4)'
-                            : 'rgba(107, 114, 128, 0.4)',
-                          boxShadow: a.status === 'active'
-                            ? '0 0 8px rgba(34, 197, 94, 0.3)'
-                            : 'none',
+                          background: 'rgba(34, 197, 94, 0.2)',
+                          color: '#4ade80',
+                          borderColor: 'rgba(34, 197, 94, 0.4)',
+                          boxShadow: '0 0 8px rgba(34, 197, 94, 0.3)'
                         }}>
-                          {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                          Converted
                         </span>
                       </div>
-                      <div style={{ color: '#d1d5db', fontSize: '12px', fontWeight: 500 }}>{conditionText}</div>
+                      <div style={{ color: '#d1d5db', fontSize: '12px', fontWeight: 500 }}>
+                        {parseFloat(c.quantity).toFixed(8)} {c.asset_symbol} → ${parseFloat(c.usd_value).toFixed(2)} USDT
+                      </div>
+                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px' }}>
+                        {formattedDate} {formattedTime}
+                      </div>
                     </div>
                   );
                 })
@@ -956,8 +988,8 @@ function HomePage() {
             overflow: 'hidden',
           }} data-reveal>
             <div className="flex items-center justify-between mb-3">
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Earn Products</h2>
-              <span className="text-xs text-gray-400">Your subscriptions</span>
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Trade History</h2>
+              <span className="text-xs text-gray-400">Completed trades</span>
             </div>
             <div className="space-y-2" style={{ 
               flex: 1, 
@@ -965,128 +997,102 @@ function HomePage() {
               maxWidth: '100%',
               wordWrap: 'break-word',
             }}>
-              {earnProducts.length === 0 ? (
+              {tradeHistory.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
-                  No earn products subscribed. Visit the Earn page to subscribe.
+                  No trade history yet. Start trading to see your completed trades here.
                 </div>
               ) : (
-                earnProducts.map((product) => (
-                  <div
-                    key={product.subscriptionId || product.id}
-                    style={{
-                      background: product.status === 'cancelled' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '10px',
-                      border: product.status === 'cancelled' ? '1px solid rgba(107, 114, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px 12px',
-                      transition: 'all 0.2s ease',
-                      maxWidth: '100%',
-                      overflow: 'hidden',
-                    }}
-                    data-reveal
-                    onMouseEnter={(e) => {
-                      if (product.status !== 'cancelled') {
+                tradeHistory.map((trade) => {
+                  const date = new Date(trade.created_at);
+                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                  const tradeAmount = parseFloat(trade.trade_amount || 0);
+                  const profitPercentage = parseFloat(trade.potential_profit_percentage || 0);
+                  const profitAmount = trade.win_lost === 'win' 
+                    ? tradeAmount + (tradeAmount * profitPercentage / 100)
+                    : tradeAmount - (tradeAmount * profitPercentage / 100);
+                  
+                  return (
+                    <div
+                      key={trade.id}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '10px 12px',
+                        transition: 'all 0.2s ease',
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                      }}
+                      data-reveal
+                      onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
                         e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
                         e.currentTarget.style.transform = 'translateX(2px)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = product.status === 'cancelled' ? 'rgba(107, 114, 128, 0.1)' : 'rgba(255, 255, 255, 0.05)';
-                      e.currentTarget.style.borderColor = product.status === 'cancelled' ? 'rgba(107, 114, 128, 0.3)' : 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.transform = 'translateX(0)';
-                    }}
-                  >
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between', 
-                      marginBottom: '4px',
-                      flexWrap: 'wrap',
-                      gap: '4px'
-                    }}>
-                      <span style={{ 
-                        fontWeight: 700, 
-                        color: product.status === 'cancelled' ? '#9ca3af' : '#ffffff', 
-                        fontSize: isMobile ? '12px' : '13px',
-                        wordBreak: 'break-word'
-                      }}>{product.symbol}</span>
-                      <span style={{
-                        fontSize: isMobile ? '11px' : '12px',
-                        fontWeight: 600,
-                        color: product.status === 'cancelled' ? '#9ca3af' : '#4ade80',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {product.apr}% APR
-                      </span>
-                    </div>
-                    <div style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '4px',
-                      flexWrap: 'wrap',
-                      gap: '4px'
-                    }}>
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                      }}
+                    >
                       <div style={{ 
-                        color: '#d1d5db', 
-                        fontSize: isMobile ? '11px' : '12px', 
-                        fontWeight: 500,
-                        wordBreak: 'break-word'
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        marginBottom: '4px',
+                        flexWrap: 'wrap',
+                        gap: '4px'
                       }}>
-                        {product.type === 'Flexible' ? 'Flexible' : `${product.days || product.duration} days`}
-                      </div>
-                      {product.status === 'cancelled' && (
+                        <span style={{ 
+                          fontWeight: 700, 
+                          color: '#ffffff', 
+                          fontSize: isMobile ? '12px' : '13px',
+                          wordBreak: 'break-word'
+                        }}>{trade.asset_symbol} {trade.side === 'buy' ? 'LONG' : 'SHORT'}</span>
                         <span style={{
-                          fontSize: isMobile ? '10px' : '11px',
-                          color: '#9ca3af',
-                          fontStyle: 'italic'
-                        }}>Cancelled</span>
-                      )}
-                    </div>
-                    {product.status === 'active' && (
-                      <div style={{ marginTop: '8px' }}>
-                        <button
-                          onClick={() => {
-                            setCancelSubscriptionProduct(product);
-                            setShowCancelSubscriptionModal(true);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                            color: '#f87171',
-                            fontSize: isMobile ? '11px' : '12px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
-                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.7)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                          }}
-                        >
-                          Cancel Subscription
-                        </button>
+                          fontSize: isMobile ? '11px' : '12px',
+                          fontWeight: 600,
+                          color: trade.win_lost === 'win' ? '#4ade80' : '#f87171',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {trade.win_lost ? trade.win_lost.toUpperCase() : 'PENDING'}
+                        </span>
                       </div>
-                    )}
-                    {product.earnedAmount > 0 && (
                       <div style={{ 
-                        marginTop: '4px',
-                        fontSize: isMobile ? '10px' : '11px',
-                        color: '#4ade80',
-                        fontWeight: 600
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '4px',
+                        flexWrap: 'wrap',
+                        gap: '4px'
                       }}>
-                        Earned: ${parseFloat(product.earnedAmount).toFixed(2)}
+                        <div style={{ 
+                          color: '#d1d5db', 
+                          fontSize: isMobile ? '11px' : '12px', 
+                          fontWeight: 500,
+                          wordBreak: 'break-word'
+                        }}>
+                          Amount: ${tradeAmount.toFixed(2)}
+                        </div>
+                        <div style={{ 
+                          color: trade.win_lost === 'win' ? '#4ade80' : '#f87171', 
+                          fontSize: isMobile ? '11px' : '12px', 
+                          fontWeight: 600,
+                        }}>
+                          {trade.win_lost === 'win' ? '+' : '-'}${Math.abs(profitAmount - tradeAmount).toFixed(2)}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                      <div style={{ 
+                        color: '#9ca3af', 
+                        fontSize: '11px', 
+                        marginTop: '4px'
+                      }}>
+                        {formattedDate} {formattedTime}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -1099,7 +1105,7 @@ function HomePage() {
             overflow: 'hidden',
           }} className="flex flex-col gap-3" data-reveal>
             <div className="flex items-center justify-between">
-              <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 700 }}>Recent Orders</h2>
+              <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 700 }}>Recent Trades</h2>
               <span className="text-xs text-gray-400">Today</span>
             </div>
             <div className="overflow-x-auto" style={{ 
@@ -1127,7 +1133,7 @@ function HomePage() {
                   {orders.length === 0 ? (
                     <tr>
                       <td colSpan="8" style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px', fontWeight: 600 }}>
-                        No recent orders. Start trading to see your order history here.
+                        No recent trades. Start trading to see your trade history here.
                         <Link href="/trade" style={{ 
                           display: 'block', 
                           marginTop: '12px', 

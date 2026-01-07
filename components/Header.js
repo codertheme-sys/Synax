@@ -129,6 +129,7 @@ export default function Header() {
     '/dashboard': 'Home', // Legacy support
     '/trade': 'Trade',
     '/earn': 'Earn',
+    '/mining': 'Mining',
     '/portfolio': 'Portfolio',
     '/assets': 'Assets',
     '/login': 'Login',
@@ -193,6 +194,7 @@ export default function Header() {
               <Link href="/home" style={navLinkStyle('/home')}>Home</Link>
               <Link href="/trade" style={navLinkStyle('/trade')}>Trade</Link>
               <Link href="/earn" style={navLinkStyle('/earn')}>Earn</Link>
+              <Link href="/mining" style={navLinkStyle('/mining')}>Mining</Link>
               <Link href="/assets" style={{...navLinkStyle('/assets'), borderBottom: 'none'}}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" style={navLinkStyle('/admin')}>Admin Panel</Link>
@@ -367,6 +369,7 @@ export default function Header() {
               <Link href="/home" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/home' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Home</Link>
               <Link href="/trade" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/trade' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Trade</Link>
               <Link href="/earn" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/earn' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Earn</Link>
+              <Link href="/mining" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/mining' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Mining</Link>
               <Link href="/assets" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/assets' ? '#ffffff' : '#d1d5db', fontWeight: 600, textDecoration: 'none', borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/admin' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Admin Panel</Link>

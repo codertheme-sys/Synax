@@ -128,41 +128,103 @@ export default async function handler(req, res) {
                 ? tradeAmount + (tradeAmount * profitPercentage / 100)
                 : tradeAmount - (tradeAmount * profitPercentage / 100);
 
-              // Update balance
-              const currentBalance = parseFloat(userProfile.balance || 0);
-              const newBalance = currentBalance + profitAmount;
-              
-              await supabaseAdmin
-                .from('profiles')
-                .update({ balance: newBalance })
-                .eq('id', user.id);
+              // NOTE: Balance is NOT updated here - trade amount was already deducted when trade was created
+              // Profit/loss is added directly to portfolio as crypto asset, not to cash balance
 
               // Add profitAmount as coin to portfolio
               try {
-                const { data: priceData } = await supabaseAdmin
+                console.log(`[binary-create] Looking for price: asset_id=${tradeDetails.asset_id}, asset_type=${tradeDetails.asset_type}, asset_symbol=${tradeDetails.asset_symbol}`);
+                
+                const { data: priceData, error: priceError } = await supabaseAdmin
                   .from('price_history')
                   .select('price')
                   .eq('asset_id', tradeDetails.asset_id)
                   .eq('asset_type', tradeDetails.asset_type)
                   .single();
 
-                if (priceData && priceData.price) {
-                  const currentPrice = parseFloat(priceData.price);
-                  if (currentPrice > 0 && profitAmount > 0) {
-                    const coinQuantity = profitAmount / currentPrice;
-                    
-                    const { data: existingPortfolio } = await supabaseAdmin
+                let currentPrice = null;
+                let correctAssetId = tradeDetails.asset_id;
+
+                if (priceError || !priceData || !priceData.price) {
+                  console.error(`[binary-create] Price lookup error for ${tradeDetails.asset_symbol}:`, priceError);
+                  // Try alternative lookup by symbol if asset_id doesn't match
+                  const { data: priceDataBySymbol } = await supabaseAdmin
+                    .from('price_history')
+                    .select('price, asset_id')
+                    .eq('asset_symbol', tradeDetails.asset_symbol.toUpperCase())
+                    .eq('asset_type', tradeDetails.asset_type)
+                    .single();
+                  
+                  if (priceDataBySymbol && priceDataBySymbol.price) {
+                    console.log(`[binary-create] Found price by symbol for ${tradeDetails.asset_symbol}:`, priceDataBySymbol.price);
+                    currentPrice = parseFloat(priceDataBySymbol.price);
+                    correctAssetId = priceDataBySymbol.asset_id || tradeDetails.asset_id;
+                  } else {
+                    console.error(`[binary-create] No price found for ${tradeDetails.asset_symbol} by symbol either`);
+                  }
+                } else {
+                  currentPrice = parseFloat(priceData.price);
+                  correctAssetId = priceData.asset_id || tradeDetails.asset_id;
+                }
+
+                if (currentPrice && currentPrice > 0) {
+                  // Calculate coin quantity from profitAmount (can be positive or negative)
+                  // profitAmount includes both trade_amount and profit/loss
+                  const coinQuantity = profitAmount / currentPrice;
+                  
+                  console.log(`[binary-create] Calculated coinQuantity for ${tradeDetails.asset_symbol}: ${coinQuantity} (profitAmount=${profitAmount}, currentPrice=${currentPrice})`);
+                  
+                  // Check if user already has this asset in portfolio (try both asset_id and symbol)
+                  let existingPortfolio = null;
+                  
+                  // First try with correct asset_id
+                  const { data: portfolioByAssetId } = await supabaseAdmin
+                    .from('portfolio')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('asset_id', correctAssetId)
+                    .eq('asset_type', tradeDetails.asset_type)
+                    .maybeSingle();
+                  
+                  if (portfolioByAssetId) {
+                    existingPortfolio = portfolioByAssetId;
+                    console.log(`[binary-create] Found existing portfolio by asset_id for ${tradeDetails.asset_symbol}`);
+                  } else {
+                    // Try by symbol if asset_id doesn't match
+                    const { data: portfolioBySymbol } = await supabaseAdmin
                       .from('portfolio')
                       .select('*')
                       .eq('user_id', user.id)
-                      .eq('asset_id', tradeDetails.asset_id)
+                      .eq('asset_symbol', tradeDetails.asset_symbol.toUpperCase())
                       .eq('asset_type', tradeDetails.asset_type)
-                      .single();
+                      .maybeSingle();
+                    
+                    if (portfolioBySymbol) {
+                      existingPortfolio = portfolioBySymbol;
+                      console.log(`[binary-create] Found existing portfolio by symbol for ${tradeDetails.asset_symbol}`);
+                    }
+                  }
 
-                    if (existingPortfolio) {
-                      const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
-                      const existingAveragePrice = parseFloat(existingPortfolio.average_price || 0);
-                      const newQuantity = existingQuantity + coinQuantity;
+                  if (existingPortfolio) {
+                    const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
+                    const existingAveragePrice = parseFloat(existingPortfolio.average_price || 0);
+                    const newQuantity = existingQuantity + coinQuantity;
+                    
+                    console.log(`[binary-create] Updating existing portfolio: existingQuantity=${existingQuantity}, coinQuantity=${coinQuantity}, newQuantity=${newQuantity}`);
+                    
+                    // If quantity becomes zero or negative, remove the portfolio entry
+                    if (newQuantity <= 0) {
+                      const { error: deleteError } = await supabaseAdmin
+                        .from('portfolio')
+                        .delete()
+                        .eq('id', existingPortfolio.id);
+                      
+                      if (deleteError) {
+                        console.error(`[binary-create] Error deleting portfolio entry:`, deleteError);
+                      } else {
+                        console.log(`[binary-create] Deleted portfolio entry for ${tradeDetails.asset_symbol} (quantity became ${newQuantity})`);
+                      }
+                    } else {
                       const totalValue = (existingQuantity * existingAveragePrice) + profitAmount;
                       const newAveragePrice = newQuantity > 0 ? totalValue / newQuantity : currentPrice;
                       const newTotalValue = newQuantity * currentPrice;
@@ -171,9 +233,10 @@ export default async function handler(req, res) {
                         ? ((currentPrice - newAveragePrice) / newAveragePrice) * 100 
                         : 0;
 
-                      await supabaseAdmin
+                      const { error: updateError } = await supabaseAdmin
                         .from('portfolio')
                         .update({
+                          asset_id: correctAssetId, // Update asset_id to correct one
                           quantity: newQuantity,
                           average_price: newAveragePrice,
                           current_price: currentPrice,
@@ -183,26 +246,43 @@ export default async function handler(req, res) {
                           updated_at: now
                         })
                         .eq('id', existingPortfolio.id);
-                    } else {
-                      const totalValue = coinQuantity * currentPrice;
-                      await supabaseAdmin
-                        .from('portfolio')
-                        .insert({
-                          user_id: user.id,
-                          asset_id: tradeDetails.asset_id,
-                          asset_type: tradeDetails.asset_type,
-                          asset_symbol: tradeDetails.asset_symbol,
-                          asset_name: tradeDetails.asset_name,
-                          quantity: coinQuantity,
-                          average_price: currentPrice,
-                          current_price: currentPrice,
-                          total_value: totalValue,
-                          profit_loss: 0,
-                          profit_loss_percent: 0,
-                          created_at: now,
-                          updated_at: now
-                        });
+                      
+                      if (updateError) {
+                        console.error(`[binary-create] Error updating portfolio for ${tradeDetails.asset_symbol}:`, updateError);
+                      } else {
+                        console.log(`[binary-create] Successfully updated portfolio for ${tradeDetails.asset_symbol}: quantity=${newQuantity}, totalValue=${newTotalValue}`);
+                      }
                     }
+                  } else if (coinQuantity > 0) {
+                    // Create new portfolio entry only if quantity is positive
+                    const totalValue = coinQuantity * currentPrice;
+                    const { data: newPortfolio, error: insertError } = await supabaseAdmin
+                      .from('portfolio')
+                      .insert({
+                        user_id: user.id,
+                        asset_id: correctAssetId,
+                        asset_type: tradeDetails.asset_type,
+                        asset_symbol: tradeDetails.asset_symbol.toUpperCase(),
+                        asset_name: tradeDetails.asset_name,
+                        quantity: coinQuantity,
+                        average_price: currentPrice,
+                        current_price: currentPrice,
+                        total_value: totalValue,
+                        profit_loss: 0,
+                        profit_loss_percent: 0,
+                        created_at: now,
+                        updated_at: now
+                      })
+                      .select()
+                      .single();
+                    
+                    if (insertError) {
+                      console.error(`[binary-create] Error creating portfolio entry for ${tradeDetails.asset_symbol}:`, insertError);
+                    } else {
+                      console.log(`[binary-create] Successfully created portfolio entry for ${tradeDetails.asset_symbol}: quantity=${coinQuantity}, totalValue=${totalValue}, asset_id=${correctAssetId}`);
+                    }
+                  } else {
+                    console.log(`[binary-create] Skipping portfolio update for ${tradeDetails.asset_symbol}: coinQuantity=${coinQuantity} (not positive)`);
                   }
                 }
               } catch (portfolioError) {
@@ -298,7 +378,6 @@ export default async function handler(req, res) {
       data: trade,
       message: 'Trade created successfully'
     });
-
   } catch (error) {
     console.error('Binary trade creation error:', error);
     console.error('Error stack:', error.stack);
@@ -309,4 +388,3 @@ export default async function handler(req, res) {
     });
   }
 }
-

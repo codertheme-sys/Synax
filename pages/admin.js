@@ -906,46 +906,40 @@ function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Fetch user trades
-      const { data: trades } = await supabase
-        .from('trading_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const response = await fetch(`/api/admin/user-details?user_id=${encodeURIComponent(user.id)}`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to load user details');
+      }
 
-      // Fetch user earn subscriptions
-      const { data: subscriptions } = await supabase
-        .from('earn_subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch user portfolio
-      const { data: portfolio } = await supabase
-        .from('portfolio')
-        .select('*')
-        .eq('user_id', user.id);
-
-      // Fetch user deposits
-      const { data: deposits } = await supabase
-        .from('deposits')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch user withdrawals
-      const { data: withdrawals } = await supabase
-        .from('withdrawals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Combine trading_history and binary_trades
+      const spotTrades = (result.data?.trading_history || []).map(t => ({
+        ...t,
+        trade_source: 'spot',
+      }));
+      const binaryTradesData = (result.data?.binary_trades || []).map(t => ({
+        ...t,
+        trade_source: 'binary',
+        // Map binary trade fields to match spot trade format for display
+        trade_type: t.side, // buy/sell
+        asset_symbol: t.asset_symbol,
+        quantity: t.trade_amount, // Use trade_amount as quantity
+        price: t.initial_price,
+      }));
+      const allTrades = [...spotTrades, ...binaryTradesData].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
 
       setUserDetails({
-        trades: trades || [],
-        portfolio: portfolio || [],
-        deposits: deposits || [],
-        withdrawals: withdrawals || [],
-        balance: user.balance || 0,
+        trades: allTrades,
+        portfolio: result.data?.portfolio || [],
+        deposits: result.data?.deposits || [],
+        withdrawals: result.data?.withdrawals || [],
+        balance: result.data?.balance ?? user.balance ?? 0,
+        earn_subscriptions: result.data?.earn_subscriptions || [],
+        binary_trades: result.data?.binary_trades || [],
       });
     } catch (error) {
       console.error('Error fetching user details:', error);

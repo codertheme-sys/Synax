@@ -43,6 +43,7 @@ export default async function handler(req, res) {
       { data: allDeposits, error: depositsError },
       { data: allWithdrawals, error: withdrawalsError },
       { data: recentTrades },
+      { data: recentBinary },
     ] = await Promise.all([
       activeUserIds.length > 0 
         ? supabaseAdmin.from('profiles').select('*', { count: 'exact' }).in('id', activeUserIds)
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
       supabaseAdmin.from('deposits').select('*').order('created_at', { ascending: false }).limit(200),
       supabaseAdmin.from('withdrawals').select('*').order('created_at', { ascending: false }).limit(200),
       supabaseAdmin.from('trading_history').select('*').order('created_at', { ascending: false }).limit(10),
+      supabaseAdmin.from('binary_trades').select('*').order('created_at', { ascending: false }).limit(10),
     ]);
     
     // Filter out any profiles that don't have corresponding auth.users
@@ -163,10 +165,44 @@ export default async function handler(req, res) {
       tradeUserMap[u.id] = u;
     });
 
-    const tradesWithEmail = recentTrades?.map(t => ({
+    const normalizeBinary = (t) => ({
+      id: t.id,
+      user_id: t.user_id,
+      asset_type: t.asset_type,
+      asset_id: t.asset_id,
+      asset_symbol: t.asset_symbol,
+      asset_name: t.asset_name,
+      trade_type: 'binary',
+      side: t.side,
+      quantity: null,
+      price: t.initial_price,
+      total_amount: t.trade_amount,
+      fee: 0,
+      status: t.status,
+      win_lost: t.win_lost,
+      last_price: t.last_price,
+      created_at: t.created_at,
+    });
+
+    const tradesSpotWithEmail = recentTrades?.map(t => ({
       ...t,
       profiles: tradeUserMap[t.user_id] || { email: t.user_id }
     })) || [];
+
+    const binaryUserIds = [...new Set(recentBinary?.map(t => t.user_id) || [])];
+    const { data: binaryUserProfiles } = binaryUserIds.length
+      ? await supabaseAdmin.from('profiles').select('id,email,full_name').in('id', binaryUserIds)
+      : { data: [] };
+    const binaryUserMap = {};
+    (binaryUserProfiles || []).forEach(u => { binaryUserMap[u.id] = u; });
+    const binaryWithEmail = (recentBinary || []).map(t => ({
+      ...normalizeBinary(t),
+      profiles: binaryUserMap[t.user_id] || { email: t.user_id }
+    }));
+
+    const tradesWithEmail = [...tradesSpotWithEmail, ...binaryWithEmail]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10);
 
     // İstatistikler hesapla - use filtered users
     const totalUsers = filteredAllUsers.length || 0;

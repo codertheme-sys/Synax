@@ -121,51 +121,106 @@ export default async function handler(req, res) {
       profitAmount = tradeAmount - (tradeAmount * profitPercentage / 100);
     }
 
-    // Update user balance
-    const currentBalance = parseFloat(userProfile.balance || 0);
-    const newBalance = currentBalance + profitAmount;
-    
-    const { error: balanceError } = await supabaseAdmin
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', trade.user_id);
-
-    if (balanceError) {
-      console.error('Error updating balance:', balanceError);
-      return res.status(500).json({ error: 'Failed to update balance' });
-    }
+    // NOTE: Balance is NOT updated here - trade amount was already deducted when trade was created
+    // Profit/loss is added directly to portfolio as crypto asset, not to cash balance
 
     // Add profitAmount as coin to portfolio
     // Get current price for the asset
     try {
-      const { data: priceData } = await supabaseAdmin
+      console.log(`[binary-auto-complete] Processing portfolio update for ${trade.asset_symbol}: asset_id=${trade.asset_id}, asset_type=${trade.asset_type}, profitAmount=${profitAmount}`);
+      
+      let currentPrice = null;
+      let correctAssetId = trade.asset_id;
+      
+      // First try to get price by asset_id
+      const { data: priceData, error: priceError } = await supabaseAdmin
         .from('price_history')
-        .select('price')
+        .select('price, asset_id')
         .eq('asset_id', trade.asset_id)
         .eq('asset_type', trade.asset_type)
         .single();
 
-      if (priceData && priceData.price) {
-        const currentPrice = parseFloat(priceData.price);
-        if (currentPrice > 0 && profitAmount > 0) {
-          // Calculate coin quantity from profitAmount
-          const coinQuantity = profitAmount / currentPrice;
-          
-          // Check if user already has this asset in portfolio
-          const { data: existingPortfolio } = await supabaseAdmin
+      if (priceError || !priceData || !priceData.price) {
+        console.log(`[binary-auto-complete] Price not found by asset_id for ${trade.asset_symbol}, trying by symbol...`);
+        // Try alternative lookup by symbol if asset_id doesn't match
+        const { data: priceDataBySymbol, error: symbolError } = await supabaseAdmin
+          .from('price_history')
+          .select('price, asset_id')
+          .eq('asset_symbol', trade.asset_symbol.toUpperCase())
+          .eq('asset_type', trade.asset_type)
+          .single();
+        
+        if (symbolError) {
+          console.error(`[binary-auto-complete] Price lookup by symbol also failed for ${trade.asset_symbol}:`, symbolError);
+        } else if (priceDataBySymbol && priceDataBySymbol.price) {
+          console.log(`[binary-auto-complete] Found price by symbol for ${trade.asset_symbol}: ${priceDataBySymbol.price}, asset_id=${priceDataBySymbol.asset_id}`);
+          currentPrice = parseFloat(priceDataBySymbol.price);
+          correctAssetId = priceDataBySymbol.asset_id || trade.asset_id;
+        }
+      } else {
+        currentPrice = parseFloat(priceData.price);
+        correctAssetId = priceData.asset_id || trade.asset_id;
+        console.log(`[binary-auto-complete] Found price by asset_id for ${trade.asset_symbol}: ${currentPrice}`);
+      }
+
+      if (currentPrice && currentPrice > 0) {
+        // Calculate coin quantity from profitAmount (can be positive or negative)
+        // profitAmount includes both trade_amount and profit/loss
+        const coinQuantity = profitAmount / currentPrice;
+        console.log(`[binary-auto-complete] Calculated coinQuantity for ${trade.asset_symbol}: ${coinQuantity} (profitAmount=${profitAmount}, currentPrice=${currentPrice})`);
+        
+        // Check if user already has this asset in portfolio (try both asset_id and symbol)
+        let existingPortfolio = null;
+        
+        // First try with correct asset_id
+        const { data: portfolioByAssetId } = await supabaseAdmin
+          .from('portfolio')
+          .select('*')
+          .eq('user_id', trade.user_id)
+          .eq('asset_id', correctAssetId)
+          .eq('asset_type', trade.asset_type)
+          .maybeSingle();
+        
+        if (portfolioByAssetId) {
+          existingPortfolio = portfolioByAssetId;
+          console.log(`[binary-auto-complete] Found existing portfolio by asset_id for ${trade.asset_symbol}`);
+        } else {
+          // Try by symbol if asset_id doesn't match
+          const { data: portfolioBySymbol } = await supabaseAdmin
             .from('portfolio')
             .select('*')
             .eq('user_id', trade.user_id)
-            .eq('asset_id', trade.asset_id)
+            .eq('asset_symbol', trade.asset_symbol.toUpperCase())
             .eq('asset_type', trade.asset_type)
-            .single();
+            .maybeSingle();
+          
+          if (portfolioBySymbol) {
+            existingPortfolio = portfolioBySymbol;
+            console.log(`[binary-auto-complete] Found existing portfolio by symbol for ${trade.asset_symbol}`);
+          }
+        }
 
-          if (existingPortfolio) {
-            // Update existing portfolio entry
-            const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
-            const existingAveragePrice = parseFloat(existingPortfolio.average_price || 0);
-            const newQuantity = existingQuantity + coinQuantity;
+        if (existingPortfolio) {
+          // Update existing portfolio entry
+          const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
+          const existingAveragePrice = parseFloat(existingPortfolio.average_price || 0);
+          const newQuantity = existingQuantity + coinQuantity;
+          
+          console.log(`[binary-auto-complete] Updating existing portfolio: existingQuantity=${existingQuantity}, coinQuantity=${coinQuantity}, newQuantity=${newQuantity}`);
+          
+          // If quantity becomes zero or negative, remove the portfolio entry
+          if (newQuantity <= 0) {
+            const { error: deleteError } = await supabaseAdmin
+              .from('portfolio')
+              .delete()
+              .eq('id', existingPortfolio.id);
             
+            if (deleteError) {
+              console.error(`[binary-auto-complete] Error deleting portfolio entry:`, deleteError);
+            } else {
+              console.log(`[binary-auto-complete] Deleted portfolio entry for ${trade.asset_symbol} (quantity became ${newQuantity})`);
+            }
+          } else {
             // Calculate weighted average price
             const totalValue = (existingQuantity * existingAveragePrice) + profitAmount;
             const newAveragePrice = newQuantity > 0 ? totalValue / newQuantity : currentPrice;
@@ -176,9 +231,10 @@ export default async function handler(req, res) {
               ? ((currentPrice - newAveragePrice) / newAveragePrice) * 100 
               : 0;
 
-            await supabaseAdmin
+            const { error: updateError } = await supabaseAdmin
               .from('portfolio')
               .update({
+                asset_id: correctAssetId, // Update asset_id to correct one
                 quantity: newQuantity,
                 average_price: newAveragePrice,
                 current_price: currentPrice,
@@ -188,31 +244,49 @@ export default async function handler(req, res) {
                 updated_at: new Date().toISOString()
               })
               .eq('id', existingPortfolio.id);
-          } else {
-            // Create new portfolio entry
-            const totalValue = coinQuantity * currentPrice;
-            const profitLoss = 0; // New entry, no profit/loss yet
-            const profitLossPercent = 0;
-
-            await supabaseAdmin
-              .from('portfolio')
-              .insert({
-                user_id: trade.user_id,
-                asset_id: trade.asset_id,
-                asset_type: trade.asset_type,
-                asset_symbol: trade.asset_symbol,
-                asset_name: trade.asset_name,
-                quantity: coinQuantity,
-                average_price: currentPrice,
-                current_price: currentPrice,
-                total_value: totalValue,
-                profit_loss: profitLoss,
-                profit_loss_percent: profitLossPercent,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
+            
+            if (updateError) {
+              console.error(`[binary-auto-complete] Error updating portfolio for ${trade.asset_symbol}:`, updateError);
+            } else {
+              console.log(`[binary-auto-complete] Successfully updated portfolio for ${trade.asset_symbol}: quantity=${newQuantity}, totalValue=${newTotalValue}`);
+            }
           }
+        } else if (coinQuantity > 0) {
+          // Create new portfolio entry only if quantity is positive
+          const totalValue = coinQuantity * currentPrice;
+          const profitLoss = 0; // New entry, no profit/loss yet
+          const profitLossPercent = 0;
+
+          const { data: newPortfolio, error: insertError } = await supabaseAdmin
+            .from('portfolio')
+            .insert({
+              user_id: trade.user_id,
+              asset_id: correctAssetId,
+              asset_type: trade.asset_type,
+              asset_symbol: trade.asset_symbol.toUpperCase(),
+              asset_name: trade.asset_name,
+              quantity: coinQuantity,
+              average_price: currentPrice,
+              current_price: currentPrice,
+              total_value: totalValue,
+              profit_loss: profitLoss,
+              profit_loss_percent: profitLossPercent,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (insertError) {
+            console.error(`[binary-auto-complete] Error creating portfolio entry for ${trade.asset_symbol}:`, insertError);
+          } else {
+            console.log(`[binary-auto-complete] Successfully created portfolio entry for ${trade.asset_symbol}: quantity=${coinQuantity}, totalValue=${totalValue}, asset_id=${correctAssetId}`);
+          }
+        } else {
+          console.log(`[binary-auto-complete] Skipping portfolio update for ${trade.asset_symbol}: coinQuantity=${coinQuantity} (not positive)`);
         }
+      } else {
+        console.error(`[binary-auto-complete] No valid price found for ${trade.asset_symbol}. Cannot add to portfolio.`);
       }
     } catch (portfolioError) {
       // Log error but don't fail the trade completion
@@ -236,13 +310,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update trade' });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Trade completed successfully',
-      win_lost: winLost,
-      profit_amount: profitAmount,
-      last_price: lastPrice
-    });
+          return res.status(200).json({
+            success: true,
+            message: 'Trade completed successfully',
+            win_lost: winLost,
+            profit_amount: profitAmount,
+            last_price: lastPrice,
+            note: 'Profit added to portfolio as crypto asset, not to cash balance'
+          });
 
   } catch (error) {
     console.error('Binary trade auto-complete error:', error);
