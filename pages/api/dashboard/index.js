@@ -170,10 +170,26 @@ export default async function handler(req, res) {
     // 5. Open Positions (portfolio'dan pozitif quantity olanlar)
     const openPositions = (portfolio || []).filter(p => parseFloat(p.quantity) > 0);
 
-    // 6. KPIs hesapla
+    // 6. Earn Products Value - Get active subscriptions
+    let earnProductsValue = 0;
+    try {
+      const { data: subscriptions } = await supabaseAdmin
+        .from('earn_subscriptions')
+        .select('amount, status')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+      
+      if (subscriptions && subscriptions.length > 0) {
+        earnProductsValue = subscriptions.reduce((sum, sub) => sum + parseFloat(sub.amount || 0), 0);
+      }
+    } catch (err) {
+      console.error('Error fetching earn subscriptions:', err);
+    }
+
+    // 7. KPIs hesapla
     const portfolioValue = (portfolio || []).reduce((sum, p) => sum + parseFloat(p.total_value || 0), 0);
     const cashBalance = parseFloat(profile?.balance || 0);
-    const totalValue = portfolioValue + cashBalance;
+    const totalValue = portfolioValue + cashBalance + earnProductsValue;
 
     // 24h P&L hesapla (portfolio'daki profit_loss toplamı)
     const pnl24h = (portfolio || []).reduce((sum, p) => sum + parseFloat(p.profit_loss || 0), 0);

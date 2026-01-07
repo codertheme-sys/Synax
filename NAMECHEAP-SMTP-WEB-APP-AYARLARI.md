@@ -196,3 +196,4 @@ SMTP Password: [şifre]
 5. **Password email hesabının şifresi olmalı**
 
 
+

@@ -176,8 +176,8 @@ function WithdrawPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <Link href="/dashboard" style={{ color: '#60a5fa', textDecoration: 'none', fontSize: '14px' }}>
-            ← Back to Dashboard
+          <Link href="/home" style={{ color: '#60a5fa', textDecoration: 'none', fontSize: '14px' }}>
+            ← Back to Home
           </Link>
         </div>
       </main>

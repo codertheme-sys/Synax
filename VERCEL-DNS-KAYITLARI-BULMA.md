@@ -214,3 +214,4 @@ DNS kayıtlarının yayılıp yayılmadığını kontrol edin:
 4. **TTL değerini "Automatic" bırakabilirsiniz** - Namecheap otomatik ayarlar
 
 
+

@@ -14,3 +14,4 @@ SET trade_win_lost_mode = 'lost'
 WHERE trade_win_lost_mode IS NULL;
 
 
+

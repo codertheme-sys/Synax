@@ -1,0 +1,916 @@
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import Header from '../components/Header';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
+
+const cardStyle = {
+  borderRadius: '16px',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  background: 'rgba(15, 17, 36, 0.95)',
+  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+  backdropFilter: 'blur(8px)',
+};
+
+function AssetsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Data states
+  const [holdings, setHoldings] = useState([]);
+  const [recentDeposits, setRecentDeposits] = useState([]);
+  const [recentWithdrawals, setRecentWithdrawals] = useState([]);
+  const [allPayments, setAllPayments] = useState([]);
+  
+  // Modal states
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [depositCoin, setDepositCoin] = useState('');
+  const [depositNetwork, setDepositNetwork] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositReceipt, setDepositReceipt] = useState(null);
+  const [withdrawCoin, setWithdrawCoin] = useState('');
+  const [withdrawNetwork, setWithdrawNetwork] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+
+  const coins = ['USDT', 'BTC', 'ETH'];
+  const networks = {
+    USDT: ['Ethereum (ERC20)', 'Tron (TRC20)', 'Polygon', 'BSC (BEP20)'],
+    BTC: ['Bitcoin Network'],
+    ETH: ['Ethereum (ERC20)'],
+  };
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push('/login');
+          return;
+        }
+        setUser(session.user);
+
+        // Fetch dashboard data
+        const response = await fetch('/api/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            const data = result.data;
+
+            // Format holdings
+            const portfolioValue = data.kpis?.portfolioValue || 0;
+            const formattedHoldings = (data.holdings || []).map(h => {
+              const qty = parseFloat(h.quantity || 0);
+              const avgPrice = parseFloat(h.average_price || 0);
+              const currentPrice = parseFloat(h.current_price || 0);
+              const pnl = parseFloat(h.profit_loss_percent || 0);
+              const totalValue = parseFloat(h.total_value || 0);
+              const portfolioTotal = portfolioValue || 1;
+              const allocation = (totalValue / portfolioTotal) * 100;
+
+              return {
+                symbol: h.asset_symbol,
+                name: h.asset_name,
+                qty: h.asset_type === 'gold' ? `${qty.toFixed(2)} oz` : qty.toFixed(8),
+                avg: `$${avgPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                price: `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                pnl: `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%`,
+                alloc: `${allocation.toFixed(1)}%`,
+              };
+            });
+            setHoldings(formattedHoldings);
+
+            // Fetch recent deposits and withdrawals
+            const [depositsResult, withdrawalsResult] = await Promise.all([
+              supabase
+                .from('deposits')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(10),
+              supabase
+                .from('withdrawals')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(10)
+            ]);
+            
+            if (depositsResult.data) {
+              setRecentDeposits(depositsResult.data);
+            }
+            
+            if (withdrawalsResult.data) {
+              setRecentWithdrawals(withdrawalsResult.data);
+            }
+            
+            // Combine deposits and withdrawals for Payment Monitor
+            const combined = [
+              ...(depositsResult.data || []).map(d => ({ ...d, type: 'deposit' })),
+              ...(withdrawalsResult.data || []).map(w => ({ ...w, type: 'withdrawal' }))
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+            
+            setAllPayments(combined);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching assets data:', error);
+        toast.error('Failed to load assets data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0b0c1a 0%, #11142d 50%, #0b0c1a 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '12px',
+      }}>
+        <img
+          src="/images/logo.png"
+          alt="Synax"
+          style={{ width: '96px', height: 'auto', opacity: 0.9 }}
+        />
+        <div className="text-xl" style={{ fontSize: '22px', fontWeight: 700 }}>
+          Loading assets...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0b0c1a 0%, #11142d 50%, #0b0c1a 100%)',
+    }}>
+      <Header />
+      <main style={{
+        maxWidth: '1400px',
+        margin: '0 auto',
+        padding: '24px',
+        paddingTop: '120px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+      }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowDepositModal(true)}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 14px 0 rgba(139, 92, 246, 0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            Deposit
+          </button>
+          <button
+            onClick={() => setShowWithdrawModal(true)}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+            }}
+          >
+            Withdraw
+          </button>
+        </div>
+
+        {/* Holdings Section */}
+        <section style={{ 
+          width: '100%', 
+          display: 'block', 
+          marginBottom: '24px',
+          visibility: 'visible',
+          opacity: 1,
+          minHeight: '200px',
+        }}>
+          <div style={{
+            ...cardStyle,
+            padding: '16px',
+            border: '2px solid rgba(59, 130, 246, 0.3)',
+            boxShadow: '0 0 30px rgba(59, 130, 246, 0.15), inset 0 0 30px rgba(59, 130, 246, 0.05)',
+            visibility: 'visible',
+            opacity: 1,
+            display: 'block',
+          }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Holdings</h2>
+              <span className="text-xs text-gray-400">Allocation &amp; P/L</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(59, 130, 246, 0.3)' }}>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingLeft: '0', paddingRight: '12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Asset</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Qty</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Price</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>P&amp;L%</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '12px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Alloc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holdings.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                          No holdings yet. Start trading to see your assets here.
+                        </div>
+                        <Link href="/trade" style={{ 
+                          display: 'inline-block', 
+                          marginTop: '12px', 
+                          color: '#60a5fa', 
+                          textDecoration: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                        }}>
+                          Go to Trade →
+                        </Link>
+                      </td>
+                    </tr>
+                  ) : (
+                    holdings.map((h, idx) => (
+                    <tr
+                      key={h.symbol}
+                      style={{
+                        borderBottom: idx < holdings.length - 1 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingLeft: '0', paddingRight: '12px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>
+                        <span style={{ fontWeight: 700 }}>{h.symbol}</span>
+                      </td>
+                      <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '12px', color: '#d1d5db', fontWeight: 500 }}>{h.qty}</td>
+                      <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{h.price}</td>
+                      <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '13px', fontWeight: 800, color: '#4ade80', textShadow: '0 0 10px rgba(34, 197, 94, 0.5)' }}>{h.pnl}</td>
+                      <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{h.alloc}</td>
+                    </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Payment Monitor Section */}
+        <section style={{ 
+          width: '100%', 
+          display: 'block',
+          marginBottom: '24px',
+          visibility: 'visible',
+          opacity: 1,
+          minHeight: '200px',
+        }}>
+          <div style={{
+            ...cardStyle,
+            padding: '16px',
+            border: '2px solid rgba(34, 197, 94, 0.3)',
+            boxShadow: '0 0 30px rgba(34, 197, 94, 0.15), inset 0 0 30px rgba(34, 197, 94, 0.05)',
+            visibility: 'visible',
+            opacity: 1,
+            display: 'block',
+          }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Payment Monitor</h2>
+              <span className="text-xs text-gray-400">History</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(34, 197, 94, 0.3)' }}>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingLeft: '0', paddingRight: '10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Type</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Coin</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Amount</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Status</th>
+                    <th style={{ paddingTop: '8px', paddingBottom: '8px', paddingRight: '10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', textAlign: 'left' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allPayments.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                          No payments yet. Make a deposit or withdrawal to see your history here.
+                        </div>
+                        <button
+                          onClick={() => setShowDepositModal(true)}
+                          style={{ 
+                            display: 'inline-block', 
+                            marginTop: '12px', 
+                            color: '#4ade80', 
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Make Deposit →
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    allPayments.map((payment, idx) => {
+                      const date = new Date(payment.created_at);
+                      const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      
+                      // Parse coin for deposits
+                      let coin = 'N/A';
+                      if (payment.type === 'deposit') {
+                        if (payment.transaction_id) {
+                          const coinNetwork = payment.transaction_id.split(':');
+                          coin = coinNetwork[0] || payment.payment_provider || 'N/A';
+                        } else {
+                          coin = payment.payment_provider || 'N/A';
+                        }
+                      } else if (payment.type === 'withdrawal') {
+                        if (payment.admin_notes && payment.admin_notes.includes('Coin:')) {
+                          const coinMatch = payment.admin_notes.match(/Coin:\s*(\w+)/);
+                          coin = coinMatch ? coinMatch[1] : 'N/A';
+                        } else {
+                          coin = payment.payment_method === 'crypto' ? 'Crypto' : 'USD';
+                        }
+                      }
+                      
+                      const status = payment.status || 'pending';
+                      const isDeposit = payment.type === 'deposit';
+                      
+                      return (
+                        <tr
+                          key={`${payment.type}-${payment.id}`}
+                          style={{
+                            borderBottom: idx < allPayments.length - 1 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDeposit ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingLeft: '0', paddingRight: '10px', fontSize: '12px', fontWeight: 700, color: isDeposit ? '#4ade80' : '#ef4444' }}>
+                            {isDeposit ? 'Deposit' : 'Withdrawal'}
+                          </td>
+                          <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingLeft: '0', paddingRight: '10px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>
+                            {coin}
+                          </td>
+                          <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '10px', fontSize: '12px', color: '#d1d5db', fontWeight: 500 }}>
+                            ${parseFloat(payment.amount || 0).toFixed(8)}
+                          </td>
+                          <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '10px', fontSize: '12px' }}>
+                            <span
+                              style={{
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                background: status === 'completed' ? 'rgba(34, 197, 94, 0.2)' : status === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(251, 191, 36, 0.2)',
+                                color: status === 'completed' ? '#4ade80' : status === 'rejected' ? '#f87171' : '#fbbf24',
+                                border: `1px solid ${status === 'completed' ? 'rgba(34, 197, 94, 0.4)' : status === 'rejected' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(251, 191, 36, 0.4)'}`,
+                              }}
+                            >
+                              {status === 'completed' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Pending'}
+                            </span>
+                          </td>
+                          <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '10px', fontSize: '12px', color: '#9ca3af', fontWeight: 500 }}>{formattedDate}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Deposit Modal - Copy from home.js */}
+      {showDepositModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowDepositModal(false)}
+        >
+          <div
+            style={{
+              ...cardStyle,
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Deposit crypto to your account</h2>
+              <button
+                onClick={() => setShowDepositModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session?.access_token) {
+                    toast.error('Please login again');
+                    return;
+                  }
+
+                  // Upload receipt first
+                  let receiptUrl = null;
+                  if (depositReceipt) {
+                    const formData = new FormData();
+                    formData.append('file', depositReceipt);
+                    
+                    const uploadResponse = await fetch('/api/deposit/upload-receipt', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                      },
+                      body: formData,
+                    });
+
+                    if (!uploadResponse.ok) {
+                      throw new Error('Failed to upload receipt');
+                    }
+
+                    const uploadResult = await uploadResponse.json();
+                    receiptUrl = uploadResult.url;
+                  }
+
+                  const response = await fetch('/api/deposit/create', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      coin: depositCoin,
+                      network: depositNetwork,
+                      amount: parseFloat(depositAmount),
+                      receipt_url: receiptUrl,
+                    }),
+                  });
+
+                  const result = await response.json();
+                  
+                  if (result.success) {
+                    toast.success('Deposit request submitted successfully!');
+                    setShowDepositModal(false);
+                    setDepositCoin('');
+                    setDepositNetwork('');
+                    setDepositAmount('');
+                    setDepositReceipt(null);
+                    window.location.reload();
+                  } else {
+                    throw new Error(result.error || 'Failed to submit deposit');
+                  }
+                } catch (error) {
+                  console.error('Deposit error:', error);
+                  toast.error(error.message || 'Failed to submit deposit request. Please try again.');
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  SELECT COIN *
+                </label>
+                <select
+                  value={depositCoin}
+                  onChange={(e) => {
+                    setDepositCoin(e.target.value);
+                    setDepositNetwork('');
+                  }}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(15, 17, 36, 0.95)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
+                  {coins.map((coin) => (
+                    <option key={coin} value={coin} style={{ background: '#0f1124', color: '#ffffff' }}>
+                      {coin}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {depositCoin && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                    SELECT NETWORK *
+                  </label>
+                  <select
+                    value={depositNetwork}
+                    onChange={(e) => setDepositNetwork(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(15, 17, 36, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      fontSize: '15px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
+                    {networks[depositCoin]?.map((network) => (
+                      <option key={network} value={network} style={{ background: '#0f1124', color: '#ffffff' }}>
+                        {network}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  Amount ($) *
+                </label>
+                <input
+                  type="number"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  required
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  Transaction receipt *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setDepositReceipt(e.target.files[0])}
+                    required
+                    id="deposit-receipt-input"
+                    style={{
+                      position: 'absolute',
+                      opacity: 0,
+                      width: 0,
+                      height: 0,
+                    }}
+                  />
+                  <label
+                    htmlFor="deposit-receipt-input"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {depositReceipt ? depositReceipt.name : 'Select File'}
+                  </label>
+                </div>
+              </div>
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                }}
+              >
+                Submit
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal - Copy from home.js */}
+      {showWithdrawModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowWithdrawModal(false)}
+        >
+          <div
+            style={{
+              ...cardStyle,
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Withdraw crypto to your external wallet</h2>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session?.access_token) {
+                    toast.error('Please login again');
+                    return;
+                  }
+
+                  const response = await fetch('/api/withdraw/create', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      coin: withdrawCoin,
+                      network: withdrawNetwork,
+                      address: withdrawAddress,
+                      amount: parseFloat(withdrawAmount),
+                    }),
+                  });
+
+                  const result = await response.json();
+                  
+                  if (result.success) {
+                    toast.success('Withdrawal request submitted successfully! Your withdrawal request will be processed within 24 hours.', {
+                      duration: 5000,
+                    });
+                    setShowWithdrawModal(false);
+                    setWithdrawCoin('');
+                    setWithdrawNetwork('');
+                    setWithdrawAddress('');
+                    setWithdrawAmount('');
+                    window.location.reload();
+                  } else {
+                    throw new Error(result.error || 'Failed to submit withdrawal');
+                  }
+                } catch (error) {
+                  console.error('Withdrawal error:', error);
+                  toast.error(error.message || 'Failed to submit withdrawal request. Please try again.');
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  SELECT COIN *
+                </label>
+                <select
+                  value={withdrawCoin}
+                  onChange={(e) => {
+                    setWithdrawCoin(e.target.value);
+                    setWithdrawNetwork('');
+                  }}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(15, 17, 36, 0.95)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
+                  {coins.map((coin) => (
+                    <option key={coin} value={coin} style={{ background: '#0f1124', color: '#ffffff' }}>
+                      {coin}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {withdrawCoin && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                    SELECT NETWORK *
+                  </label>
+                  <select
+                    value={withdrawNetwork}
+                    onChange={(e) => setWithdrawNetwork(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(15, 17, 36, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      fontSize: '15px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
+                    {networks[withdrawCoin]?.map((network) => (
+                      <option key={network} value={network} style={{ background: '#0f1124', color: '#ffffff' }}>
+                        {network}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  WALLET ADDRESS *
+                </label>
+                <input
+                  type="text"
+                  value={withdrawAddress}
+                  onChange={(e) => setWithdrawAddress(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                  placeholder="Enter wallet address"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  Amount ($) *
+                </label>
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  required
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <button
+                type="submit"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                }}
+              >
+                Submit
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AssetsPage;
+

@@ -125,10 +125,12 @@ export default function Header() {
   };
 
   const pageNames = {
-    '/dashboard': 'Dashboard',
+    '/home': 'Home',
+    '/dashboard': 'Home', // Legacy support
     '/trade': 'Trade',
     '/earn': 'Earn',
     '/portfolio': 'Portfolio',
+    '/assets': 'Assets',
     '/login': 'Login',
     '/signup': 'Sign Up',
     '/deposit': 'Deposit',
@@ -188,10 +190,10 @@ export default function Header() {
             justifyContent: 'center',
             flex: 1
           }}>
-              <Link href="/dashboard" style={navLinkStyle('/dashboard')}>Dashboard</Link>
+              <Link href="/home" style={navLinkStyle('/home')}>Home</Link>
               <Link href="/trade" style={navLinkStyle('/trade')}>Trade</Link>
               <Link href="/earn" style={navLinkStyle('/earn')}>Earn</Link>
-              <Link href="/portfolio" style={{...navLinkStyle('/portfolio'), borderBottom: 'none'}}>Portfolio</Link>
+              <Link href="/assets" style={{...navLinkStyle('/assets'), borderBottom: 'none'}}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" style={navLinkStyle('/admin')}>Admin Panel</Link>
               )}
@@ -362,10 +364,10 @@ export default function Header() {
         {isMobile && mobileMenuOpen && (
           <div className="border-t border-white/10 mt-4 pt-4 pb-4">
             <div className="flex flex-col gap-3">
-              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/dashboard' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Dashboard</Link>
+              <Link href="/home" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/home' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Home</Link>
               <Link href="/trade" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/trade' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Trade</Link>
               <Link href="/earn" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/earn' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Earn</Link>
-              <Link href="/portfolio" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/portfolio' ? '#ffffff' : '#d1d5db', fontWeight: 600, textDecoration: 'none', borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Portfolio</Link>
+              <Link href="/assets" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/assets' ? '#ffffff' : '#d1d5db', fontWeight: 600, textDecoration: 'none', borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/admin' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Admin Panel</Link>
               )}

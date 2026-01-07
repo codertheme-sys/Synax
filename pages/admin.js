@@ -1053,7 +1053,7 @@ function AdminPage() {
             </h1>
           </div>
           <Link
-            href="/dashboard"
+            href="/home"
             style={{
               padding: '12px 24px',
               borderRadius: '10px',
@@ -1065,7 +1065,7 @@ function AdminPage() {
               textDecoration: 'none',
             }}
           >
-            Back to Dashboard
+            Back to Home
           </Link>
         </div>
 

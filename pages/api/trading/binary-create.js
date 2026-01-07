@@ -137,6 +137,78 @@ export default async function handler(req, res) {
                 .update({ balance: newBalance })
                 .eq('id', user.id);
 
+              // Add profitAmount as coin to portfolio
+              try {
+                const { data: priceData } = await supabaseAdmin
+                  .from('price_history')
+                  .select('price')
+                  .eq('asset_id', tradeDetails.asset_id)
+                  .eq('asset_type', tradeDetails.asset_type)
+                  .single();
+
+                if (priceData && priceData.price) {
+                  const currentPrice = parseFloat(priceData.price);
+                  if (currentPrice > 0 && profitAmount > 0) {
+                    const coinQuantity = profitAmount / currentPrice;
+                    
+                    const { data: existingPortfolio } = await supabaseAdmin
+                      .from('portfolio')
+                      .select('*')
+                      .eq('user_id', user.id)
+                      .eq('asset_id', tradeDetails.asset_id)
+                      .eq('asset_type', tradeDetails.asset_type)
+                      .single();
+
+                    if (existingPortfolio) {
+                      const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
+                      const existingAveragePrice = parseFloat(existingPortfolio.average_price || 0);
+                      const newQuantity = existingQuantity + coinQuantity;
+                      const totalValue = (existingQuantity * existingAveragePrice) + profitAmount;
+                      const newAveragePrice = newQuantity > 0 ? totalValue / newQuantity : currentPrice;
+                      const newTotalValue = newQuantity * currentPrice;
+                      const profitLoss = newTotalValue - (newQuantity * newAveragePrice);
+                      const profitLossPercent = newAveragePrice > 0 
+                        ? ((currentPrice - newAveragePrice) / newAveragePrice) * 100 
+                        : 0;
+
+                      await supabaseAdmin
+                        .from('portfolio')
+                        .update({
+                          quantity: newQuantity,
+                          average_price: newAveragePrice,
+                          current_price: currentPrice,
+                          total_value: newTotalValue,
+                          profit_loss: profitLoss,
+                          profit_loss_percent: profitLossPercent,
+                          updated_at: now
+                        })
+                        .eq('id', existingPortfolio.id);
+                    } else {
+                      const totalValue = coinQuantity * currentPrice;
+                      await supabaseAdmin
+                        .from('portfolio')
+                        .insert({
+                          user_id: user.id,
+                          asset_id: tradeDetails.asset_id,
+                          asset_type: tradeDetails.asset_type,
+                          asset_symbol: tradeDetails.asset_symbol,
+                          asset_name: tradeDetails.asset_name,
+                          quantity: coinQuantity,
+                          average_price: currentPrice,
+                          current_price: currentPrice,
+                          total_value: totalValue,
+                          profit_loss: 0,
+                          profit_loss_percent: 0,
+                          created_at: now,
+                          updated_at: now
+                        });
+                    }
+                  }
+                }
+              } catch (portfolioError) {
+                console.error('Error updating portfolio:', portfolioError);
+              }
+
               // Update trade
               await supabaseAdmin
                 .from('binary_trades')

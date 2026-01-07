@@ -196,7 +196,7 @@ function LoginPage() {
         setPassword('');
         // Wait a bit before redirect to ensure session is set
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/home');
         }, 500);
       } else {
         toast.error('Login failed. Please try again.');

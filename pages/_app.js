@@ -26,6 +26,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 
 function MyApp({ Component, pageProps }) {
@@ -370,6 +371,34 @@ function MyApp({ Component, pageProps }) {
         <link rel="canonical" href="https://synax.vip/" />
       </Head>
       <Component {...pageProps} />
+      {/* Floating Contact Icon */}
+      <Link
+        href="/contact"
+        aria-label="Contact"
+        style={{
+          position: 'fixed',
+          right: '20px',
+          bottom: '20px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '9999px',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+          boxShadow: '0 10px 25px rgba(59, 130, 246, 0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontSize: '22px',
+          fontWeight: 800,
+          textDecoration: 'none',
+          zIndex: 9999,
+          border: '1px solid rgba(255,255,255,0.25)',
+          cursor: 'pointer',
+        }}
+        title="Contact"
+      >
+        ✉️
+      </Link>
       <Toaster
         position="top-right"
         toastOptions={{
