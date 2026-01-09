@@ -122,7 +122,7 @@ export default async function handler(req, res) {
     const allPaymentUserIds = [...new Set([...depositUserIds, ...withdrawalUserIds])];
     
     const { data: paymentUserProfiles } = allPaymentUserIds.length > 0 
-      ? await supabaseAdmin.from('profiles').select('id, email, full_name').in('id', allPaymentUserIds)
+      ? await supabaseAdmin.from('profiles').select('id, email, full_name, user_name').in('id', allPaymentUserIds)
       : { data: [] };
 
     const paymentUserMap = {};
@@ -130,10 +130,10 @@ export default async function handler(req, res) {
       paymentUserMap[u.id] = u;
     });
 
-    // Helper function to add email to deposits/withdrawals
+    // Helper function to add email and username to deposits/withdrawals
     const addEmailToItems = (items) => {
       return items?.map(item => {
-        const userProfile = paymentUserMap[item.user_id] || { email: item.user_id, full_name: null };
+        const userProfile = paymentUserMap[item.user_id] || { email: item.user_id, full_name: null, user_name: null };
         return {
           ...item,
           profiles: userProfile
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     // Fetch user emails for trades
     const tradeUserIds = [...new Set(recentTrades?.map(t => t.user_id) || [])];
     const { data: tradeUserProfiles } = tradeUserIds.length > 0 
-      ? await supabaseAdmin.from('profiles').select('id, email, full_name').in('id', tradeUserIds)
+      ? await supabaseAdmin.from('profiles').select('id, email, full_name, user_name').in('id', tradeUserIds)
       : { data: [] };
 
     const tradeUserMap = {};
@@ -186,18 +186,18 @@ export default async function handler(req, res) {
 
     const tradesSpotWithEmail = recentTrades?.map(t => ({
       ...t,
-      profiles: tradeUserMap[t.user_id] || { email: t.user_id }
+      profiles: tradeUserMap[t.user_id] || { email: t.user_id, user_name: null }
     })) || [];
 
     const binaryUserIds = [...new Set(recentBinary?.map(t => t.user_id) || [])];
     const { data: binaryUserProfiles } = binaryUserIds.length
-      ? await supabaseAdmin.from('profiles').select('id,email,full_name').in('id', binaryUserIds)
+      ? await supabaseAdmin.from('profiles').select('id,email,full_name,user_name').in('id', binaryUserIds)
       : { data: [] };
     const binaryUserMap = {};
     (binaryUserProfiles || []).forEach(u => { binaryUserMap[u.id] = u; });
     const binaryWithEmail = (recentBinary || []).map(t => ({
       ...normalizeBinary(t),
-      profiles: binaryUserMap[t.user_id] || { email: t.user_id }
+      profiles: binaryUserMap[t.user_id] || { email: t.user_id, user_name: null }
     }));
 
     const tradesWithEmail = [...tradesSpotWithEmail, ...binaryWithEmail]

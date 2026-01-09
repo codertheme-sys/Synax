@@ -157,7 +157,7 @@ function ContactMessageCard({ message, onUpdate }) {
             </span>
           </div>
           <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '4px' }}>
-            <strong style={{ color: '#ffffff' }}>From:</strong> {message.full_name} ({message.email})
+            <strong style={{ color: '#ffffff' }}>From:</strong> {message.username || message.user_name || message.full_name || 'N/A'} ({message.email})
           </div>
           <div style={{ fontSize: '12px', color: '#6b7280' }}>
             {new Date(message.created_at).toLocaleString()}
@@ -362,6 +362,7 @@ function ContactMessageCard({ message, onUpdate }) {
 }
 
 export default ContactMessageCard;
+
 
 
 

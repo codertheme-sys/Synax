@@ -198,6 +198,8 @@ function AdminPage() {
         asset_symbol: t.asset_symbol,
         quantity: t.trade_amount, // Use trade_amount as quantity
         price: t.initial_price,
+        time_frame: t.time_frame, // Keep time_frame for binary trades
+        win_lost: t.win_lost, // Keep win_lost for binary trades
       }));
       const allTrades = [...spotTrades, ...binaryTradesData].sort((a, b) => 
         new Date(b.created_at) - new Date(a.created_at)
@@ -575,7 +577,7 @@ function AdminPage() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Email</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Full Name</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>User Name</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Balance</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>KYC Status</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Joined</th>
@@ -587,7 +589,7 @@ function AdminPage() {
                     {allUsers.map((user) => (
                       <tr key={user.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{user.email || 'N/A'}</td>
-                        <td style={{ padding: '12px', color: '#ffffff' }}>{user.full_name || 'N/A'}</td>
+                        <td style={{ padding: '12px', color: '#ffffff' }}>{user.username || user.user_name || 'N/A'}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(user.balance || 0).toFixed(2)}</td>
                         <td style={{ padding: '12px' }}>
                           <span style={{
@@ -694,7 +696,8 @@ function AdminPage() {
                 <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>User</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>User Name</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Email</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Side</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Asset</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Time Frame</th>
@@ -707,10 +710,15 @@ function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {binaryTrades.map((trade) => (
+                    {binaryTrades.map((trade) => {
+                      const user = allUsers.find(u => u.id === trade.user_id);
+                      return (
                       <tr key={trade.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <td style={{ padding: '12px', color: '#ffffff' }}>
-                          {allUsers.find(u => u.id === trade.user_id)?.email || trade.user_id?.substring(0, 8) || 'N/A'}
+                          {user?.username || user?.user_name || 'N/A'}
+                        </td>
+                        <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
+                          {user?.email || trade.user_id?.substring(0, 8) || 'N/A'}
                         </td>
                         <td style={{ padding: '12px' }}>
                           <span style={{
@@ -761,7 +769,8 @@ function AdminPage() {
                           — {/* No actions needed - trades are auto-approved */}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
                 {binaryTrades.length === 0 && (
@@ -1017,7 +1026,7 @@ function AdminPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>User Details: {selectedUser.email || selectedUser.id}</h2>
+              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>User Details: {selectedUser.username || selectedUser.user_name || selectedUser.email || selectedUser.id}</h2>
               <button
                 onClick={() => setShowUserDetails(false)}
                 style={{
@@ -1225,8 +1234,9 @@ function AdminPage() {
                           <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Type</th>
                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Asset</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Quantity</th>
-                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Price</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Trade Amount</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Status</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Time Frame</th>
                             <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Date</th>
                           </tr>
                         </thead>
@@ -1239,15 +1249,33 @@ function AdminPage() {
                                   borderRadius: '6px',
                                   fontSize: '11px',
                                   fontWeight: 600,
-                                  background: trade.trade_type === 'buy' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                  color: trade.trade_type === 'buy' ? '#4ade80' : '#f87171',
+                                  background: trade.trade_type === 'buy' || trade.side === 'buy' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: trade.trade_type === 'buy' || trade.side === 'buy' ? '#4ade80' : '#f87171',
                                 }}>
-                                  {trade.trade_type?.toUpperCase() || 'N/A'}
+                                  {trade.trade_type?.toUpperCase() || trade.side?.toUpperCase() || 'N/A'}
                                 </span>
                               </td>
                               <td style={{ padding: '12px', color: '#ffffff' }}>{trade.asset_symbol || 'N/A'}</td>
-                              <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(trade.quantity || 0).toFixed(8)}</td>
-                              <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(trade.price || 0).toFixed(2)}</td>
+                              <td style={{ padding: '12px', color: '#ffffff' }}>
+                                {trade.trade_amount ? `$${parseFloat(trade.trade_amount).toFixed(2)}` : trade.quantity ? `${parseFloat(trade.quantity).toFixed(8)}` : 'N/A'}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                {trade.win_lost ? (
+                                  <span style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    background: trade.win_lost === 'win' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: trade.win_lost === 'win' ? '#4ade80' : '#f87171',
+                                  }}>
+                                    {trade.win_lost.toUpperCase()}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                              <td style={{ padding: '12px', color: '#ffffff' }}>
+                                {trade.time_frame ? `${trade.time_frame}s` : '—'}
+                              </td>
                               <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
                                 {trade.created_at ? new Date(trade.created_at).toLocaleDateString() : 'N/A'}
                               </td>

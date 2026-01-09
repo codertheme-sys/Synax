@@ -288,7 +288,7 @@ export default function ContactPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Full Name *
+                  User Name *
                 </label>
                 <input
                   type="text"
@@ -306,7 +306,7 @@ export default function ContactPage() {
                     outline: 'none',
                     transition: 'all 0.2s',
                   }}
-                  placeholder="Enter your full name"
+                  placeholder="Enter your user name"
                   onFocus={(e) => {
                     e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
                     e.target.style.background = 'rgba(255, 255, 255, 0.08)';

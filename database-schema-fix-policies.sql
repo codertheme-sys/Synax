@@ -124,3 +124,4 @@ GRANT ALL ON public.kyc_documents TO authenticated;
 
 
 
+

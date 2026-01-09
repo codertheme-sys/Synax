@@ -160,3 +160,4 @@ CREATE POLICY "Admins can update all binary trades" ON binary_trades
 
 
 
+

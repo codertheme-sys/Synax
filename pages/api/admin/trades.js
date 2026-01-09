@@ -83,14 +83,14 @@ export default async function handler(req, res) {
       ...(binaryTrades || []).map(normalizeBinary),
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 100);
 
-    // Attach user emails
+    // Attach user emails and usernames
     const userIds = [...new Set(combined.map(t => t.user_id).filter(Boolean))];
     const { data: userProfiles } = userIds.length
-      ? await supabaseAdmin.from('profiles').select('id,email,full_name').in('id', userIds)
+      ? await supabaseAdmin.from('profiles').select('id,email,full_name,user_name').in('id', userIds)
       : { data: [] };
     const userMap = {};
     (userProfiles || []).forEach(u => { userMap[u.id] = u; });
-    const withEmails = combined.map(t => ({ ...t, profiles: userMap[t.user_id] || { email: t.user_id } }));
+    const withEmails = combined.map(t => ({ ...t, profiles: userMap[t.user_id] || { email: t.user_id, user_name: null } }));
 
     return res.status(200).json({ success: true, data: withEmails });
   } catch (error) {

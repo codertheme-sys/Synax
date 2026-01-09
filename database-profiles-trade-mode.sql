@@ -42,3 +42,4 @@ WHERE trade_win_lost_mode IS NULL;
 
 
 
+

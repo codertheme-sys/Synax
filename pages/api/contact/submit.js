@@ -31,7 +31,9 @@ export default async function handler(req, res) {
 
     // Insert contact message into database
     const insertData = {
-      full_name: name.trim(),
+      full_name: name.trim(), // Keep for backward compatibility
+      username: name.trim(), // Store as username
+      user_name: name.trim(), // Alternative field name
       email: email.trim().toLowerCase(),
       subject: subject.trim(),
       message: message.trim(),
