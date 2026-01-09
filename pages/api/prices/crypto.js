@@ -21,24 +21,31 @@ export default async function handler(req, res) {
       .eq('asset_type', 'crypto')
       .eq('is_active', true);
 
-    // Cache kontrolü
-    const cacheKey = ids || 'all';
-    const { data: cachedData } = await supabaseAdmin
-      .from('price_history')
-      .select('*')
-      .eq('asset_id', cacheKey)
-      .eq('asset_type', 'crypto')
-      .single();
-
-    const now = new Date();
-    const cacheTime = cachedData?.last_updated 
-      ? new Date(cachedData.last_updated) 
-      : null;
+    // Cache kontrolü - sadece belirli coin'ler için (ids varsa)
+    // Tüm coin'ler için cache kullanmıyoruz çünkü her seferinde güncel veri çekmek daha iyi
+    let cachedData = null;
+    let isCacheValid = false;
     
-    const isCacheValid = cacheTime && 
-      (now - cacheTime) < (CACHE_DURATION * 60 * 1000);
+    if (ids) {
+      // Belirli coin'ler isteniyorsa cache kontrolü yap
+      const cacheKey = ids;
+      const { data: cached } = await supabaseAdmin
+        .from('price_history')
+        .select('*')
+        .eq('asset_id', cacheKey)
+        .eq('asset_type', 'crypto')
+        .maybeSingle();
 
-    if (isCacheValid && cachedData) {
+      if (cached) {
+        const now = new Date();
+        const cacheTime = cached.last_updated ? new Date(cached.last_updated) : null;
+        isCacheValid = cacheTime && (now - cacheTime) < (CACHE_DURATION * 60 * 1000);
+        cachedData = cached;
+      }
+    }
+
+    // Cache geçerliyse ve belirli coin isteniyorsa cache'den dön
+    if (isCacheValid && cachedData && ids) {
       return res.status(200).json({
         success: true,
         data: [{
@@ -57,6 +64,8 @@ export default async function handler(req, res) {
         cached: true
       });
     }
+    
+    // Cache yoksa veya geçersizse yeni veri çek
 
     // Fetch prices from multiple sources (Binance + CoinGecko)
     let allData;
