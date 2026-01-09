@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Header from '../components/Header';
 
@@ -106,6 +107,7 @@ const faqs = [
 ];
 
 export default function FAQPage() {
+  const router = useRouter();
   const [openIndex, setOpenIndex] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -117,9 +119,19 @@ export default function FAQPage() {
       };
       checkMobile();
       window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
+      
+      // Listen for Profile Settings modal open event from Header
+      const handleOpenProfileModal = () => {
+        router.push('/home?openProfile=true');
+      };
+      window.addEventListener('openProfileModal', handleOpenProfileModal);
+      
+      return () => {
+        window.removeEventListener('resize', checkMobile);
+        window.removeEventListener('openProfileModal', handleOpenProfileModal);
+      };
     }
-  }, []);
+  }, [router]);
 
   const toggle = (idx) => {
     setOpenIndex(openIndex === idx ? null : idx);
@@ -155,7 +167,7 @@ export default function FAQPage() {
             paddingLeft: isMobile ? '0' : '0',
             paddingRight: isMobile ? '0' : '0'
           }}>
-            Answers about trading, Earn, security, onboarding, and account management on Synax.
+            Find answers to common questions about Synax
           </p>
         </div>
 

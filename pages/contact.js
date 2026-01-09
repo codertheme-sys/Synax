@@ -1,5 +1,6 @@
 // pages/contact.js - Contact Page
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ const cardStyle = {
 };
 
 export default function ContactPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,6 +25,15 @@ export default function ContactPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Listen for Profile Settings modal open event from Header
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      router.push('/home?openProfile=true');
+    };
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    return () => window.removeEventListener('openProfileModal', handleOpenProfileModal);
+  }, [router]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -521,4 +532,5 @@ export default function ContactPage() {
     </div>
   );
 }
+
 

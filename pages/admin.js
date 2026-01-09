@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
@@ -147,7 +148,7 @@ function ContactMessageCard({ message, onUpdate }) {
           toast.error(`Reply saved but email failed: ${emailResult.warning || 'Unknown error'}`);
         }
       } catch (emailError) {
-        // Email gönderimi başarısız olsa bile reply kaydedildi
+        // Email gÃ¶nderimi baÅŸarÄ±sÄ±z olsa bile reply kaydedildi
         console.error('Email sending exception:', emailError);
         setStatus('replied');
         setReplyText('');
@@ -757,7 +758,7 @@ function ReceiptViewer({ receiptUrl }) {
           gap: '6px',
         }}
       >
-        📄 View Receipt
+        ðŸ“„ View Receipt
       </a>
       {signedUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
         <img
@@ -781,6 +782,7 @@ function ReceiptViewer({ receiptUrl }) {
 }
 
 function AdminPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [adminData, setAdminData] = useState(null);
@@ -1102,7 +1104,7 @@ function AdminPage() {
                   <div style={{ ...cardStyle, padding: '24px', width: '250px', flexShrink: 0 }}>
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Active Users</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>{adminData.stats?.activeUsers || 0}</span>
-                  </div>
+                </div>
                   <div style={{ ...cardStyle, padding: '24px', width: '250px', flexShrink: 0 }}>
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Pending KYC</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>{adminData.stats?.pendingKyc || 0}</span>
@@ -1111,12 +1113,12 @@ function AdminPage() {
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Total Volume</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>${(adminData.stats?.totalVolume || 0).toLocaleString('en-US')}</span>
                   </div>
-                </div>
+            </div>
 
                 <div className="grid lg:grid-cols-2 gap-6 mb-6">
-                  <div style={{ ...cardStyle, padding: '28px' }}>
+              <div style={{ ...cardStyle, padding: '28px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Pending KYC</h2>
-                    <div className="space-y-3">
+                <div className="space-y-3">
                       {adminData.pendingKyc && Array.isArray(adminData.pendingKyc) && adminData.pendingKyc.length > 0 ? adminData.pendingKyc.map((user) => {
                         // Find KYC documents for this user
                         const userKycDocs = (adminData.pendingKycDocuments && Array.isArray(adminData.pendingKycDocuments)) 
@@ -1126,22 +1128,22 @@ function AdminPage() {
                         // Removed debug logs
                         
                         return (
-                          <div
-                            key={user.id}
-                            style={{
-                              padding: '16px',
-                              background: 'rgba(255, 255, 255, 0.05)',
-                              borderRadius: '10px',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                            }}
-                          >
+                    <div
+                      key={user.id}
+                      style={{
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: userKycDocs.length > 0 ? '12px' : '0' }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
                                   {user.email || user.id}
-                                </div>
+                        </div>
                                 <div style={{ fontSize: '12px', color: '#9ca3af' }}>Status: {user.kyc_status || 'pending'}</div>
-                              </div>
+                      </div>
                               <button
                                 onClick={async () => {
                                   try {
@@ -1187,13 +1189,13 @@ function AdminPage() {
                                     toast.error('Failed to approve KYC');
                                   }
                                 }}
-                                style={{
+                        style={{
                                   padding: '8px 16px',
                                   borderRadius: '8px',
                                   background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                                   color: '#ffffff',
                                   fontSize: '13px',
-                                  fontWeight: 600,
+                          fontWeight: 600,
                                   cursor: 'pointer',
                                   border: 'none',
                                 }}
@@ -1209,7 +1211,7 @@ function AdminPage() {
                                     <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                       <span style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'capitalize' }}>
                                         {doc.document_type?.replace(/_/g, ' ')}:
-                                      </span>
+                      </span>
                                       {doc.document_url && doc.document_url !== 'pending_upload' ? (
                                         <a
                                           href={doc.document_url}
@@ -1227,8 +1229,8 @@ function AdminPage() {
                                       ) : (
                                         <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Upload pending</span>
                                       )}
-                                    </div>
-                                  ))}
+                    </div>
+                  ))}
                                 </div>
                               ) : (
                                 <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>No documents uploaded</div>
@@ -1240,52 +1242,52 @@ function AdminPage() {
                         <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No pending KYC</div>
                       )}
                     </div>
-                  </div>
                 </div>
+              </div>
 
-                <div style={{ ...cardStyle, padding: '28px' }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Recent Trades</h2>
-                    <div className="space-y-3">
+              <div style={{ ...cardStyle, padding: '28px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Recent Trades</h2>
+                <div className="space-y-3">
                       {adminData.recentTrades && adminData.recentTrades.length > 0 ? adminData.recentTrades.map((trade) => (
-                        <div
-                          key={trade.id}
-                          style={{
-                            padding: '16px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div
+                      key={trade.id}
+                      style={{
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <span style={{ fontSize: '13px', color: '#9ca3af' }}>{trade.profiles?.email || trade.user_id}</span>
-                            <span
-                              style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 600,
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 600,
                                 background: trade.trade_type === 'buy' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                                 color: trade.trade_type === 'buy' ? '#4ade80' : '#f87171',
-                              }}
-                            >
+                          }}
+                        >
                               {trade.trade_type?.toUpperCase() || 'N/A'}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ffffff' }}>
-                            <span>
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ffffff' }}>
+                        <span>
                               {parseFloat(trade.quantity || 0).toFixed(4)} {trade.asset_symbol || 'N/A'}
-                            </span>
+                        </span>
                             <span style={{ fontWeight: 600 }}>${parseFloat(trade.price || 0).toFixed(2)}</span>
-                          </div>
+                      </div>
                           <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
                             {trade.created_at ? new Date(trade.created_at).toLocaleString() : 'N/A'}
-                          </div>
-                        </div>
+                    </div>
+                </div>
                       )) : (
                         <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No recent trades</div>
                       )}
-                    </div>
-                </div>
+              </div>
+            </div>
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No data available</div>
@@ -1458,7 +1460,7 @@ function AdminPage() {
                         <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(trade.trade_amount || 0).toFixed(2)}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(trade.initial_price || 0).toFixed(2)}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>
-                          {trade.last_price ? `$${parseFloat(trade.last_price).toFixed(2)}` : '—'}
+                          {trade.last_price ? `$${parseFloat(trade.last_price).toFixed(2)}` : 'â€”'}
                         </td>
                         <td style={{ padding: '12px' }}>
                           {trade.win_lost ? (
@@ -1472,7 +1474,7 @@ function AdminPage() {
                             }}>
                               {trade.win_lost.toUpperCase()}
                             </span>
-                          ) : '—'}
+                          ) : 'â€”'}
                         </td>
                         <td style={{ padding: '12px' }}>
                           <span style={{
@@ -1487,7 +1489,7 @@ function AdminPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
-                          — {/* No actions needed - trades are auto-approved */}
+                          â€” {/* No actions needed - trades are auto-approved */}
                         </td>
                       </tr>
                     ))}
@@ -1763,9 +1765,9 @@ function AdminPage() {
                   justifyContent: 'center',
                 }}
               >
-                ×
+                Ã—
               </button>
-            </div>
+    </div>
 
             {loadingUserDetails ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading...</div>
@@ -2137,4 +2139,7 @@ function AdminPage() {
 }
 
 export default AdminPage;
+
+
+
 

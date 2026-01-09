@@ -21,6 +21,14 @@ function MiningPage() {
       }
     };
     checkUser();
+    
+    // Listen for Profile Settings modal open event from Header
+    const handleOpenProfileModal = () => {
+      router.push('/home?openProfile=true');
+    };
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    
+    return () => window.removeEventListener('openProfileModal', handleOpenProfileModal);
   }, [router]);
 
   if (!mounted) {
@@ -75,4 +83,6 @@ function MiningPage() {
 }
 
 export default MiningPage;
+
+
 

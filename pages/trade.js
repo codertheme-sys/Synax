@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Header from '../components/Header';
 import toast from 'react-hot-toast';
@@ -137,10 +138,10 @@ function OrderBook({ symbol }) {
   }, [symbol]);
 
   if (loading) {
-    return (
+  return (
       <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>
         Loading order book...
-      </div>
+        </div>
     );
   }
 
@@ -203,18 +204,18 @@ function OrderBook({ symbol }) {
           </div>
           <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
             <table style={{ width: '100%', fontSize: '11px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
                   <th style={{ padding: '6px', textAlign: 'left', color: '#9ca3af', fontWeight: 600 }}>Price</th>
                   <th style={{ padding: '6px', textAlign: 'right', color: '#9ca3af', fontWeight: 600 }}>Quantity</th>
                   <th style={{ padding: '6px', textAlign: 'right', color: '#9ca3af', fontWeight: 600 }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
+                    </tr>
+                  </thead>
+                  <tbody>
                 {orderBook.bids.map((bid, idx) => (
-                  <tr 
+                      <tr
                     key={idx} 
-                    style={{ 
+                        style={{
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                       position: 'relative'
                     }}
@@ -227,7 +228,7 @@ function OrderBook({ symbol }) {
                       zIndex: 1
                     }}>
                       ${bid.price.toFixed(2)}
-                    </td>
+                        </td>
                     <td style={{ 
                       padding: '6px', 
                       color: '#ffffff', 
@@ -236,7 +237,7 @@ function OrderBook({ symbol }) {
                       zIndex: 1
                     }}>
                       {bid.quantity.toFixed(8)}
-                    </td>
+                        </td>
                     <td style={{ 
                       padding: '6px', 
                       color: '#ffffff', 
@@ -245,7 +246,7 @@ function OrderBook({ symbol }) {
                       zIndex: 1
                     }}>
                       ${bid.total.toFixed(2)}
-                    </td>
+                        </td>
                     {/* Depth visualization */}
                     <td style={{
                       position: 'absolute',
@@ -257,12 +258,12 @@ function OrderBook({ symbol }) {
                       zIndex: 0,
                       pointerEvents: 'none'
                     }} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
         {/* Asks (Sell Orders) */}
         <div style={{ flex: 1 }}>
@@ -274,7 +275,7 @@ function OrderBook({ symbol }) {
             textAlign: 'center'
           }}>
             ASKS (SELL)
-          </div>
+                      </div>
           <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
             <table style={{ width: '100%', fontSize: '11px' }}>
               <thead>
@@ -335,8 +336,8 @@ function OrderBook({ symbol }) {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
+                  </div>
+                </div>
       </div>
     </div>
   );
@@ -502,7 +503,7 @@ function AlertsManager({ userId, selectedAsset }) {
             No alerts for {selectedAsset}
           </div>
         ) : (
-          <div>
+                <div>
             {filteredAlerts.map((alert) => (
               <div
                 key={alert.id}
@@ -539,11 +540,11 @@ function AlertsManager({ userId, selectedAsset }) {
                 >
                   Delete
                 </button>
-              </div>
-            ))}
-          </div>
+                      </div>
+                    ))}
+                  </div>
         )}
-      </div>
+                </div>
 
       {/* Create Alert Modal */}
       {showCreateModal && (
@@ -580,7 +581,7 @@ function AlertsManager({ userId, selectedAsset }) {
               <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>
                 Asset: {selectedAsset}
               </label>
-            </div>
+              </div>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px' }}>
@@ -635,38 +636,38 @@ function AlertsManager({ userId, selectedAsset }) {
                   fontSize: '14px',
                 }}
               />
-            </div>
+          </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
+                <button
                 onClick={() => setShowCreateModal(false)}
-                style={{
+                  style={{
                   flex: 1,
-                  padding: '12px',
+                    padding: '12px',
                   borderRadius: '8px',
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
                 Cancel
-              </button>
-              <button
+                </button>
+                <button
                 onClick={handleCreateAlert}
                 disabled={creating || !conditionValue}
-                style={{
+                  style={{
                   flex: 1,
-                  padding: '12px',
+                    padding: '12px',
                   borderRadius: '8px',
                   background: creating || !conditionValue 
                     ? 'rgba(59, 130, 246, 0.5)' 
                     : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                   border: 'none',
                   color: '#ffffff',
-                  fontSize: '14px',
+                    fontSize: '14px',
                   fontWeight: 600,
                   cursor: creating || !conditionValue ? 'not-allowed' : 'pointer',
                 }}
@@ -810,11 +811,12 @@ function OpenOrdersList({ userId }) {
           ))}
         </tbody>
       </table>
-    </div>
+              </div>
   );
 }
 
 function TradePage() {
+  const router = useRouter();
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [timeFrame, setTimeFrame] = useState(60); // 60, 80, 90, 100, 120 seconds
   const [side, setSide] = useState('buy'); // 'buy' (LONG) or 'sell' (SHORT)
@@ -862,12 +864,19 @@ function TradePage() {
       window.addEventListener('resize', checkMobile);
     }
     
+    // Listen for Profile Settings modal open event from Header
+    const handleOpenProfileModal = () => {
+      router.push('/home?openProfile=true');
+    };
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('resize', checkMobile);
+        window.removeEventListener('openProfileModal', handleOpenProfileModal);
       }
     };
-  }, []);
+  }, [router]);
 
   // Wait for TradingView script to load
   useEffect(() => {
@@ -1141,12 +1150,12 @@ function TradePage() {
         if (session?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('balance')
+            .select('cash_balance')
             .eq('id', session.user.id)
             .single();
           
           if (profile) {
-            setBalance(parseFloat(profile.balance || 0));
+            setBalance(parseFloat(profile.cash_balance || 0));
           }
         }
       } catch (error) {
@@ -1396,11 +1405,11 @@ function TradePage() {
         // Refresh balance
         const profileResult = await supabase
           .from('profiles')
-          .select('balance')
+          .select('cash_balance')
           .eq('id', session.user.id)
           .single();
         if (profileResult.data) {
-          setBalance(parseFloat(profileResult.data.balance || 0));
+          setBalance(parseFloat(profileResult.data.cash_balance || 0));
         }
         
         // Show modal and start countdown
@@ -1487,11 +1496,11 @@ function TradePage() {
         // Refresh balance
         const profileResult = await supabase
           .from('profiles')
-          .select('balance')
+          .select('cash_balance')
           .eq('id', session.user.id)
           .single();
         if (profileResult.data) {
-          setBalance(parseFloat(profileResult.data.balance || 0));
+          setBalance(parseFloat(profileResult.data.cash_balance || 0));
         }
       } else {
         console.error('Trade completion error:', result);
@@ -1543,7 +1552,7 @@ function TradePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16">
         <div className="text-center mb-8 sm:mb-12">
           <h1 style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: 800, color: '#ffffff', lineHeight: '1.1', marginBottom: '12px', letterSpacing: '-0.02em' }}>
-            Trade cryptocurrencies & gold
+            Trade
           </h1>
           <p style={{ fontSize: isMobile ? '14px' : '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: '0 auto', padding: isMobile ? '0 16px' : '0' }}>
             Execute trades with real-time market data and instant execution.
@@ -1859,18 +1868,18 @@ function TradePage() {
 
               {/* Potential Profit Percentage - Auto-calculated */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
                   Potential Profit Percentage
-                </label>
+                  </label>
                 <div
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#ffffff',
-                    fontSize: '15px',
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      fontSize: '15px',
                     fontWeight: 600,
                   }}
                 >
@@ -1897,7 +1906,7 @@ function TradePage() {
                     fontSize: '17px',
                     fontWeight: 600,
                   }}>$</span>
-                  <input
+                <input
                     type="text"
                     value={tradeAmount}
                     onChange={(e) => {
@@ -1908,19 +1917,19 @@ function TradePage() {
                         setTradeAmount(value);
                       }
                     }}
-                    style={{
-                      width: '100%',
+                  style={{
+                    width: '100%',
                       padding: '16px 18px 16px 32px',
                       borderRadius: '12px',
                       background: 'rgba(255, 255, 255, 0.06)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: '#ffffff',
+                    color: '#ffffff',
                       fontSize: '17px',
                       fontWeight: 500,
-                      outline: 'none',
+                    outline: 'none',
                       transition: 'all 0.2s',
-                    }}
-                    placeholder="0.00"
+                  }}
+                  placeholder="0.00"
                     onFocus={(e) => {
                       e.target.style.borderColor = 'rgba(59, 130, 246, 0.5)';
                       e.target.style.background = 'rgba(255, 255, 255, 0.08)';
@@ -1929,8 +1938,8 @@ function TradePage() {
                       e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
                       e.target.style.background = 'rgba(255, 255, 255, 0.06)';
                     }}
-                  />
-                </div>
+                />
+              </div>
                 {/* Minimum amount warning */}
                 <div style={{ fontSize: '18px', color: '#9ca3af', marginTop: '8px' }}>
                   Minimum: {
@@ -1940,24 +1949,24 @@ function TradePage() {
                     timeFrame === 100 ? '$10,000' :
                     timeFrame === 120 ? '$20,000' : '$100'
                   }
-                </div>
-              </div>
+                  </div>
+                  </div>
 
 
               {/* Submit Buttons - BUY/LONG and SELL/SHORT */}
               <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
-                <button
-                  type="submit"
+              <button
+                type="submit"
                   disabled={loading || !tradeAmount}
-                  style={{
-                    width: '100%',
+                style={{
+                  width: '100%',
                     padding: '18px',
                     borderRadius: '12px',
                     background: loading || !tradeAmount 
                       ? 'rgba(34, 197, 94, 0.2)' 
                       : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                    border: 'none',
-                    color: '#ffffff',
+                  border: 'none',
+                  color: '#ffffff',
                     fontSize: '18px',
                     fontWeight: 700,
                     cursor: loading || !tradeAmount ? 'not-allowed' : 'pointer',
@@ -1971,7 +1980,7 @@ function TradePage() {
                   }}
                 >
                   {loading ? 'Processing...' : 'BUY/LONG'}
-                </button>
+              </button>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -2008,7 +2017,7 @@ function TradePage() {
           </div>
         </div>
       </main>
-      </div>
+    </div>
       
       {/* Trade Result Modal */}
       {showTradeModal && activeTrade && (

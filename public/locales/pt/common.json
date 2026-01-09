@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "home": "Início",
+    "trade": "Negociar",
+    "earn": "Ganhar",
+    "assets": "Ativos",
+    "adminPanel": "Painel de Administração",
+    "support": "Suporte",
+    "faq": "Perguntas Frequentes",
+    "terms": "Termos de Uso",
+    "privacy": "Política de Privacidade",
+    "contact": "Contato"
+  },
+  "auth": {
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "signOut": "Sair",
+    "welcomeBack": "Bem-vindo de volta",
+    "signInToContinue": "Entre na sua conta para continuar",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgotPassword": "Esqueceu a senha?",
+    "loggingIn": "Entrando...",
+    "dontHaveAccount": "Não tem uma conta?",
+    "createAccount": "Criar Conta",
+    "createAccountDesc": "Cadastre-se para começar a negociar criptomoedas e ouro",
+    "name": "Nome",
+    "surname": "Sobrenome",
+    "username": "Nome de usuário",
+    "confirmPassword": "Confirmar Senha",
+    "kycDocument": "Documento KYC",
+    "uploadKyc": "Enviar Documento KYC",
+    "creatingAccount": "Criando conta...",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "invalidEmailPassword": "E-mail ou senha inválidos",
+    "emailNotConfirmed": "E-mail não confirmado",
+    "resendConfirmation": "Reenviar e-mail de confirmação"
+  },
+  "userMenu": {
+    "profileSettings": "Configurações do Perfil",
+    "dayMode": "Modo Dia",
+    "nightMode": "Modo Noite",
+    "languagePreference": "Preferência de Idioma"
+  },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "submit": "Enviar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar"
+  },
+  "home": {
+    "accountOverview": "Visão geral da sua conta",
+    "accountOverviewDesc": "Acompanhe o saldo, negociações recentes, posições e alertas de relance.",
+    "portfolioValue": "Valor do Portfólio",
+    "p24h": "P&L 24h",
+    "cashBalance": "Saldo em Dinheiro",
+    "recentTrades": "Negociações Recentes",
+    "tradeHistory": "Histórico de Negociações",
+    "convertsHistory": "Histórico de Conversões",
+    "noRecentTrades": "Nenhuma negociação recente. Comece a negociar para ver seu histórico aqui.",
+    "noTradeHistory": "Ainda não há histórico de negociações. Comece a negociar para ver suas negociações concluídas aqui.",
+    "profile": "Perfil",
+    "trade": "Negociar"
+  },
+  "contact": {
+    "title": "Entre em Contato",
+    "subtitle": "Entre em contato com nossa equipe de atendimento ao cliente. Estamos aqui para ajudar!",
+    "name": "Nome",
+    "email": "E-mail",
+    "subject": "Assunto",
+    "message": "Mensagem",
+    "attachFile": "Anexar Arquivo",
+    "uploadingFile": "Enviando arquivo...",
+    "sending": "Enviando...",
+    "sendMessage": "Enviar Mensagem",
+    "fileUploaded": "Arquivo enviado com sucesso",
+    "messageSent": "Mensagem enviada com sucesso"
+  },
+  "faq": {
+    "title": "Perguntas Frequentes",
+    "subtitle": "Encontre respostas para perguntas comuns sobre Synax"
+  },
+  "mining": {
+    "comingSoon": "EM BREVE"
+  },
+  "admin": {
+    "title": "Painel de Administração",
+    "overview": "Visão Geral",
+    "users": "Usuários",
+    "trades": "Negociações",
+    "totalUsers": "Total de Usuários",
+    "activeTrades": "Negociações Ativas",
+    "totalVolume": "Volume Total",
+    "revenue": "Receita",
+    "recentUsers": "Usuários Recentes",
+    "recentTrades": "Negociações Recentes",
+    "userDetails": "Detalhes do Usuário",
+    "assets": "Ativos",
+    "deposits": "Depósitos",
+    "withdrawals": "Saques",
+    "earnProducts": "Produtos de Ganho"
+  },
+  "terms": {
+    "title": "Termos de Uso",
+    "backToHome": "Voltar ao Início"
+  },
+  "privacy": {
+    "title": "Política de Privacidade",
+    "backToHome": "Voltar ao Início"
+  }
+}
