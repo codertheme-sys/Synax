@@ -239,3 +239,4 @@ CREATE POLICY "Authenticated users can delete kyc-documents"
 
 
 
+
