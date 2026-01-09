@@ -25,38 +25,10 @@ export default async function handler(req, res) {
 
     const userId = user.id;
 
-    // 1. Profile ve Balance bilgisi
-    let { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('balance, currency, kyc_verified')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Profile error:', profileError);
-      // If profile doesn't exist, create a default one
-      if (profileError.code === 'PGRST116') {
-        const { data: newProfile, error: insertError } = await supabaseAdmin
-          .from('profiles')
-          .insert({
-            id: userId,
-            balance: 0,
-            currency: 'USD',
-            kyc_verified: false,
-          })
-          .select()
-          .single();
-        if (!insertError && newProfile) {
-          profile = newProfile;
-        } else {
-          // Fallback to default profile
-          profile = { balance: 0, currency: 'USD', kyc_verified: false };
-        }
-      } else {
-        // Fallback to default profile on other errors
-        profile = { balance: 0, currency: 'USD', kyc_verified: false };
-      }
-    }
+    // 1. KPIs - Portfolio Value, 24h P&L, Cash Balance
+    let portfolioValue = 0;
+    let pnl24h = 0;
+    let cashBalance = 0;
 
     // 2. Portfolio verileri - First update prices, then fetch
     let portfolio = [];
@@ -74,13 +46,13 @@ export default async function handler(req, res) {
             // Get current price from price_history
             const { data: priceData } = await supabaseAdmin
               .from('price_history')
-              .select('*')
+              .select('price')
               .eq('asset_id', p.asset_id)
               .eq('asset_type', p.asset_type)
               .single();
 
-            if (priceData) {
-              const currentPrice = parseFloat(priceData.price || 0);
+            if (priceData && priceData.price) {
+              const currentPrice = parseFloat(priceData.price);
               const quantity = parseFloat(p.quantity || 0);
               const averagePrice = parseFloat(p.average_price || 0);
               const totalValue = quantity * currentPrice;
@@ -106,25 +78,32 @@ export default async function handler(req, res) {
         });
 
         await Promise.all(updatePromises);
-      }
 
-      // Now fetch updated portfolio
-      const { data: portfolioData, error: portfolioError } = await supabaseAdmin
-        .from('portfolio')
-        .select('*')
-        .eq('user_id', userId)
-        .order('total_value', { ascending: false });
+        // Now fetch updated portfolio
+        const { data: portfolioData, error: portfolioError } = await supabaseAdmin
+          .from('portfolio')
+          .select('*')
+          .eq('user_id', userId);
 
-      if (portfolioError) {
-        console.error('Portfolio error:', portfolioError);
-        portfolio = [];
-      } else {
-        portfolio = portfolioData || [];
+        if (portfolioError) {
+          console.error('Portfolio error:', portfolioError);
+          portfolio = [];
+        } else {
+          portfolio = portfolioData || [];
+        }
       }
     } catch (err) {
       console.error('Portfolio fetch error:', err);
       portfolio = [];
     }
+
+    // Calculate KPIs from portfolio - only include items with quantity > 0
+    portfolioValue = portfolio
+      .filter(p => parseFloat(p.quantity || 0) > 0)
+      .reduce((sum, p) => sum + parseFloat(p.total_value || 0), 0);
+    pnl24h = portfolio
+      .filter(p => parseFloat(p.quantity || 0) > 0)
+      .reduce((sum, p) => sum + parseFloat(p.profit_loss || 0), 0);
 
     // 3. Recent Orders (son 10 işlem)
     let recentOrders = [];
@@ -175,10 +154,10 @@ export default async function handler(req, res) {
     try {
       const { data: subscriptions } = await supabaseAdmin
         .from('earn_subscriptions')
-        .select('amount, status')
+        .select('amount')
         .eq('user_id', userId)
         .eq('status', 'active');
-      
+
       if (subscriptions && subscriptions.length > 0) {
         earnProductsValue = subscriptions.reduce((sum, sub) => sum + parseFloat(sub.amount || 0), 0);
       }
@@ -186,33 +165,38 @@ export default async function handler(req, res) {
       console.error('Error fetching earn subscriptions:', err);
     }
 
-    // 7. KPIs hesapla
-    const portfolioValue = (portfolio || []).reduce((sum, p) => sum + parseFloat(p.total_value || 0), 0);
-    const cashBalance = parseFloat(profile?.balance || 0);
-    const totalValue = portfolioValue + cashBalance + earnProductsValue;
+    // Get cash balance from profiles table
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('cash_balance')
+        .eq('id', userId)
+        .single();
 
-    // 24h P&L hesapla (portfolio'daki profit_loss toplamı)
-    const pnl24h = (portfolio || []).reduce((sum, p) => sum + parseFloat(p.profit_loss || 0), 0);
-    const pnl24hPercent = portfolioValue > 0 ? (pnl24h / portfolioValue) * 100 : 0;
+      if (profile) {
+        cashBalance = parseFloat(profile.cash_balance || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching cash balance:', err);
+    }
 
-    // Fetch price information for watchlist
+    // 7. Watchlist with prices
     let watchlistWithPrices = [];
     if (watchlist && watchlist.length > 0) {
       try {
         const assetIds = watchlist.map(w => w.asset_id);
-        
-        const { data: prices } = await supabaseAdmin
+        const { data: priceHistory } = await supabaseAdmin
           .from('price_history')
           .select('*')
           .in('asset_id', assetIds);
 
         watchlistWithPrices = watchlist.map(w => {
-          const priceData = prices?.find(p => p.asset_id === w.asset_id && p.asset_type === w.asset_type);
+          const price = priceHistory?.find(p => p.asset_id === w.asset_id);
           return {
             ...w,
-            current_price: priceData?.price || 0,
-            price_change_24h: priceData?.price_change_24h || 0,
-            price_change_percent_24h: priceData?.price_change_percent_24h || 0,
+            current_price: price ? parseFloat(price.price) : 0,
+            price_change_24h: price ? parseFloat(price.price_change_24h || 0) : 0,
+            price_change_percent_24h: price ? parseFloat(price.price_change_percent_24h || 0) : 0,
           };
         });
       } catch (err) {
@@ -226,38 +210,47 @@ export default async function handler(req, res) {
       }
     }
 
-    // Calculate performance metrics
-    // Drawdown: Maximum decline from peak
-    const drawdown = portfolio.length > 0 ? (() => {
-      const totalValues = portfolio.map(p => parseFloat(p.total_value || 0));
-      if (totalValues.length === 0) return 0;
-      const peak = Math.max(...totalValues);
-      const current = totalValues.reduce((sum, val) => sum + val, 0);
-      return peak > 0 ? ((current - peak) / peak) * 100 : 0;
-    })() : 0;
+    // 8. Alerts (active alerts)
+    let alerts = [];
+    try {
+      const { data: alertsData } = await supabaseAdmin
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-    // Volatility: Standard deviation of returns (simplified)
-    const volatility = portfolio.length > 0 ? (() => {
-      const returns = portfolio.map(p => parseFloat(p.profit_loss_percent || 0));
-      if (returns.length === 0) return 0;
-      const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
-      const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
-      return Math.sqrt(variance);
-    })() : 0;
+      alerts = alertsData || [];
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+    }
 
-    // Sharpe Ratio: (Return - Risk-free rate) / Volatility (simplified, using 0% risk-free rate)
-    const sharpe = volatility > 0 && portfolio.length > 0 ? (() => {
-      const avgReturn = portfolio.reduce((sum, p) => sum + parseFloat(p.profit_loss_percent || 0), 0) / portfolio.length;
-      return avgReturn / volatility;
-    })() : 0;
+    // 9. Recent Deposits & Withdrawals
+    let recentDeposits = [];
+    let recentWithdrawals = [];
+    try {
+      const { data: depositsData } = await supabaseAdmin
+        .from('deposits')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    // Win Rate: Percentage of profitable positions
-    const winRate = portfolio.length > 0 ? (() => {
-      const profitable = portfolio.filter(p => parseFloat(p.profit_loss || 0) > 0).length;
-      return (profitable / portfolio.length) * 100;
-    })() : 0;
+      const { data: withdrawalsData } = await supabaseAdmin
+        .from('withdrawals')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    // Daily P&L: Today's profit/loss from portfolio (simplified - uses current portfolio P&L)
+      recentDeposits = depositsData || [];
+      recentWithdrawals = withdrawalsData || [];
+    } catch (err) {
+      console.error('Error fetching deposits/withdrawals:', err);
+    }
+
+    // 10. Daily, MTD, YTD P&L calculations
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dailyPnL = (() => {
@@ -265,9 +258,8 @@ export default async function handler(req, res) {
         // Get trades made today
         const todayTrades = recentOrders.filter(o => {
           const tradeDate = new Date(o.created_at);
-          return tradeDate >= today && o.status === 'completed';
+          return tradeDate >= today;
         });
-        // Calculate P&L from today's trades (simplified - uses current portfolio)
         // This is a placeholder - in real implementation, would track daily P&L separately
         return portfolio.length > 0 ? pnl24h * 0.1 : 0; // 10% of 24h P&L as approximation
       } catch (err) {
@@ -275,7 +267,6 @@ export default async function handler(req, res) {
       }
     })();
 
-    // MTD P&L: Month-to-date profit/loss (simplified)
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
@@ -283,7 +274,7 @@ export default async function handler(req, res) {
       try {
         const monthTrades = recentOrders.filter(o => {
           const tradeDate = new Date(o.created_at);
-          return tradeDate >= monthStart && o.status === 'completed';
+          return tradeDate >= monthStart;
         });
         // Simplified calculation
         return portfolio.length > 0 ? pnl24h * 3 : 0;
@@ -292,7 +283,6 @@ export default async function handler(req, res) {
       }
     })();
 
-    // YTD P&L: Year-to-date profit/loss (simplified)
     const yearStart = new Date();
     yearStart.setMonth(0, 1);
     yearStart.setHours(0, 0, 0, 0);
@@ -300,7 +290,7 @@ export default async function handler(req, res) {
       try {
         const yearTrades = recentOrders.filter(o => {
           const tradeDate = new Date(o.created_at);
-          return tradeDate >= yearStart && o.status === 'completed';
+          return tradeDate >= yearStart;
         });
         // Simplified calculation - uses current portfolio P&L
         return pnl24h;
@@ -313,27 +303,22 @@ export default async function handler(req, res) {
       success: true,
       data: {
         kpis: {
-          portfolioValue: totalValue,
-          pnl24h: pnl24h,
-          pnl24hPercent: pnl24hPercent,
-          openPositions: openPositions.length,
-          cashBalance: cashBalance,
+          portfolioValue,
+          pnl24h,
+          cashBalance,
+          dailyPnL,
+          mtdPnL,
+          ytdPnL,
         },
-        portfolio: portfolio || [],
-        holdings: portfolio || [],
-        openPositions: openPositions,
-        recentOrders: recentOrders || [],
+        portfolio: portfolio.filter(p => parseFloat(p.quantity || 0) > 0), // Only return items with quantity > 0
+        holdings: portfolio.filter(p => parseFloat(p.quantity || 0) > 0), // Same as portfolio for compatibility
+        recentOrders,
         watchlist: watchlistWithPrices,
-        profile: profile || { balance: 0, currency: 'USD', kyc_verified: false },
-        performance: {
-          drawdown: drawdown, // Keep as number
-          volatility: volatility, // Keep as number
-          sharpe: sharpe, // Keep as number
-          winRate: winRate, // Keep as number
-          dailyPnL: dailyPnL,
-          mtdPnL: mtdPnL,
-          ytdPnL: ytdPnL,
-        },
+        openPositions,
+        earnProductsValue,
+        alerts,
+        recentDeposits,
+        recentWithdrawals,
       }
     });
 
@@ -345,16 +330,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

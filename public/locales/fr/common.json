@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "trade": "Échanger",
+    "earn": "Gagner",
+    "assets": "Actifs",
+    "adminPanel": "Panneau d'administration",
+    "support": "Support",
+    "faq": "FAQ",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "contact": "Contact"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "signup": "S'inscrire",
+    "signOut": "Se déconnecter",
+    "welcomeBack": "Bon retour",
+    "signInToContinue": "Connectez-vous à votre compte pour continuer",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "loggingIn": "Connexion en cours...",
+    "dontHaveAccount": "Vous n'avez pas de compte ?",
+    "createAccount": "Créer un compte",
+    "createAccountDesc": "Inscrivez-vous pour commencer à trader des cryptomonnaies et de l'or",
+    "name": "Prénom",
+    "surname": "Nom",
+    "username": "Nom d'utilisateur",
+    "confirmPassword": "Confirmer le mot de passe",
+    "kycDocument": "Document KYC",
+    "uploadKyc": "Télécharger le document KYC",
+    "creatingAccount": "Création du compte...",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "invalidEmailPassword": "E-mail ou mot de passe invalide",
+    "emailNotConfirmed": "E-mail non confirmé",
+    "resendConfirmation": "Renvoyer l'e-mail de confirmation"
+  },
+  "userMenu": {
+    "profileSettings": "Paramètres du profil",
+    "dayMode": "Mode Jour",
+    "nightMode": "Mode Nuit",
+    "languagePreference": "Préférence de langue"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "submit": "Soumettre",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "close": "Fermer"
+  },
+  "home": {
+    "accountOverview": "Aperçu de votre compte",
+    "accountOverviewDesc": "Suivez le solde, les transactions récentes, les positions et les alertes en un coup d'œil.",
+    "portfolioValue": "Valeur du Portefeuille",
+    "p24h": "P&L 24h",
+    "cashBalance": "Solde en Espèces",
+    "recentTrades": "Transactions Récentes",
+    "tradeHistory": "Historique des Transactions",
+    "convertsHistory": "Historique des Conversions",
+    "noRecentTrades": "Aucune transaction récente. Commencez à trader pour voir votre historique ici.",
+    "noTradeHistory": "Aucun historique de transaction pour le moment. Commencez à trader pour voir vos transactions terminées ici.",
+    "profile": "Profil",
+    "trade": "Échanger"
+  },
+  "contact": {
+    "title": "Contactez-nous",
+    "subtitle": "Contactez notre équipe de service client. Nous sommes là pour vous aider !",
+    "name": "Nom",
+    "email": "E-mail",
+    "subject": "Sujet",
+    "message": "Message",
+    "attachFile": "Joindre un fichier",
+    "uploadingFile": "Téléchargement du fichier...",
+    "sending": "Envoi en cours...",
+    "sendMessage": "Envoyer le message",
+    "fileUploaded": "Fichier téléchargé avec succès",
+    "messageSent": "Message envoyé avec succès"
+  },
+  "faq": {
+    "title": "Questions Fréquemment Posées",
+    "subtitle": "Trouvez des réponses aux questions courantes sur Synax"
+  },
+  "mining": {
+    "comingSoon": "BIENTÔT DISPONIBLE"
+  },
+  "admin": {
+    "title": "Panneau d'administration",
+    "overview": "Aperçu",
+    "users": "Utilisateurs",
+    "trades": "Transactions",
+    "totalUsers": "Total des Utilisateurs",
+    "activeTrades": "Transactions Actives",
+    "totalVolume": "Volume Total",
+    "revenue": "Revenus",
+    "recentUsers": "Utilisateurs Récents",
+    "recentTrades": "Transactions Récentes",
+    "userDetails": "Détails de l'Utilisateur",
+    "assets": "Actifs",
+    "deposits": "Dépôts",
+    "withdrawals": "Retraits",
+    "earnProducts": "Produits de Gain"
+  },
+  "terms": {
+    "title": "Conditions d'utilisation",
+    "backToHome": "Retour à l'accueil"
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "backToHome": "Retour à l'accueil"
+  }
+}

@@ -389,3 +389,184 @@ Artık platformunuz canlıda!
 
 **🎉 Başarılar! Platformunuz hazır!**
 
+
+
+### 7.1 Supabase SMTP (Email Verification)
+Supabase Dashboard > **Authentication** > **Email** > **SMTP Settings**:
+
+```
+Host: smtp-mail.outlook.com
+Port: 587
+Username: customerservicesynax@hotmail.com
+Password: YOUR_APP_PASSWORD (normal şifre değil!)
+Sender Email: customerservicesynax@hotmail.com
+Sender Name: Synax Support
+```
+
+⚠️ **Önemli:** App Password kullanın! Normal şifre çalışmaz.
+Detaylı bilgi: `HOTMAIL-SMTP-AYARLARI.md`
+
+### 7.2 Contact Reply SMTP
+Vercel environment variables'da `SMTP_*` değişkenleri zaten eklendi (Adım 4.4)
+
+## 🔥 ADIM 8: Cron Job Kurulumu (Earn Products Expiry)
+
+Kilitli earn product'ların süresi dolduğunda otomatik tamamlanması için:
+
+### Seçenek 1: Vercel Cron (Pro plan gerekli)
+Proje kök dizininde `vercel.json` dosyası oluşturun:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/earn/check-expired",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
+```
+
+Bu her saat başı çalışır.
+
+### Seçenek 2: External Cron Service (Ücretsiz)
+[Cron-job.org](https://cron-job.org) veya [EasyCron](https://www.easycron.com) kullanın:
+
+- **URL**: `https://yourdomain.com/api/earn/check-expired`
+- **Schedule**: Her saat (0 * * * *)
+- **Method**: GET veya POST
+- **Authentication**: API key header ekleyin (güvenlik için)
+
+API endpoint'e authentication ekleyin (güvenlik için):
+Vercel environment variables'a ekleyin: `CRON_API_KEY=your-secret-key`
+
+## ✅ ADIM 9: Post-Deployment Kontrolleri
+
+### 9.1 İlk Admin Kullanıcı Oluşturma
+1. Production site'da kayıt olun
+2. Supabase Dashboard > **Table Editor** > **profiles**
+3. Kullanıcınızı bulun
+4. `is_admin` sütununu `true` yapın
+5. Kaydedin
+
+### 9.2 Fonksiyonellik Testleri
+- [ ] Ana sayfa yükleniyor mu?
+- [ ] Kayıt olma çalışıyor mu?
+- [ ] Email verification geliyor mu?
+- [ ] Login çalışıyor mu?
+- [ ] Dashboard yükleniyor mu?
+- [ ] KYC belge yükleme çalışıyor mu?
+- [ ] Deposit işlemi çalışıyor mu? (Stripe test kartları ile)
+- [ ] Trading işlemleri çalışıyor mu?
+- [ ] Earn products görünüyor mu?
+- [ ] Contact form çalışıyor mu?
+- [ ] Admin panel erişilebilir mi?
+- [ ] Admin mesajlara cevap verebiliyor mu?
+
+### 9.3 API Testleri
+```bash
+# Health check
+curl https://yourdomain.com/api/health
+
+# Prices
+curl https://yourdomain.com/api/prices/crypto?symbol=BTC
+
+# Earn products
+curl https://yourdomain.com/api/earn/products
+```
+
+### 9.4 Stripe Webhook Testi
+1. Stripe Dashboard > **Webhooks** > **Send test webhook**
+2. Event: `payment_intent.succeeded`
+3. Gönderin
+4. Vercel logs'da webhook'un geldiğini kontrol edin
+
+### 9.5 Email Testi
+1. Yeni bir kullanıcı kaydı yapın
+2. Email verification maili geldi mi kontrol edin
+3. Admin panel'den bir mesaja cevap verin
+4. Kullanıcının email'ine cevap gitti mi kontrol edin
+
+## ✅ DEPLOYMENT TAMAMLANDI!
+
+Artık platformunuz canlıda! 
+
+**Test Etmek İçin:**
+1. Ana sayfaya gidin
+2. Kayıt olun
+3. KYC belgelerinizi yükleyin
+4. Para yatırın (Stripe test kartları ile)
+5. İşlem yapın!
+
+## 🚨 ÖNEMLİ GÜVENLİK NOTLARI
+
+1. **Stripe Keys**: Production'da `sk_live_` ve `pk_live_` kullanın (test değil!)
+2. **Service Role Key**: Asla client-side'da kullanmayın!
+3. **Webhook Secret**: Güvenli tutun, sadece server-side'da kullanın
+4. **KYC**: Gerçek para işlemleri için KYC zorunlu
+5. **SSL**: Vercel otomatik SSL sağlar
+
+## 📝 SONRAKI ADIMLAR
+
+- [ ] İlk admin kullanıcısı oluştur
+- [ ] KYC onay sistemi test et
+- [ ] Stripe test ödemeleri yap
+- [ ] Gerçek ödeme akışını test et
+- [ ] Email verification test et
+- [ ] Contact form test et
+- [ ] Admin panel test et
+- [ ] Cron job test et (earn products expiry)
+- [ ] Monitoring kur (Sentry, LogRocket vb.)
+- [ ] Uptime monitoring (UptimeRobot vb.)
+- [ ] Backup stratejisi uygula
+
+## 📊 MONITORING VE BACKUP
+
+### Monitoring
+- **Vercel Analytics**: Dashboard > Analytics (otomatik)
+- **Error Tracking**: Sentry veya LogRocket (önerilen)
+- **Uptime Monitoring**: UptimeRobot (ücretsiz)
+
+### Backup
+- **Supabase**: Otomatik backup (Dashboard > Database > Backups)
+- **Code**: GitHub'da zaten yedekleniyor
+- **Environment Variables**: Password manager'da saklayın!
+
+## 🐛 SORUN GİDERME
+
+### Build Hatası
+- Environment variables kontrol et
+- Logs'a bak (Vercel > Deployments > Logs)
+
+### Webhook Çalışmıyor
+- Webhook URL doğru mu?
+- Stripe Dashboard > Webhooks > Logs kontrol et
+- Vercel logs kontrol et
+
+### Ödeme Başarısız
+- Stripe Dashboard > Payments kontrol et
+- KYC durumunu kontrol et
+- Bakiye yeterli mi kontrol et
+
+### Email Gönderilmiyor
+- Supabase SMTP ayarlarını kontrol et
+- App Password kullanıldığından emin ol (normal şifre değil!)
+- Vercel environment variables'da `SMTP_*` değişkenlerini kontrol et
+- Vercel logs'da email hatalarını kontrol et
+- Detaylı bilgi: `HOTMAIL-SMTP-AYARLARI.md`
+
+### Database Bağlantı Hatası
+- `NEXT_PUBLIC_SUPABASE_URL` doğru mu?
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` doğru mu?
+- Supabase projesi aktif mi?
+- RLS policies doğru mu?
+
+### Domain SSL Hatası
+- DNS ayarları doğru mu? (24-48 saat bekle)
+- Vercel Dashboard > **Settings** > **Domains** kontrol et
+- CNAME kaydı doğru mu?
+
+---
+
+**🎉 Başarılar! Platformunuz hazır!**
+

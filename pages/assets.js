@@ -306,7 +306,7 @@ function AssetsPage() {
           </button>
         </div>
 
-        {/* Holdings, Payment Monitor, Earn Products, Mining - Grid Layout */}
+        {/* Holdings, Payment Monitor, Earn Products - Grid Layout */}
         <section style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
@@ -635,32 +635,6 @@ function AssetsPage() {
           </div>
         </div>
 
-        {/* Mining Section */}
-        <div style={{ 
-          width: '100%', 
-          display: 'block',
-          visibility: 'visible',
-          opacity: 1,
-          height: '400px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            ...cardStyle,
-            padding: '16px',
-            border: '2px solid rgba(139, 92, 246, 0.3)',
-            boxShadow: '0 0 30px rgba(139, 92, 246, 0.15), inset 0 0 30px rgba(139, 92, 246, 0.05)',
-            visibility: 'visible',
-            opacity: 1,
-            display: 'block',
-          }}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Mining</h2>
-            </div>
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af', fontSize: '14px', height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              Coming soon...
-            </div>
-          </div>
-        </div>
         </section>
       </main>
 

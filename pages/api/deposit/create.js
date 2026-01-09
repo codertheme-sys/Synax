@@ -98,10 +98,6 @@ export default async function handler(req, res) {
       allFields: Object.keys(deposit)
     });
 
-    if (depositError) {
-      throw depositError;
-    }
-
     return res.status(200).json({
       success: true,
       message: 'Deposit request created successfully',
@@ -116,5 +112,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
-

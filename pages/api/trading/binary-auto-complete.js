@@ -310,14 +310,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update trade' });
     }
 
-          return res.status(200).json({
-            success: true,
-            message: 'Trade completed successfully',
-            win_lost: winLost,
-            profit_amount: profitAmount,
-            last_price: lastPrice,
-            note: 'Profit added to portfolio as crypto asset, not to cash balance'
-          });
+    return res.status(200).json({
+      success: true,
+      message: 'Trade completed successfully',
+      win_lost: winLost,
+      profit_amount: profitAmount,
+      last_price: lastPrice,
+      note: 'Profit added to portfolio as crypto asset, not to cash balance'
+    });
 
   } catch (error) {
     console.error('Binary trade auto-complete error:', error);
@@ -327,4 +327,3 @@ export default async function handler(req, res) {
     });
   }
 }
-

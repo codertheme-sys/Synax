@@ -116,6 +116,24 @@ function HomePage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Listen for profile modal open event from Header and query parameter
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      setShowProfileModal(true);
+    };
+    
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    
+    // Check if query parameter is set
+    if (router.query.openProfile === 'true') {
+      setShowProfileModal(true);
+      // Clean up URL
+      router.replace(router.pathname, undefined, { shallow: true });
+    }
+    
+    return () => window.removeEventListener('openProfileModal', handleOpenProfileModal);
+  }, [router]);
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -137,15 +155,15 @@ function HomePage() {
         setUser(currentUser);
         setProfileEmail(currentUser.email || '');
         
-        // Get profile data including KYC status
+        // Get profile data including KYC status and username
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name, kyc_status, kyc_verified')
+          .select('full_name, username, kyc_status, kyc_verified')
           .eq('id', currentUser.id)
           .single();
         
         if (profileData) {
-          setProfileUsername(profileData.full_name || '');
+          setProfileUsername(profileData.username || profileData.full_name || '');
           setKycStatus(profileData.kyc_status || 'pending');
         }
         
@@ -2047,24 +2065,47 @@ function HomePage() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 try {
-                  // Update profile in Supabase
                   const { data: { session } } = await supabase.auth.getSession();
-                  if (session?.user) {
-                    const { error } = await supabase
-                      .from('profiles')
-                      .update({
-                        full_name: profileUsername,
-                      })
-                      .eq('id', session.user.id);
-                    
-                    if (error) throw error;
-                    
-                    toast.success('Profile updated successfully!');
-                setShowProfileModal(false);
+                  if (!session?.user) {
+                    toast.error('Please login again');
+                    return;
                   }
+
+                  const currentUser = session.user;
+                  const emailChanged = profileEmail !== currentUser.email;
+                  
+                  // If email changed, send verification link
+                  if (emailChanged) {
+                    const { error: emailError } = await supabase.auth.updateUser(
+                      { email: profileEmail },
+                      { emailRedirectTo: `${window.location.origin}/login?email_changed=true` }
+                    );
+                    
+                    if (emailError) {
+                      throw emailError;
+                    }
+                    
+                    toast.success('Verification link sent to your new email address. Please check your inbox.');
+                    setShowProfileModal(false);
+                    return;
+                  }
+
+                  // Update username in profiles table
+                  const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({
+                      username: profileUsername,
+                      full_name: profileUsername, // Keep for backward compatibility
+                    })
+                    .eq('id', currentUser.id);
+                  
+                  if (profileError) throw profileError;
+                  
+                  toast.success('Profile updated successfully!');
+                  setShowProfileModal(false);
                 } catch (error) {
                   console.error('Profile update error:', error);
-                  toast.error('Failed to update profile. Please try again.');
+                  toast.error(error.message || 'Failed to update profile. Please try again.');
                 }
               }}
               className="space-y-4"
@@ -2089,6 +2130,11 @@ function HomePage() {
                     outline: 'none',
                   }}
                 />
+                {profileEmail !== user?.email && (
+                  <p style={{ fontSize: '12px', color: '#fbbf24', marginTop: '4px' }}>
+                    A verification link will be sent to your new email address
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
@@ -2140,41 +2186,6 @@ function HomePage() {
                   </span>
                 </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Two-Factor Authentication
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      cursor: 'pointer',
-                    }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#d1d5db' }}>Enable 2FA for enhanced security</span>
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Notification Preferences
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                    <span style={{ fontSize: '14px', color: '#d1d5db' }}>Email notifications</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                    <span style={{ fontSize: '14px', color: '#d1d5db' }}>Price alerts</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input type="checkbox" style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                    <span style={{ fontSize: '14px', color: '#d1d5db' }}>Trade confirmations</span>
-                  </div>
-                </div>
-              </div>
               <button
                 type="submit"
                 style={{
@@ -2201,3 +2212,4 @@ function HomePage() {
 }
 
 export default HomePage;
+

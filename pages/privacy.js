@@ -1,8 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Header from '../components/Header';
 
 function PrivacyPage() {
+  const router = useRouter();
+  
+  // Listen for Profile Settings modal open event from Header
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      router.push('/home?openProfile=true');
+    };
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    return () => window.removeEventListener('openProfileModal', handleOpenProfileModal);
+  }, [router]);
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white pb-16">
       <Header />
@@ -107,6 +119,9 @@ function PrivacyPage() {
 }
 
 export default PrivacyPage;
+
+
+
 
 
 

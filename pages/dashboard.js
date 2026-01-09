@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
@@ -21,7 +21,7 @@ const holdings = [
 const positions = [
   { symbol: 'BTCUSDT', side: 'Long', size: '0.8 BTC', entry: '$49,800', mark: '$51,200', pnl: '+$1,120', lev: '3x', liq: '$38,400' },
   { symbol: 'ETHUSDT', side: 'Short', size: '6 ETH', entry: '$2,820', mark: '$2,740', pnl: '+$480', lev: '2x', liq: '$3,520' },
-  { symbol: 'XAUUSD', side: 'Long', size: '1.5 oz', entry: '$1,990', mark: '$2,030', pnl: '+$60', lev: '1x', liq: '—' },
+  { symbol: 'XAUUSD', side: 'Long', size: '1.5 oz', entry: '$1,990', mark: '$2,030', pnl: '+$60', lev: '1x', liq: '�' },
 ];
 
 const orders = [
@@ -262,8 +262,8 @@ function HomePage() {
               side: o.side === 'buy' ? 'LONG' : 'SHORT',
               qty: `$${parseFloat(o.trade_amount || 0).toFixed(2)}`,
               initialPrice: `$${parseFloat(o.initial_price || 0).toFixed(2)}`,
-              lastPrice: o.last_price ? `$${parseFloat(o.last_price).toFixed(2)}` : '—',
-              winLost: o.win_lost ? o.win_lost.toUpperCase() : '—',
+              lastPrice: o.last_price ? `$${parseFloat(o.last_price).toFixed(2)}` : '�',
+              winLost: o.win_lost ? o.win_lost.toUpperCase() : '�',
               status: o.admin_status === 'approved' ? 'Approved' : o.admin_status === 'rejected' ? 'Rejected' : 'Pending',
             };
           });
@@ -1136,7 +1136,7 @@ function HomePage() {
                           fontSize: '13px',
                           fontWeight: 600,
                         }}>
-                          Go to Trade →
+                          Go to Trade ?
                         </Link>
                       </td>
                     </tr>
@@ -1171,10 +1171,10 @@ function HomePage() {
                           </span>
                         </td>
                         <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: '#d1d5db', fontWeight: 500, whiteSpace: 'nowrap' }}>{o.qty}</td>
-                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>{o.initialPrice || '—'}</td>
-                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>{o.lastPrice || '—'}</td>
+                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>{o.initialPrice || '�'}</td>
+                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>{o.lastPrice || '�'}</td>
                         <td style={{ padding: isMobile ? '6px 4px' : '8px' }}>
-                          {o.winLost && o.winLost !== '—' ? (
+                          {o.winLost && o.winLost !== '�' ? (
                             <span style={{
                               fontSize: isMobile ? '9px' : '10px',
                               padding: '3px 8px',
@@ -1186,7 +1186,7 @@ function HomePage() {
                             }}>
                               {o.winLost}
                             </span>
-                          ) : '—'}
+                          ) : '�'}
                         </td>
                         <td style={{ padding: '8px' }}>
                           <span style={{
@@ -1267,7 +1267,7 @@ function HomePage() {
                   padding: '4px 8px',
                 }}
               >
-                ×
+                �
               </button>
             </div>
             <form
@@ -1439,7 +1439,7 @@ function HomePage() {
                           boxShadow: '0 10px 30px rgba(239, 68, 68, 0.4)',
                           backdropFilter: 'blur(10px)',
                         },
-                        icon: '⚠️',
+                        icon: '??',
                       });
                     }}
                     required
@@ -1596,7 +1596,7 @@ function HomePage() {
                   padding: '4px 8px',
                 }}
               >
-                ×
+                �
               </button>
             </div>
             <form
@@ -1820,7 +1820,7 @@ function HomePage() {
                   padding: '4px 8px',
                 }}
               >
-                ×
+                �
               </button>
             </div>
             
@@ -1838,7 +1838,7 @@ function HomePage() {
                   marginBottom: '16px',
                 }}>
                   <p style={{ fontSize: '14px', color: '#fbbf24', fontWeight: 600, marginBottom: '8px' }}>
-                    ⚠️ Early Cancellation Warning
+                    ?? Early Cancellation Warning
                   </p>
                   <p style={{ fontSize: '13px', color: '#fcd34d', lineHeight: '1.5' }}>
                     This is a locked subscription. Early cancellation may result in <strong>no earnings</strong>. You will only receive your principal amount back.
@@ -1853,7 +1853,7 @@ function HomePage() {
                   marginBottom: '16px',
                 }}>
                   <p style={{ fontSize: '14px', color: '#4ade80', fontWeight: 600, marginBottom: '8px' }}>
-                    ℹ️ Proportional Earnings
+                    ?? Proportional Earnings
                   </p>
                   <p style={{ fontSize: '13px', color: '#86efac', lineHeight: '1.5' }}>
                     This is a flexible subscription. You will receive <strong>proportional earnings</strong> based on the time you've held the subscription.
@@ -2034,7 +2034,7 @@ function HomePage() {
                   padding: '4px 8px',
                 }}
               >
-                ×
+                �
               </button>
             </div>
             <form

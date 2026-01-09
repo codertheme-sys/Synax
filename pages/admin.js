@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import ContactMessageCard from '../components/admin/ContactMessageCard';
+import PaymentsTab from '../components/admin/PaymentsTab';
 
 // Global CSS for select dropdown options
 if (typeof document !== 'undefined') {
@@ -46,741 +49,9 @@ const recentTrades = [
   { id: 3, user: 'user3@example.com', type: 'Buy', asset: 'SOL', amount: '50', price: '$105', time: '8 min ago' },
 ];
 
-// Contact Message Card Component
-function ContactMessageCard({ message, onUpdate }) {
-  const [showReply, setShowReply] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [status, setStatus] = useState(message.status);
-  const [updating, setUpdating] = useState(false);
-
-  const handleStatusChange = async (newStatus) => {
-    setUpdating(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const response = await fetch('/api/admin/contact-message-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          messageId: message.id,
-          status: newStatus,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setStatus(newStatus);
-        toast.success('Status updated successfully');
-        if (onUpdate) await onUpdate();
-      } else {
-        throw new Error(result.error || 'Failed to update status');
-      }
-    } catch (error) {
-      toast.error(error.message || 'Failed to update status');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleReply = async () => {
-    if (!replyText.trim()) {
-      toast.error('Please enter a reply message');
-      return;
-    }
-
-    setUpdating(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const response = await fetch('/api/admin/contact-message-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          messageId: message.id,
-          status: 'replied',
-          adminNotes: replyText.trim(),
-        }),
-      });
-
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save reply');
-      }
-
-      // Then, send email to user
-      try {
-        const emailResponse = await fetch('/api/admin/send-contact-reply', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            messageId: message.id,
-            replyMessage: replyText.trim(),
-            userEmail: message.email,
-            userName: message.full_name,
-            subject: message.subject,
-          }),
-        });
-
-        const emailResult = await emailResponse.json();
-        
-        setStatus('replied');
-        setReplyText('');
-        setShowReply(false);
-        
-        if (emailResult.success && !emailResult.warning) {
-          toast.success('Reply saved and email sent successfully');
-        } else {
-          console.error('Email sending failed:', emailResult);
-          console.error('Error details:', emailResult.errorDetails);
-          console.error('Warning:', emailResult.warning);
-          toast.error(`Reply saved but email failed: ${emailResult.warning || 'Unknown error'}`);
-        }
-      } catch (emailError) {
-        // Email gönderimi başarısız olsa bile reply kaydedildi
-        console.error('Email sending exception:', emailError);
-        setStatus('replied');
-        setReplyText('');
-        setShowReply(false);
-        toast.error(`Reply saved but email failed: ${emailError.message || 'Network error'}`);
-      }
-      
-      if (onUpdate) await onUpdate();
-    } catch (error) {
-      toast.error(error.message || 'Failed to save reply');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'new':
-        return { bg: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' };
-      case 'read':
-        return { bg: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' };
-      case 'replied':
-        return { bg: 'rgba(34, 197, 94, 0.15)', color: '#4ade80' };
-      case 'closed':
-        return { bg: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af' };
-      default:
-        return { bg: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' };
-    }
-  };
-
-  const statusColors = getStatusColor(status);
-
-  return (
-    <div style={{
-      padding: '20px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff' }}>{message.subject}</h3>
-            <span style={{
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 600,
-              background: statusColors.bg,
-              color: statusColors.color,
-            }}>
-              {status.toUpperCase()}
-            </span>
-          </div>
-          <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '4px' }}>
-            <strong style={{ color: '#ffffff' }}>From:</strong> {message.full_name} ({message.email})
-          </div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            {new Date(message.created_at).toLocaleString()}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <select
-            value={status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            disabled={updating}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: updating ? 'not-allowed' : 'pointer',
-              appearance: 'none',
-              WebkitAppearance: 'none',
-              MozAppearance: 'none',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 8px center',
-              paddingRight: '32px',
-            }}
-          >
-            <option value="new" style={{ background: '#0f1124', color: '#ffffff' }}>New</option>
-            <option value="read" style={{ background: '#0f1124', color: '#ffffff' }}>Read</option>
-            <option value="replied" style={{ background: '#0f1124', color: '#ffffff' }}>Replied</option>
-            <option value="closed" style={{ background: '#0f1124', color: '#ffffff' }}>Closed</option>
-          </select>
-        </div>
-      </div>
-
-      <div style={{
-        padding: '16px',
-        background: 'rgba(0, 0, 0, 0.2)',
-        borderRadius: '8px',
-        marginBottom: '16px',
-      }}>
-        <p style={{ fontSize: '14px', color: '#e5e7eb', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-          {message.message}
-        </p>
-      </div>
-
-      {message.attachment_url && (
-        <div style={{
-          padding: '16px',
-          background: 'rgba(59, 130, 246, 0.1)',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
-        }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#60a5fa', marginBottom: '8px' }}>Attachment:</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {message.attachment_type === 'png' || message.attachment_type === 'jpeg' || message.attachment_type === 'jpg' ? (
-              <img 
-                src={message.attachment_url} 
-                alt={message.attachment_name || 'Attachment'} 
-                style={{ 
-                  maxWidth: '200px', 
-                  maxHeight: '200px', 
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            ) : null}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: 600, marginBottom: '4px' }}>
-                {message.attachment_name || 'Attachment'}
-              </div>
-              <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                Type: {message.attachment_type?.toUpperCase() || 'Unknown'}
-              </div>
-              <a
-                href={message.attachment_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-block',
-                  marginTop: '8px',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  color: '#60a5fa',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                View/Download
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {message.admin_notes && (
-        <div style={{
-          padding: '16px',
-          background: 'rgba(34, 197, 94, 0.1)',
-          borderRadius: '8px',
-          marginBottom: '16px',
-          border: '1px solid rgba(34, 197, 94, 0.2)',
-        }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#4ade80', marginBottom: '8px' }}>Admin Reply:</div>
-          <p style={{ fontSize: '14px', color: '#d1fae5', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-            {message.admin_notes}
-          </p>
-          {message.replied_at && (
-            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '8px' }}>
-              Replied: {new Date(message.replied_at).toLocaleString()}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!showReply && !message.admin_notes && (
-        <button
-          onClick={() => setShowReply(true)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            background: 'rgba(59, 130, 246, 0.2)',
-            color: '#60a5fa',
-            fontSize: '13px',
-            fontWeight: 600,
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          Reply
-        </button>
-      )}
-
-      {showReply && (
-        <div style={{ marginTop: '16px' }}>
-          <textarea
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder="Enter your reply..."
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              fontSize: '14px',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              marginBottom: '12px',
-            }}
-          />
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={handleReply}
-              disabled={updating}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                background: updating ? 'rgba(59, 130, 246, 0.5)' : 'rgba(34, 197, 94, 0.2)',
-                color: '#4ade80',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                cursor: updating ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {updating ? 'Saving...' : 'Send Reply'}
-            </button>
-            <button
-              onClick={() => {
-                setShowReply(false);
-                setReplyText('');
-              }}
-              disabled={updating}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                background: 'rgba(107, 114, 128, 0.2)',
-                color: '#9ca3af',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: 'none',
-                cursor: updating ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Payments Tab Component - 3 sections: Pending, Approved, Rejected
-function PaymentsTab({ adminData, onRefresh }) {
-  const [paymentTab, setPaymentTab] = useState('pending');
-  const [processingIds, setProcessingIds] = useState(new Set());
-
-  // Removed debug logs
-
-  const deposits = adminData.deposits || {
-    pending: adminData.pendingDeposits || [],
-    approved: [],
-    rejected: []
-  };
-  const withdrawals = adminData.withdrawals || {
-    pending: adminData.pendingWithdrawals || [],
-    approved: [],
-    rejected: []
-  };
-
-  const handleApprove = async (id, type) => {
-    if (processingIds.has(id)) return;
-    
-    setProcessingIds(prev => new Set(prev).add(id));
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const endpoint = type === 'deposit' ? '/api/admin/deposit-approve' : '/api/admin/withdraw-approve';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          deposit_id: type === 'deposit' ? id : undefined,
-          withdrawal_id: type === 'withdrawal' ? id : undefined,
-          action: 'approve',
-        }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        toast.success(`${type === 'deposit' ? 'Deposit' : 'Withdrawal'} approved successfully`);
-        // Refresh admin data instead of full page reload
-        if (onRefresh) {
-          await onRefresh();
-        } else {
-          window.location.reload();
-        }
-      } else {
-        toast.error(result.error || `Failed to approve ${type}`);
-      }
-    } catch (error) {
-      toast.error(`Failed to approve ${type}`);
-    } finally {
-      setProcessingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-    }
-  };
-
-  const handleReject = async (id, type) => {
-    if (processingIds.has(id)) return;
-    
-    setProcessingIds(prev => new Set(prev).add(id));
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const endpoint = type === 'deposit' ? '/api/admin/deposit-approve' : '/api/admin/withdraw-approve';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          deposit_id: type === 'deposit' ? id : undefined,
-          withdrawal_id: type === 'withdrawal' ? id : undefined,
-          action: 'reject',
-        }),
-      });
-      const result = await response.json();
-      if (result.success) {
-        toast.success(`${type === 'deposit' ? 'Deposit' : 'Withdrawal'} rejected`);
-        // Refresh admin data instead of full page reload
-        if (onRefresh) {
-          await onRefresh();
-        } else {
-          window.location.reload();
-        }
-      } else {
-        toast.error(result.error || `Failed to reject ${type}`);
-      }
-    } catch (error) {
-      toast.error(`Failed to reject ${type}`);
-    } finally {
-      setProcessingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-    }
-  };
-
-  const renderPaymentItem = (item, type) => {
-    const isProcessing = processingIds.has(item.id);
-    const isDeposit = type === 'deposit';
-    
-    let coin = 'N/A';
-    let network = 'N/A';
-    if (isDeposit) {
-      const coinNetwork = item.transaction_id?.split(':') || [];
-      coin = coinNetwork[0] || item.payment_provider || 'N/A';
-      network = coinNetwork[1] || 'N/A';
-    }
-    
-    const receiptUrl = item.bank_receipt_url || item.receipt_url || item.bank_receipt || null;
-    const statusColor = paymentTab === 'pending' ? '#f59e0b' : paymentTab === 'approved' ? '#10b981' : '#ef4444';
-    
-    return (
-      <div
-        key={item.id}
-        style={{
-          padding: '20px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          marginBottom: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>
-              {item.profiles?.email || item.user_id}
-            </div>
-            <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-              Type: <span style={{ color: '#ffffff', fontWeight: 600 }}>{isDeposit ? 'Deposit' : 'Withdrawal'}</span>
-            </div>
-            <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-              Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>${parseFloat(item.amount || 0).toFixed(2)}</span>
-            </div>
-            {isDeposit && (
-              <>
-                <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-                  Coin: <span style={{ color: '#ffffff' }}>{coin}</span>
-                </div>
-                <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-                  Network: <span style={{ color: '#ffffff' }}>{network}</span>
-                </div>
-              </>
-            )}
-            <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-              Status: <span style={{ color: statusColor, fontWeight: 600 }}>{item.status}</span>
-            </div>
-            <div style={{ fontSize: '13px', color: '#9ca3af' }}>
-              Date: <span style={{ color: '#ffffff' }}>{item.created_at ? new Date(item.created_at).toLocaleString('en-US') : 'N/A'}</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
-            {/* Large amount display on the right */}
-            <div style={{
-              fontSize: '48px',
-              fontWeight: 700,
-              color: isDeposit ? '#22c55e' : '#ef4444',
-              textAlign: 'right',
-              lineHeight: '1',
-            }}>
-              ${parseFloat(item.amount || 0).toFixed(2)}
-            </div>
-            {paymentTab === 'pending' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  onClick={() => handleApprove(item.id, type)}
-                  disabled={isProcessing || item.status !== 'pending'}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    background: isProcessing || item.status !== 'pending' 
-                      ? 'rgba(16, 185, 129, 0.3)' 
-                      : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
-                    border: 'none',
-                    whiteSpace: 'nowrap',
-                    opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
-                  }}
-                >
-                  {isProcessing ? 'Processing...' : 'Approve'}
-                </button>
-                <button
-                  onClick={() => handleReject(item.id, type)}
-                  disabled={isProcessing || item.status !== 'pending'}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    background: isProcessing || item.status !== 'pending'
-                      ? 'rgba(239, 68, 68, 0.3)'
-                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
-                    border: 'none',
-                    whiteSpace: 'nowrap',
-                    opacity: isProcessing || item.status !== 'pending' ? 0.6 : 1,
-                  }}
-                >
-                  {isProcessing ? 'Processing...' : 'Reject'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        {isDeposit && receiptUrl && (
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>Receipt:</div>
-            <ReceiptViewer receiptUrl={receiptUrl} />
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const currentDeposits = deposits[paymentTab] || [];
-  const currentWithdrawals = withdrawals[paymentTab] || [];
-  
-  // Removed debug logs
-  
-  const allItems = [...currentDeposits.map(d => ({ ...d, _type: 'deposit' })), ...currentWithdrawals.map(w => ({ ...w, _type: 'withdrawal' }))];
-  allItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  return (
-    <div style={{ ...cardStyle, padding: '28px' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>Payments</h2>
-      
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-        {['pending', 'approved', 'rejected'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setPaymentTab(tab)}
-            style={{
-              padding: '12px 24px',
-              background: paymentTab === tab ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-              border: 'none',
-              borderBottom: paymentTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
-              color: paymentTab === tab ? '#60a5fa' : '#9ca3af',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {allItems.length > 0 ? (
-        <div className="space-y-4">
-          {allItems.map((item) => renderPaymentItem(item, item._type))}
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-          No {paymentTab} payments
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Receipt Viewer Component - Handles signed URL for private buckets
-function ReceiptViewer({ receiptUrl }) {
-  const [signedUrl, setSignedUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!receiptUrl) {
-      setLoading(false);
-      return;
-    }
-
-    // Check if URL is already a signed URL (contains 'token=' or 'signature=')
-    if (receiptUrl.includes('token=') || receiptUrl.includes('signature=')) {
-      setSignedUrl(receiptUrl);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch signed URL from API
-    fetch('/api/deposit/get-receipt-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ receipt_url: receiptUrl }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.receipt_url) {
-          setSignedUrl(data.receipt_url);
-        } else {
-          // Fallback to original URL
-          setSignedUrl(receiptUrl);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching signed URL:', err);
-        // Fallback to original URL
-        setSignedUrl(receiptUrl);
-        setLoading(false);
-      });
-  }, [receiptUrl]);
-
-  if (loading) {
-    return (
-      <div style={{ fontSize: '12px', color: '#9ca3af' }}>Loading receipt...</div>
-    );
-  }
-
-  if (!signedUrl) {
-    return (
-      <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>No receipt uploaded</div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-      <a
-        href={signedUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          padding: '8px 16px',
-          borderRadius: '8px',
-          background: 'rgba(59, 130, 246, 0.15)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          color: '#60a5fa',
-          fontSize: '13px',
-          fontWeight: 600,
-          textDecoration: 'none',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
-      >
-        📄 View Receipt
-      </a>
-      {signedUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
-        <img
-          src={signedUrl}
-          alt="Receipt"
-          style={{
-            maxWidth: '200px',
-            maxHeight: '200px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            cursor: 'pointer',
-          }}
-          onClick={() => window.open(signedUrl, '_blank')}
-          onError={(e) => {
-            e.target.style.display = 'none';
-          }}
-        />
-      )}
-    </div>
-  );
-}
 
 function AdminPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [adminData, setAdminData] = useState(null);
@@ -1102,7 +373,7 @@ function AdminPage() {
                   <div style={{ ...cardStyle, padding: '24px', width: '250px', flexShrink: 0 }}>
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Active Users</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>{adminData.stats?.activeUsers || 0}</span>
-                  </div>
+                </div>
                   <div style={{ ...cardStyle, padding: '24px', width: '250px', flexShrink: 0 }}>
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Pending KYC</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>{adminData.stats?.pendingKyc || 0}</span>
@@ -1111,12 +382,12 @@ function AdminPage() {
                     <p style={{ fontSize: '26px', color: '#3b82f6', marginBottom: '8px', fontWeight: 600 }}>Total Volume</p>
                     <span style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff' }}>${(adminData.stats?.totalVolume || 0).toLocaleString('en-US')}</span>
                   </div>
-                </div>
+            </div>
 
                 <div className="grid lg:grid-cols-2 gap-6 mb-6">
-                  <div style={{ ...cardStyle, padding: '28px' }}>
+              <div style={{ ...cardStyle, padding: '28px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Pending KYC</h2>
-                    <div className="space-y-3">
+                <div className="space-y-3">
                       {adminData.pendingKyc && Array.isArray(adminData.pendingKyc) && adminData.pendingKyc.length > 0 ? adminData.pendingKyc.map((user) => {
                         // Find KYC documents for this user
                         const userKycDocs = (adminData.pendingKycDocuments && Array.isArray(adminData.pendingKycDocuments)) 
@@ -1126,22 +397,22 @@ function AdminPage() {
                         // Removed debug logs
                         
                         return (
-                          <div
-                            key={user.id}
-                            style={{
-                              padding: '16px',
-                              background: 'rgba(255, 255, 255, 0.05)',
-                              borderRadius: '10px',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                            }}
-                          >
+                    <div
+                      key={user.id}
+                      style={{
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: userKycDocs.length > 0 ? '12px' : '0' }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', marginBottom: '4px' }}>
                                   {user.email || user.id}
-                                </div>
+                        </div>
                                 <div style={{ fontSize: '12px', color: '#9ca3af' }}>Status: {user.kyc_status || 'pending'}</div>
-                              </div>
+                      </div>
                               <button
                                 onClick={async () => {
                                   try {
@@ -1187,13 +458,13 @@ function AdminPage() {
                                     toast.error('Failed to approve KYC');
                                   }
                                 }}
-                                style={{
+                        style={{
                                   padding: '8px 16px',
                                   borderRadius: '8px',
                                   background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                                   color: '#ffffff',
                                   fontSize: '13px',
-                                  fontWeight: 600,
+                          fontWeight: 600,
                                   cursor: 'pointer',
                                   border: 'none',
                                 }}
@@ -1209,7 +480,7 @@ function AdminPage() {
                                     <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                       <span style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'capitalize' }}>
                                         {doc.document_type?.replace(/_/g, ' ')}:
-                                      </span>
+                      </span>
                                       {doc.document_url && doc.document_url !== 'pending_upload' ? (
                                         <a
                                           href={doc.document_url}
@@ -1227,8 +498,8 @@ function AdminPage() {
                                       ) : (
                                         <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Upload pending</span>
                                       )}
-                                    </div>
-                                  ))}
+                    </div>
+                  ))}
                                 </div>
                               ) : (
                                 <div style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>No documents uploaded</div>
@@ -1240,52 +511,52 @@ function AdminPage() {
                         <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No pending KYC</div>
                       )}
                     </div>
-                  </div>
                 </div>
+              </div>
 
-                <div style={{ ...cardStyle, padding: '28px' }}>
-                  <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Recent Trades</h2>
-                    <div className="space-y-3">
+              <div style={{ ...cardStyle, padding: '28px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Recent Trades</h2>
+                <div className="space-y-3">
                       {adminData.recentTrades && adminData.recentTrades.length > 0 ? adminData.recentTrades.map((trade) => (
-                        <div
-                          key={trade.id}
-                          style={{
-                            padding: '16px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div
+                      key={trade.id}
+                      style={{
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <span style={{ fontSize: '13px', color: '#9ca3af' }}>{trade.profiles?.email || trade.user_id}</span>
-                            <span
-                              style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 600,
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 600,
                                 background: trade.trade_type === 'buy' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                                 color: trade.trade_type === 'buy' ? '#4ade80' : '#f87171',
-                              }}
-                            >
+                          }}
+                        >
                               {trade.trade_type?.toUpperCase() || 'N/A'}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ffffff' }}>
-                            <span>
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#ffffff' }}>
+                        <span>
                               {parseFloat(trade.quantity || 0).toFixed(4)} {trade.asset_symbol || 'N/A'}
-                            </span>
+                        </span>
                             <span style={{ fontWeight: 600 }}>${parseFloat(trade.price || 0).toFixed(2)}</span>
-                          </div>
+                      </div>
                           <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
                             {trade.created_at ? new Date(trade.created_at).toLocaleString() : 'N/A'}
-                          </div>
-                        </div>
+                    </div>
+                </div>
                       )) : (
                         <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No recent trades</div>
                       )}
-                    </div>
-                </div>
+              </div>
+            </div>
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No data available</div>
@@ -1765,7 +1036,7 @@ function AdminPage() {
               >
                 ×
               </button>
-            </div>
+    </div>
 
             {loadingUserDetails ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading...</div>
@@ -2137,4 +1408,7 @@ function AdminPage() {
 }
 
 export default AdminPage;
+
+
+
 

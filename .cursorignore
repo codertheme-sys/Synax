@@ -1,0 +1,6 @@
+# Cursor ignore file - Prevent analysis of very large files
+# These files cause Cursor to timeout during analysis
+
+# Large admin file - already modularized, no need for full analysis
+pages/admin.js
+

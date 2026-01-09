@@ -16,6 +16,34 @@ export default function Header() {
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [mobileSupportOpen, setMobileSupportOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Theme management
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark');
+    } else {
+      setIsDarkMode(true);
+      localStorage.setItem('theme', 'dark');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode, mounted]);
+
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const openProfileSettings = () => {
+    setUserMenuOpen(false);
+    // Trigger profile modal in home page
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('openProfileModal'));
+    }
+  };
   
   // Removed debug logs
 
@@ -194,7 +222,6 @@ export default function Header() {
               <Link href="/home" style={navLinkStyle('/home')}>Home</Link>
               <Link href="/trade" style={navLinkStyle('/trade')}>Trade</Link>
               <Link href="/earn" style={navLinkStyle('/earn')}>Earn</Link>
-              <Link href="/mining" style={navLinkStyle('/mining')}>Mining</Link>
               <Link href="/assets" style={{...navLinkStyle('/assets'), borderBottom: 'none'}}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" style={navLinkStyle('/admin')}>Admin Panel</Link>
@@ -329,32 +356,152 @@ export default function Header() {
               </Link>
             </>
           )}
+          {/* User Dropdown Menu - Desktop */}
           {!checkingUser && user && (!mounted || !isMobile) && (
-            <button
-              onClick={handleSignOut}
-              style={{
-                marginLeft: '24px',
-                padding: '10px 20px',
-                borderRadius: '10px',
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.5)',
-                color: '#ef4444',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
-                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.7)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-              }}
-            >
-              Sign Out
-            </button>
+            <div style={{ position: 'relative', marginLeft: '24px', paddingLeft: '20px' }}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'rgba(139, 92, 246, 0.3)',
+                  border: '2px solid rgba(139, 92, 246, 0.6)',
+                  color: '#a78bfa',
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 0 10px rgba(139, 92, 246, 0.4)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.4)';
+                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.8)';
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(139, 92, 246, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.6)';
+                  e.currentTarget.style.boxShadow = '0 0 10px rgba(139, 92, 246, 0.4)';
+                }}
+                title="User Menu"
+              >
+                👤
+              </button>
+              {userMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '8px',
+                    background: 'rgba(15, 17, 36, 0.98)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    padding: '8px',
+                    minWidth: '220px',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                    zIndex: 1000,
+                  }}
+                  onMouseLeave={() => setUserMenuOpen(false)}
+                >
+                  <button
+                    onClick={openProfileSettings}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span>⚙️</span>
+                    <span>Profile Settings</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsDarkMode(!isDarkMode);
+                      setUserMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span>{isDarkMode ? '☀️' : '🌙'}</span>
+                    <span>{isDarkMode ? 'Day Mode' : 'Night Mode'}</span>
+                  </button>
+                  <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.1)', margin: '8px 0' }} />
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setUserMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#ef4444',
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <span>🚪</span>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -369,7 +516,6 @@ export default function Header() {
               <Link href="/home" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/home' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Home</Link>
               <Link href="/trade" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/trade' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Trade</Link>
               <Link href="/earn" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/earn' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Earn</Link>
-              <Link href="/mining" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/mining' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Mining</Link>
               <Link href="/assets" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/assets' ? '#ffffff' : '#d1d5db', fontWeight: 600, textDecoration: 'none', borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Assets</Link>
               {!checkingAdmin && isAdmin && (
                 <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ padding: '12px 16px', fontSize: '16px', color: router.pathname === '/admin' ? '#ffffff' : '#d1d5db', fontWeight: 600, borderBottom: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>Admin Panel</Link>
@@ -398,8 +544,8 @@ export default function Header() {
                 {mobileSupportOpen && (
                   <div style={{ paddingLeft: '16px' }}>
                     <Link href="/faq" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>FAQ</Link>
-                    <Link href="/terms" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>Terms</Link>
-                    <Link href="/privacy" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>Privacy</Link>
+                    <Link href="/terms" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>Terms of Use</Link>
+                    <Link href="/privacy" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>Privacy Policy</Link>
                     <Link href="/contact" onClick={() => { setMobileMenuOpen(false); setMobileSupportOpen(false); }} style={{ padding: '12px 16px', fontSize: '16px', color: '#9ca3af', display: 'block' }}>Contact</Link>
                   </div>
                 )}
