@@ -44,8 +44,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing user_id' });
     }
 
-    // More lenient validation - allow null/undefined for optional receipt
-    if (file_base64 === null || file_base64 === undefined) {
+    // More lenient validation - allow null/undefined/empty for optional receipt
+    if (file_base64 === null || file_base64 === undefined || file_base64 === '') {
       console.log('Deposit receipt upload - No file provided, proceeding without receipt');
       return res.status(200).json({ 
         success: true, 
@@ -56,12 +56,16 @@ export default async function handler(req, res) {
 
     if (typeof file_base64 !== 'string') {
       console.error('Deposit receipt upload - Invalid file_base64 type:', typeof file_base64);
-      return res.status(400).json({ error: 'Invalid file data format: expected string' });
+      return res.status(400).json({ 
+        error: 'Invalid file data format: expected string',
+        received_type: typeof file_base64
+      });
     }
 
-    if (file_base64.length === 0) {
-      console.error('Deposit receipt upload - Empty file_base64 string');
-      return res.status(400).json({ error: 'Empty file data' });
+    // Check if it's a valid base64 data URL
+    if (!file_base64.startsWith('data:') && !file_base64.match(/^[A-Za-z0-9+/=]+$/)) {
+      console.error('Deposit receipt upload - Invalid base64 format');
+      return res.status(400).json({ error: 'Invalid base64 data format' });
     }
 
     // Convert base64 to buffer

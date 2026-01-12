@@ -1327,6 +1327,15 @@ function HomePage() {
 
                       const fileBase64 = await fileBase64Promise;
 
+                      // Validate fileBase64 before sending
+                      if (!fileBase64 || typeof fileBase64 !== 'string' || fileBase64.length === 0) {
+                        console.error('Receipt upload - Invalid file data after conversion');
+                        toast.error('Failed to process receipt file. Please try again.');
+                        throw new Error('Invalid file data');
+                      }
+
+                      console.log('Receipt upload - File converted, size:', fileBase64.length, 'type:', depositReceipt.type);
+
                       // Upload via API endpoint (uses service role, bypasses RLS)
                       const uploadResponse = await fetch('/api/deposit/upload-receipt', {
                         method: 'POST',
@@ -1336,7 +1345,7 @@ function HomePage() {
                         body: JSON.stringify({
                           user_id: session.user.id,
                           file_base64: fileBase64,
-                          file_name: depositReceipt.name,
+                          file_name: depositReceipt.name || 'receipt.jpg',
                           file_type: depositReceipt.type || 'image/jpeg',
                         }),
                       });

@@ -1150,12 +1150,12 @@ function TradePage() {
         if (session?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('cash_balance')
+            .select('balance')
             .eq('id', session.user.id)
             .single();
           
           if (profile) {
-            setBalance(parseFloat(profile.cash_balance || 0));
+            setBalance(parseFloat(profile.balance || 0));
           }
         }
       } catch (error) {
@@ -1410,11 +1410,11 @@ function TradePage() {
         // Refresh balance
         const profileResult = await supabase
           .from('profiles')
-          .select('cash_balance')
+          .select('balance')
           .eq('id', session.user.id)
           .single();
         if (profileResult.data) {
-          setBalance(parseFloat(profileResult.data.cash_balance || 0));
+          setBalance(parseFloat(profileResult.data.balance || 0));
         }
         
         // Show modal and start countdown
@@ -1501,11 +1501,11 @@ function TradePage() {
         // Refresh balance
         const profileResult = await supabase
           .from('profiles')
-          .select('cash_balance')
+          .select('balance')
           .eq('id', session.user.id)
           .single();
         if (profileResult.data) {
-          setBalance(parseFloat(profileResult.data.cash_balance || 0));
+          setBalance(parseFloat(profileResult.data.balance || 0));
         }
       } else {
         console.error('Trade completion error:', result);
