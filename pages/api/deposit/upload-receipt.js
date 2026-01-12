@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
-// Disable body parser to handle large files
+// Configure body parser for large files (Next.js API route config)
 export const config = {
   api: {
     bodyParser: {
