@@ -191,6 +191,7 @@ export default function Header() {
 
   // Removed debug logs
 
+
   return (
     <header
       className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-[#0b0c1a]/85 via-[#11142d]/85 to-[#0b0c1a]/85 shadow-lg shadow-black/30"

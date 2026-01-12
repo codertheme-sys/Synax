@@ -17,6 +17,15 @@ export default async function handler(req, res) {
 
   console.log('Deposit receipt upload API called');
 
+  // Check environment variables
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Deposit receipt upload - Missing environment variables');
+    return res.status(500).json({ 
+      error: 'Server configuration error. Please contact support.',
+      details: !supabaseUrl ? 'Missing NEXT_PUBLIC_SUPABASE_URL' : 'Missing SUPABASE_SERVICE_ROLE_KEY'
+    });
+  }
+
   try {
     const { user_id, file_base64, file_name, file_type } = req.body;
 
@@ -38,9 +47,41 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing file data' });
     }
 
+    // Validate base64 string
+    if (typeof file_base64 !== 'string' || file_base64.length === 0) {
+      console.error('Deposit receipt upload - Invalid file_base64 format');
+      return res.status(400).json({ error: 'Invalid file data format' });
+    }
+
     // Convert base64 to buffer
-    const base64Data = file_base64.replace(/^data:.*,/, '');
-    const fileBuffer = Buffer.from(base64Data, 'base64');
+    let base64Data;
+    try {
+      base64Data = file_base64.replace(/^data:.*,/, '');
+      if (!base64Data || base64Data.length === 0) {
+        throw new Error('Empty base64 data after removing prefix');
+      }
+    } catch (parseError) {
+      console.error('Deposit receipt upload - Base64 parse error:', parseError);
+      return res.status(400).json({ error: 'Invalid file data format' });
+    }
+
+    let fileBuffer;
+    try {
+      fileBuffer = Buffer.from(base64Data, 'base64');
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new Error('Empty buffer after base64 decode');
+      }
+    } catch (bufferError) {
+      console.error('Deposit receipt upload - Buffer creation error:', bufferError);
+      return res.status(400).json({ error: 'Failed to process file data' });
+    }
+
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (fileBuffer.length > maxSize) {
+      console.error('Deposit receipt upload - File too large:', fileBuffer.length);
+      return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+    }
 
     console.log('Deposit receipt upload - File buffer created, size:', fileBuffer.length);
 
@@ -50,6 +91,25 @@ export default async function handler(req, res) {
     const filePath = `deposits/${fileName}`;
 
     console.log('Deposit receipt upload - Uploading to:', filePath);
+
+    // Check if bucket exists and is accessible
+    const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+    if (listError) {
+      console.error('Deposit receipt upload - Bucket list error:', listError);
+      return res.status(500).json({ 
+        error: 'Storage access error',
+        details: listError.message 
+      });
+    }
+
+    const bucketExists = buckets?.some(b => b.name === 'deposit-receipts');
+    if (!bucketExists) {
+      console.error('Deposit receipt upload - Bucket does not exist');
+      return res.status(500).json({ 
+        error: 'Storage bucket not found. Please contact support.',
+        details: 'deposit-receipts bucket does not exist'
+      });
+    }
 
     // Upload to Storage
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
@@ -62,7 +122,22 @@ export default async function handler(req, res) {
 
     if (uploadError) {
       console.error('Deposit receipt upload - Storage upload error:', uploadError);
-      return res.status(500).json({ error: `Failed to upload file: ${uploadError.message}` });
+      // Provide more specific error messages
+      let errorMessage = 'Failed to upload file';
+      if (uploadError.message) {
+        errorMessage = uploadError.message;
+      } else if (uploadError.error) {
+        errorMessage = uploadError.error;
+      }
+      return res.status(500).json({ 
+        error: errorMessage,
+        details: uploadError
+      });
+    }
+
+    if (!uploadData) {
+      console.error('Deposit receipt upload - Upload succeeded but no data returned');
+      return res.status(500).json({ error: 'Upload succeeded but no data returned' });
     }
 
     console.log('Deposit receipt upload - File uploaded successfully:', uploadData);
@@ -72,6 +147,11 @@ export default async function handler(req, res) {
       .from('deposit-receipts')
       .getPublicUrl(filePath);
 
+    if (!urlData || !urlData.publicUrl) {
+      console.error('Deposit receipt upload - Failed to get public URL');
+      return res.status(500).json({ error: 'Failed to generate file URL' });
+    }
+
     console.log('Deposit receipt upload - Public URL:', urlData.publicUrl);
 
     return res.status(200).json({ 
@@ -80,9 +160,15 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Deposit receipt upload - Exception:', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    console.error('Deposit receipt upload - Error stack:', error.stack);
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
+
+
 
 
 

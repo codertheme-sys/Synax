@@ -1342,10 +1342,17 @@ function HomePage() {
                       });
 
                       if (!uploadResponse.ok) {
-                        const errorData = await uploadResponse.json();
+                        let errorData;
+                        try {
+                          errorData = await uploadResponse.json();
+                        } catch (parseError) {
+                          errorData = { error: `Server error: ${uploadResponse.status} ${uploadResponse.statusText}` };
+                        }
                         console.error('Receipt upload API error:', errorData);
-                        toast.error(`Failed to upload receipt: ${errorData.error || 'Unknown error'}`);
+                        const errorMessage = errorData.error || errorData.details || 'Unknown error';
+                        toast.error(`Failed to upload receipt: ${errorMessage}`);
                         receiptUrl = null; // Ensure it's null on error
+                        throw new Error(`Receipt upload failed: ${errorMessage}`); // Stop form submission
                       } else {
                         const result = await uploadResponse.json();
                         if (result.success && result.receipt_url) {
@@ -1355,11 +1362,15 @@ function HomePage() {
                           console.error('Receipt upload response missing receipt_url:', result);
                           toast.error('Receipt upload succeeded but URL not returned');
                           receiptUrl = null;
+                          throw new Error('Receipt upload succeeded but URL not returned'); // Stop form submission
                         }
                       }
                     } catch (uploadErr) {
                       console.error('Receipt upload exception:', uploadErr);
-                      toast.error('Failed to upload receipt. Please try again.');
+                      if (uploadErr.message && !uploadErr.message.includes('Receipt upload failed')) {
+                        toast.error(`Failed to upload receipt: ${uploadErr.message}`);
+                      }
+                      throw uploadErr; // Re-throw to stop form submission
                     }
                   }
 
