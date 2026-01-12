@@ -34,7 +34,9 @@ export default async function handler(req, res) {
       file_name,
       file_type,
       has_file_base64: !!file_base64,
-      file_base64_length: file_base64?.length || 0
+      file_base64_type: typeof file_base64,
+      file_base64_length: file_base64?.length || 0,
+      file_base64_preview: file_base64 ? file_base64.substring(0, 50) + '...' : 'null/undefined'
     });
 
     if (!user_id) {
@@ -42,15 +44,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing user_id' });
     }
 
-    if (!file_base64) {
-      console.error('Deposit receipt upload - Missing file_base64');
-      return res.status(400).json({ error: 'Missing file data' });
+    // More lenient validation - allow null/undefined for optional receipt
+    if (file_base64 === null || file_base64 === undefined) {
+      console.log('Deposit receipt upload - No file provided, proceeding without receipt');
+      return res.status(200).json({ 
+        success: true, 
+        receipt_url: null,
+        message: 'No receipt provided'
+      });
     }
 
-    // Validate base64 string
-    if (typeof file_base64 !== 'string' || file_base64.length === 0) {
-      console.error('Deposit receipt upload - Invalid file_base64 format');
-      return res.status(400).json({ error: 'Invalid file data format' });
+    if (typeof file_base64 !== 'string') {
+      console.error('Deposit receipt upload - Invalid file_base64 type:', typeof file_base64);
+      return res.status(400).json({ error: 'Invalid file data format: expected string' });
+    }
+
+    if (file_base64.length === 0) {
+      console.error('Deposit receipt upload - Empty file_base64 string');
+      return res.status(400).json({ error: 'Empty file data' });
     }
 
     // Convert base64 to buffer

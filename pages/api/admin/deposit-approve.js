@@ -58,18 +58,25 @@ export default async function handler(req, res) {
     }
 
     if (action === 'approve') {
-      // Increase balance
+      // Increase balance - Update both balance and cash_balance
       const { data: userProfile } = await supabaseAdmin
         .from('profiles')
-        .select('balance')
+        .select('balance, cash_balance')
         .eq('id', deposit.user_id)
         .single();
 
-      const newBalance = parseFloat(userProfile.balance || 0) + parseFloat(deposit.amount);
+      const currentBalance = parseFloat(userProfile.balance || 0);
+      const currentCashBalance = parseFloat(userProfile.cash_balance || 0);
+      const depositAmount = parseFloat(deposit.amount);
+      
+      const newBalance = currentBalance + depositAmount;
+      const newCashBalance = currentCashBalance + depositAmount;
+      
       await supabaseAdmin
         .from('profiles')
         .update({
           balance: newBalance,
+          cash_balance: newCashBalance,
           updated_at: new Date().toISOString()
         })
         .eq('id', deposit.user_id);

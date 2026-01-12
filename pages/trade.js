@@ -1164,6 +1164,11 @@ function TradePage() {
     };
 
     fetchBalance();
+    
+    // Refresh balance every 5 seconds to catch deposit approvals
+    const balanceInterval = setInterval(fetchBalance, 5000);
+    
+    return () => clearInterval(balanceInterval);
   }, []);
 
   const [currentAsset, setCurrentAsset] = useState({ symbol: 'BTC', name: 'Bitcoin', price: 51200, change: 0 });
