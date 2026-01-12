@@ -97,8 +97,8 @@ export default async function handler(req, res) {
       portfolio = [];
     }
 
-    // Calculate KPIs from portfolio - only include items with quantity > 0
-    portfolioValue = portfolio
+    // Calculate Assets Value from portfolio - only include items with quantity > 0
+    const assetsValue = portfolio
       .filter(p => parseFloat(p.quantity || 0) > 0)
       .reduce((sum, p) => sum + parseFloat(p.total_value || 0), 0);
     pnl24h = portfolio
@@ -165,20 +165,23 @@ export default async function handler(req, res) {
       console.error('Error fetching earn subscriptions:', err);
     }
 
-    // Get cash balance from profiles table
+    // Get cash balance from profiles table (use balance column, not cash_balance)
     try {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('cash_balance')
+        .select('balance')
         .eq('id', userId)
         .single();
 
       if (profile) {
-        cashBalance = parseFloat(profile.cash_balance || 0);
+        cashBalance = parseFloat(profile.balance || 0);
       }
     } catch (err) {
       console.error('Error fetching cash balance:', err);
     }
+
+    // Calculate Portfolio Value = Assets + Earn Products + Cash Balance
+    portfolioValue = assetsValue + earnProductsValue + cashBalance;
 
     // 7. Watchlist with prices
     let watchlistWithPrices = [];

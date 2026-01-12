@@ -62,10 +62,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if it's a valid base64 data URL
-    if (!file_base64.startsWith('data:') && !file_base64.match(/^[A-Za-z0-9+/=]+$/)) {
-      console.error('Deposit receipt upload - Invalid base64 format');
-      return res.status(400).json({ error: 'Invalid base64 data format' });
+    // Check if it's a valid base64 data URL (FileReader.readAsDataURL always returns data:...)
+    // FileReader.readAsDataURL() returns format: "data:image/jpeg;base64,/9j/4AAQ..."
+    if (!file_base64.startsWith('data:')) {
+      console.error('Deposit receipt upload - Invalid base64 format: does not start with data:');
+      console.error('Deposit receipt upload - First 50 chars:', file_base64.substring(0, 50));
+      return res.status(400).json({ 
+        error: 'Invalid file data format: expected data URL',
+        hint: 'File must be converted using FileReader.readAsDataURL()'
+      });
+    }
+    
+    // Check if it contains base64 data after "data:..."
+    if (!file_base64.includes(',')) {
+      console.error('Deposit receipt upload - Invalid data URL format: missing comma separator');
+      return res.status(400).json({ 
+        error: 'Invalid file data format: missing base64 data'
+      });
     }
 
     // Convert base64 to buffer
