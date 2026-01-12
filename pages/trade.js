@@ -1498,6 +1498,10 @@ function TradePage() {
       const result = await response.json();
       if (result.success) {
         setTradeResult(result.win_lost);
+        // Store profit/loss amount for display
+        if (result.profit_amount !== undefined) {
+          setActiveTrade(prev => prev ? { ...prev, profit_amount: result.profit_amount } : null);
+        }
         // Refresh balance
         const profileResult = await supabase
           .from('profiles')
@@ -2090,18 +2094,30 @@ function TradePage() {
                   {tradeResult === 'win' ? 'WIN!' : 'LOST'}
                 </h2>
                 <div style={{ marginBottom: '32px' }}>
-                  <div style={{
-                    fontSize: '48px',
-                    marginBottom: '16px',
-                  }}>
-                    {tradeResult === 'win' ? '🎉' : '❌'}
-                  </div>
+                  {tradeResult === 'lost' && (
+                    <div style={{
+                      fontSize: '48px',
+                      marginBottom: '16px',
+                    }}>
+                      ❌
+                    </div>
+                  )}
                   <div style={{ fontSize: '18px', color: '#9ca3af', marginBottom: '8px' }}>
                     {activeTrade.side === 'buy' ? 'LONG' : 'SHORT'} {activeTrade.asset_symbol}
                   </div>
-                  <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 600 }}>
-                    Amount: ${parseFloat(activeTrade.trade_amount).toFixed(2)}
-                  </div>
+                  {activeTrade.profit_amount !== undefined ? (
+                    <div style={{ 
+                      fontSize: '20px', 
+                      color: tradeResult === 'win' ? '#22c55e' : '#ef4444', 
+                      fontWeight: 700 
+                    }}>
+                      {tradeResult === 'win' ? 'Won: +$' : 'Lost: -$'}{Math.abs(activeTrade.profit_amount - parseFloat(activeTrade.trade_amount || 0)).toFixed(2)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 600 }}>
+                      Amount: ${parseFloat(activeTrade.trade_amount).toFixed(2)}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => {

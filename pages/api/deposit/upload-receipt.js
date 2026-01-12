@@ -16,6 +16,10 @@ export default async function handler(req, res) {
   }
 
   console.log('Deposit receipt upload API called');
+  console.log('Deposit receipt upload - Request headers:', {
+    'content-type': req.headers['content-type'],
+    'content-length': req.headers['content-length']
+  });
 
   // Check environment variables
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -27,6 +31,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Log raw body for debugging
+    console.log('Deposit receipt upload - Raw body type:', typeof req.body);
+    console.log('Deposit receipt upload - Raw body keys:', req.body ? Object.keys(req.body) : 'null/undefined');
+    
     const { user_id, file_base64, file_name, file_type } = req.body;
 
     console.log('Deposit receipt upload - Request data:', {

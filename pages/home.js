@@ -1446,6 +1446,7 @@ function HomePage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
+                  className="deposit-select"
                 >
                   <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
                   {coins.map((coin) => (
@@ -1497,6 +1498,7 @@ function HomePage() {
                       fontSize: '15px',
                       outline: 'none',
                     }}
+                    className="deposit-select"
                   >
                     <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
                     {networks[depositCoin]?.map((network) => (
@@ -1744,6 +1746,7 @@ function HomePage() {
                       fontSize: '15px',
                       outline: 'none',
                     }}
+                    className="deposit-select"
                   >
                     <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
                     {networks[withdrawCoin]?.map((network) => (

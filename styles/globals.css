@@ -49,6 +49,20 @@ body {
   color: white !important;
 }
 
+/* Light Mode - Deposit/Withdraw Select Elements */
+[data-theme="light"] .deposit-select,
+[data-theme="light"] select.deposit-select {
+  color: #1f2937 !important;
+  background: #f9fafb !important;
+  border-color: #d1d5db !important;
+}
+
+[data-theme="light"] .deposit-select option,
+[data-theme="light"] select.deposit-select option {
+  color: #1f2937 !important;
+  background: #ffffff !important;
+}
+
 /* Light Mode - Main background */
 [data-theme="light"] body,
 [data-theme="light"] html {

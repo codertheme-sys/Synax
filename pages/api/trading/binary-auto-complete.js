@@ -121,6 +121,9 @@ export default async function handler(req, res) {
       profitAmount = tradeAmount - (tradeAmount * profitPercentage / 100);
     }
 
+    // Calculate profit/loss difference for display
+    const profitLossDifference = profitAmount - tradeAmount;
+
     // NOTE: Balance is NOT updated here - trade amount was already deducted when trade was created
     // Profit/loss is added directly to portfolio as crypto asset, not to cash balance
 
