@@ -1511,6 +1511,14 @@ function TradePage() {
         if (profileResult.data) {
           setBalance(parseFloat(profileResult.data.balance || 0));
         }
+        
+        // Auto-close modal after 5 seconds
+        setTimeout(() => {
+          setShowTradeModal(false);
+          setActiveTrade(null);
+          setTradeResult(null);
+          setCountdown(0);
+        }, 5000);
       } else {
         console.error('Trade completion error:', result);
         toast.error(result.error || result.details || 'Failed to complete trade');
@@ -2111,7 +2119,7 @@ function TradePage() {
                       color: tradeResult === 'win' ? '#22c55e' : '#ef4444', 
                       fontWeight: 700 
                     }}>
-                      {tradeResult === 'win' ? 'Won: +$' : 'Lost: -$'}{Math.abs(activeTrade.profit_amount - parseFloat(activeTrade.trade_amount || 0)).toFixed(2)}
+                      {tradeResult === 'win' ? '+$' : '-$'}{Math.abs(activeTrade.profit_amount - parseFloat(activeTrade.trade_amount || 0)).toFixed(2)}
                     </div>
                   ) : (
                     <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 600 }}>
@@ -2119,29 +2127,6 @@ function TradePage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    setShowTradeModal(false);
-                    setActiveTrade(null);
-                    setTradeResult(null);
-                    setCountdown(0);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    background: tradeResult === 'win' 
-                      ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: '#ffffff',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Close
-                </button>
               </>
             )}
           </div>
