@@ -1718,6 +1718,7 @@ function HomePage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
+                  className="deposit-select"
                 >
                   <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
                   {coins.map((coin) => (
