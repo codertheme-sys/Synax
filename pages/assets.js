@@ -690,26 +690,63 @@ function AssetsPage() {
                     return;
                   }
 
-                  // Upload receipt first
+                  // Upload receipt first (base64 via API)
                   let receiptUrl = null;
                   if (depositReceipt) {
-                    const formData = new FormData();
-                    formData.append('file', depositReceipt);
-                    
-                    const uploadResponse = await fetch('/api/deposit/upload-receipt', {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                      },
-                      body: formData,
-                    });
+                    try {
+                      const reader = new FileReader();
+                      const fileBase64Promise = new Promise((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(depositReceipt);
+                      });
 
-                    if (!uploadResponse.ok) {
-                      throw new Error('Failed to upload receipt');
+                      const fileBase64 = await fileBase64Promise;
+
+                      if (!fileBase64 || typeof fileBase64 !== 'string' || fileBase64.length === 0) {
+                        console.error('Receipt upload - Invalid file data after conversion (assets page)');
+                        toast.error('Failed to process receipt file. Please try again.');
+                        throw new Error('Invalid file data');
+                      }
+
+                      const uploadResponse = await fetch('/api/deposit/upload-receipt', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          user_id: session.user.id,
+                          file_base64: fileBase64,
+                          file_name: depositReceipt.name || 'receipt.jpg',
+                          file_type: depositReceipt.type || 'image/jpeg',
+                        }),
+                      });
+
+                      if (!uploadResponse.ok) {
+                        let errorData;
+                        try {
+                          errorData = await uploadResponse.json();
+                        } catch (parseError) {
+                          errorData = { error: `Server error: ${uploadResponse.status} ${uploadResponse.statusText}` };
+                        }
+                        console.error('Receipt upload API error (assets):', errorData);
+                        const errorMessage = errorData.error || errorData.details || 'Unknown error';
+                        toast.error(`Failed to upload receipt: ${errorMessage}`);
+                        throw new Error(`Receipt upload failed: ${errorMessage}`);
+                      } else {
+                        const result = await uploadResponse.json();
+                        if (result.success && result.receipt_url) {
+                          receiptUrl = result.receipt_url;
+                        } else {
+                          console.error('Receipt upload response missing receipt_url (assets):', result);
+                          toast.error('Receipt upload succeeded but URL not returned');
+                          throw new Error('Receipt upload succeeded but URL not returned');
+                        }
+                      }
+                    } catch (uploadErr) {
+                      console.error('Receipt upload exception (assets):', uploadErr);
+                      throw uploadErr;
                     }
-
-                    const uploadResult = await uploadResponse.json();
-                    receiptUrl = uploadResult.url;
                   }
 
                   const response = await fetch('/api/deposit/create', {
@@ -767,6 +804,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
+                  className="deposit-select"
                 >
                   <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
                   {coins.map((coin) => (
@@ -795,6 +833,7 @@ function AssetsPage() {
                       fontSize: '15px',
                       outline: 'none',
                     }}
+                  className="deposit-select"
                   >
                     <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
                     {networks[depositCoin]?.map((network) => (
@@ -1099,6 +1138,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
+                  className="deposit-select"
                 >
                   <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a coin</option>
                   {coins.map((coin) => (
@@ -1127,6 +1167,8 @@ function AssetsPage() {
                       fontSize: '15px',
                       outline: 'none',
                     }}
+                  className="deposit-select"
+                  className="deposit-select"
                   >
                     <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
                     {networks[withdrawCoin]?.map((network) => (
