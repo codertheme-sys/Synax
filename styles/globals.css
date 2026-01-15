@@ -284,3 +284,12 @@ body.home [data-reveal].reveal-show {
   }
 }
 
+/* Hide LiveChat default widget button - we use custom button instead */
+#chat-widget-container,
+[id*="livechat-widget"],
+[class*="livechat-widget"],
+iframe[src*="livechatinc.com"][src*="widget"],
+div[data-livechat-widget] {
+  display: none !important;
+}
+
