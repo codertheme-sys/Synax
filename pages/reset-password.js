@@ -370,9 +370,15 @@ function ResetPasswordPage() {
               Reset Your Password
             </h1>
             <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6' }}>
-              Enter your new password below.
+              {isProcessingToken ? 'Processing reset link...' : hasValidSession ? 'Enter your new password below.' : 'Invalid or expired password reset link. Please request a new one.'}
             </p>
           </div>
+
+          {isProcessingToken && (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#60a5fa' }}>
+              <div style={{ fontSize: '14px' }}>Loading...</div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
