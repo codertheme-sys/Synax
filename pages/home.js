@@ -821,198 +821,7 @@ function HomePage() {
 
 
 
-        {/* Performance & Alerts - Side by Side */}
-        <section
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-          style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: isMobile ? '16px' : '24px' }}
-          data-reveal
-        >
-          <div
-            style={{
-              ...cardStyle,
-              padding: '16px',
-              border: '2px solid rgba(236, 72, 153, 0.3)',
-              boxShadow: '0 0 30px rgba(236, 72, 153, 0.15), inset 0 0 30px rgba(236, 72, 153, 0.05)',
-            }}
-            className="flex flex-col gap-4"
-            data-reveal
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>Performance</h2>
-                <p className="text-gray-400 text-xs">Key metrics</p>
-              </div>
-            </div>
-
-            {/* Metrics 2x2 */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/5 rounded-xl p-3 border border-white/10 hover:bg-white/10 transition-colors">
-                <p className="text-gray-400 text-xs mb-1">Drawdown</p>
-                <p style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
-                  {dashboardData?.performance?.drawdown !== undefined 
-                    ? (() => {
-                        const drawdown = parseFloat(dashboardData.performance.drawdown) || 0;
-                        return `${drawdown >= 0 ? '+' : ''}${drawdown.toFixed(2)}%`;
-                      })()
-                    : '0.00%'}
-                </p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 border border-white/10 hover:bg-white/10 transition-colors">
-                <p className="text-gray-400 text-xs mb-1">Volatility</p>
-                <p style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
-                  {dashboardData?.performance?.volatility !== undefined 
-                    ? (() => {
-                        const volatility = parseFloat(dashboardData.performance.volatility) || 0;
-                        return `${volatility.toFixed(2)}%`;
-                      })()
-                    : '0.00%'}
-                </p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 border border-white/10 hover:bg-white/10 transition-colors">
-                <p className="text-gray-400 text-xs mb-1">Sharpe</p>
-                <p style={{ fontSize: '18px', fontWeight: 800, color: '#4ade80' }}>
-                  {dashboardData?.performance?.sharpe !== undefined 
-                    ? (() => {
-                        const sharpe = parseFloat(dashboardData.performance.sharpe) || 0;
-                        return sharpe.toFixed(2);
-                      })()
-                    : '0.00'}
-                </p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-3 border border-white/10 hover:bg-white/10 transition-colors">
-                <p className="text-gray-400 text-xs mb-1">Win rate</p>
-                <p style={{ fontSize: '18px', fontWeight: 800, color: '#4ade80' }}>
-                  {dashboardData?.performance?.winRate !== undefined 
-                    ? (() => {
-                        const winRate = parseFloat(dashboardData.performance.winRate) || 0;
-                        return `${winRate.toFixed(0)}%`;
-                      })()
-                    : '0%'}
-                </p>
-              </div>
-            </div>
-
-            {/* Periodic PnL */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { 
-                  label: 'Daily PnL', 
-                  value: dashboardData?.performance?.dailyPnL !== undefined 
-                    ? `${dashboardData.performance.dailyPnL >= 0 ? '+' : ''}$${Math.abs(dashboardData.performance.dailyPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : '$0.00',
-                  positive: (dashboardData?.performance?.dailyPnL || 0) >= 0 
-                },
-                { 
-                  label: 'MTD PnL', 
-                  value: dashboardData?.performance?.mtdPnL !== undefined 
-                    ? `${dashboardData.performance.mtdPnL >= 0 ? '+' : ''}$${Math.abs(dashboardData.performance.mtdPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : '$0.00',
-                  positive: (dashboardData?.performance?.mtdPnL || 0) >= 0 
-                },
-                { 
-                  label: 'YTD PnL', 
-                  value: dashboardData?.performance?.ytdPnL !== undefined 
-                    ? `${dashboardData.performance.ytdPnL >= 0 ? '+' : ''}$${Math.abs(dashboardData.performance.ytdPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : '$0.00',
-                  positive: (dashboardData?.performance?.ytdPnL || 0) >= 0 
-                },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                  }}
-                  className="hover:bg-white/10 transition-colors"
-                  data-reveal
-                >
-                  <p className="text-gray-400 text-xs mb-1">{item.label}</p>
-                  <p
-                    style={{
-                      fontSize: '15px',
-                      fontWeight: 800,
-                      color: item.positive ? '#4ade80' : '#f87171',
-                    }}
-                  >
-                    {item.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{
-            ...cardStyle,
-            padding: '16px',
-            border: '2px solid rgba(139, 92, 246, 0.3)',
-            boxShadow: '0 0 30px rgba(139, 92, 246, 0.15), inset 0 0 30px rgba(139, 92, 246, 0.05)',
-          }} className="flex flex-col gap-3" data-reveal>
-            <div className="flex items-center justify-between">
-              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Converts History</h2>
-            </div>
-            <div className="space-y-2" style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              {converts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
-                  No convert operations yet. Convert your coins to USDT from the Assets page.
-                </div>
-              ) : (
-                converts.map((c) => {
-                  const date = new Date(c.created_at);
-                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                  return (
-                    <div
-                      key={c.id}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
-                        padding: '10px 12px',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-                        e.currentTarget.style.transform = 'translateX(2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{c.asset_symbol} → USDT</span>
-                        <span style={{
-                          fontSize: '10px',
-                          padding: '3px 8px',
-                          borderRadius: '8px',
-                          fontWeight: 700,
-                          border: '1px solid',
-                          background: 'rgba(34, 197, 94, 0.2)',
-                          color: '#4ade80',
-                          borderColor: 'rgba(34, 197, 94, 0.4)',
-                          boxShadow: '0 0 8px rgba(34, 197, 94, 0.3)'
-                        }}>
-                          Converted
-                        </span>
-                      </div>
-                      <div style={{ color: '#d1d5db', fontSize: '12px', fontWeight: 500 }}>
-                        {parseFloat(c.quantity).toFixed(8)} {c.asset_symbol} → ${parseFloat(c.usd_value).toFixed(2)} USDT
-                      </div>
-                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px' }}>
-                        {formattedDate} {formattedTime}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Watchlist & Recent Orders - Side by Side */}
+        {/* Trade History & Converts History - Side by Side */}
         <section
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
           style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: isMobile ? '16px' : '24px' }}
@@ -1139,6 +948,82 @@ function HomePage() {
               )}
             </div>
           </div>
+          <div style={{
+            ...cardStyle,
+            padding: '16px',
+            border: '2px solid rgba(139, 92, 246, 0.3)',
+            boxShadow: '0 0 30px rgba(139, 92, 246, 0.15), inset 0 0 30px rgba(139, 92, 246, 0.05)',
+          }} className="flex flex-col gap-3" data-reveal>
+            <div className="flex items-center justify-between">
+              <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Converts History</h2>
+            </div>
+            <div className="space-y-2" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+              {converts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
+                  No convert operations yet. Convert your coins to USDT from the Assets page.
+                </div>
+              ) : (
+                converts.map((c) => {
+                  const date = new Date(c.created_at);
+                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <div
+                      key={c.id}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                        e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+                        e.currentTarget.style.transform = 'translateX(2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '13px' }}>{c.asset_symbol} → USDT</span>
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          border: '1px solid',
+                          background: 'rgba(34, 197, 94, 0.2)',
+                          color: '#4ade80',
+                          borderColor: 'rgba(34, 197, 94, 0.4)',
+                          boxShadow: '0 0 8px rgba(34, 197, 94, 0.3)'
+                        }}>
+                          Converted
+                        </span>
+                      </div>
+                      <div style={{ color: '#d1d5db', fontSize: '12px', fontWeight: 500 }}>
+                        {parseFloat(c.quantity).toFixed(8)} {c.asset_symbol} → ${parseFloat(c.usd_value).toFixed(2)} USDT
+                      </div>
+                      <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px' }}>
+                        {formattedDate} {formattedTime}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Recent Trades */}
+        <section
+          className="grid grid-cols-1 gap-6"
+          style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr', gap: isMobile ? '16px' : '24px' }}
+          data-reveal
+        >
           <div style={{
             ...cardStyle,
             padding: '16px',
