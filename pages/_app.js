@@ -245,7 +245,16 @@ function MyApp({ Component, pageProps }) {
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
       if (event === 'SIGNED_IN' && currentPath === '/reset-password') {
         console.log('User signed in on reset-password page, staying on page');
+        // Prevent any automatic redirects
+        if (typeof window !== 'undefined') {
+          window.__preventRedirect = true;
+        }
         return;
+      }
+      
+      // Clear prevent redirect flag if not on reset-password page
+      if (typeof window !== 'undefined' && currentPath !== '/reset-password') {
+        window.__preventRedirect = false;
       }
     });
 

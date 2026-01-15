@@ -22,7 +22,23 @@ function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isProcessingToken, setIsProcessingToken] = useState(true);
+  const [hasValidSession, setHasValidSession] = useState(false);
   const router = useRouter();
+  
+  // Prevent navigation away from reset password page
+  useEffect(() => {
+    const preventNavigation = () => {
+      if (hasValidSession && !success) {
+        return 'Are you sure you want to leave? Your password reset is in progress.';
+      }
+    };
+    
+    window.addEventListener('beforeunload', preventNavigation);
+    
+    return () => {
+      window.removeEventListener('beforeunload', preventNavigation);
+    };
+  }, [hasValidSession, success]);
 
   useEffect(() => {
     // Check for error in URL hash first
@@ -66,8 +82,14 @@ function ResetPasswordPage() {
           // Session set successfully, user can now reset password
           console.log('Recovery session set successfully');
           setIsProcessingToken(false);
+          setHasValidSession(true);
           // Clear the hash to clean up the URL but stay on reset-password page
           window.history.replaceState(null, '', '/reset-password');
+          // Set flag to prevent redirects
+          if (typeof window !== 'undefined') {
+            window.__preventRedirect = true;
+            window.__onResetPasswordPage = true;
+          }
           toast.success('Please enter your new password below');
         }
       });
