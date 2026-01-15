@@ -33,7 +33,57 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
-  const [liveChatLoaded, setLiveChatLoaded] = useState(false);
+
+  // Load LiveChat Widget Script
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    
+    // Check if LiveChat is already loaded
+    if (window.LiveChatWidget || window.__lc?.license) return;
+    
+    // LiveChat script configuration
+    window.__lc = window.__lc || {};
+    window.__lc.license = 19453766;
+    window.__lc.integration_name = "manual_channels";
+    window.__lc.product_name = "livechat";
+    
+    // LiveChat widget initialization
+    (function(n, t, c) {
+      function i(n) {
+        return e._h ? e._h.apply(null, n) : e._q.push(n);
+      }
+      var e = {
+        _q: [],
+        _h: null,
+        _v: "2.0",
+        on: function() {
+          i(["on", c.call(arguments)]);
+        },
+        once: function() {
+          i(["once", c.call(arguments)]);
+        },
+        off: function() {
+          i(["off", c.call(arguments)]);
+        },
+        get: function() {
+          if (!e._h) throw new Error("[LiveChatWidget] You can't use getters before load.");
+          return i(["get", c.call(arguments)]);
+        },
+        call: function() {
+          i(["call", c.call(arguments)]);
+        },
+        init: function() {
+          var n = t.createElement("script");
+          n.async = !0;
+          n.type = "text/javascript";
+          n.src = "https://cdn.livechatinc.com/tracking.js";
+          t.head.appendChild(n);
+        }
+      };
+      !n.__lc.asyncInit && e.init();
+      n.LiveChatWidget = n.LiveChatWidget || e;
+    })(window, document, [].slice);
+  }, []);
 
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
@@ -116,123 +166,6 @@ function MyApp({ Component, pageProps }) {
     };
   }, [router.pathname]);
 
-  // Load LiveChat Script
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    
-    // Check if LiveChat is already loaded
-    if (window.LiveChatWidget || window.__lc?.license) return;
-    
-    // LiveChat script configuration
-    window.__lc = window.__lc || {};
-    window.__lc.license = 19453766;
-    window.__lc.integration_name = "manual_channels";
-    window.__lc.product_name = "livechat";
-    // Prevent auto-opening of chat window
-    window.__lc.params = window.__lc.params || [];
-    window.__lc.params.push({
-      name: 'hide_widget_on_load',
-      value: true
-    });
-    window.__lc.params.push({
-      name: 'hide_widget_on_start',
-      value: true
-    });
-    
-    // LiveChat widget initialization
-    (function(n, t, c) {
-      function i(n) {
-        return e._h ? e._h.apply(null, n) : e._q.push(n);
-      }
-      var e = {
-        _q: [],
-        _h: null,
-        _v: "2.0",
-        on: function() {
-          i(["on", c.call(arguments)]);
-        },
-        once: function() {
-          i(["once", c.call(arguments)]);
-        },
-        off: function() {
-          i(["off", c.call(arguments)]);
-        },
-        get: function() {
-          if (!e._h) throw new Error("[LiveChatWidget] You can't use getters before load.");
-          return i(["get", c.call(arguments)]);
-        },
-        call: function() {
-          i(["call", c.call(arguments)]);
-        },
-        init: function() {
-          var n = t.createElement("script");
-          n.async = !0;
-          n.type = "text/javascript";
-          n.src = "https://cdn.livechatinc.com/tracking.js";
-          t.head.appendChild(n);
-        }
-      };
-      !n.__lc.asyncInit && e.init();
-      n.LiveChatWidget = n.LiveChatWidget || e;
-    })(window, document, [].slice);
-    
-    // Hide LiveChat's default widget button (we use our custom button instead)
-    // Keep widget container visible for API to work, but hide only the button
-    const hideLiveChatButton = setInterval(() => {
-      if (window.LC_API) {
-        // LiveChat is loaded
-        window.LC_API.on_ready = function() {
-          console.log('LiveChat ready. Hiding default button...');
-          // Find LiveChat container
-          const lcContainer = document.querySelector('#chat-widget-container, [id*="livechat"], [class*="livechat-widget"]');
-          if (lcContainer) {
-            // Keep container visible for API to work
-            lcContainer.style.display = 'block';
-            lcContainer.style.visibility = 'visible';
-            lcContainer.style.zIndex = '9998';
-            
-            // Hide only the button (first child is usually the button)
-            const button = lcContainer.querySelector('button, [role="button"], > div:first-child, > button:first-child');
-            if (button) {
-              button.style.display = 'none';
-              button.style.visibility = 'hidden';
-              button.style.opacity = '0';
-              console.log('LiveChat default button hidden');
-            }
-          }
-        };
-        clearInterval(hideLiveChatButton);
-      }
-    }, 100);
-    
-    // Continuously check and hide LiveChat button (in case it appears later)
-    const continuousHide = setInterval(() => {
-      // Find LiveChat containers
-      const lcContainers = document.querySelectorAll(
-        '#chat-widget-container, [id*="livechat-widget"], [class*="livechat-widget"], [data-livechat-widget]'
-      );
-      lcContainers.forEach(container => {
-        // Keep container visible
-        container.style.display = 'block';
-        container.style.visibility = 'visible';
-        // Hide any buttons inside
-        const buttons = container.querySelectorAll('button, [role="button"], > div:first-child');
-        buttons.forEach(btn => {
-          btn.style.display = 'none';
-          btn.style.visibility = 'hidden';
-          btn.style.opacity = '0';
-        });
-      });
-    }, 500);
-    
-    // Stop checking after 30 seconds
-    setTimeout(() => {
-      clearInterval(hideLiveChatButton);
-      clearInterval(continuousHide);
-    }, 30000);
-    
-    setLiveChatLoaded(true);
-  }, []);
 
   // Check for user session
   useEffect(() => {
@@ -490,151 +423,6 @@ function MyApp({ Component, pageProps }) {
         <link rel="canonical" href="https://synax.vip/" />
       </Head>
       <Component {...pageProps} />
-      {/* Floating Live Chat Icon */}
-      <button
-        onClick={() => {
-          if (typeof window === 'undefined') return;
-          
-          console.log('LiveChat button clicked. Checking API availability...', {
-            LC_API: !!window.LC_API,
-            LiveChatWidget: !!window.LiveChatWidget,
-            __lc: !!window.__lc,
-            LC_API_open_chat_window: !!(window.LC_API && window.LC_API.open_chat_window)
-          });
-          
-          // LiveChat - Primary method
-          if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
-            console.log('Opening LiveChat using LC_API.open_chat_window()');
-            try {
-              // Make sure LiveChat widget container exists and is functional
-              const lcContainer = document.querySelector('#chat-widget-container, [id*="livechat-widget"], [class*="livechat-widget"]');
-              if (lcContainer) {
-                // Show container temporarily for API to work
-                lcContainer.style.display = 'block';
-                lcContainer.style.visibility = 'visible';
-                lcContainer.style.zIndex = '9999';
-                lcContainer.style.pointerEvents = 'auto';
-                
-                // Hide any buttons inside
-                const buttons = lcContainer.querySelectorAll('button, [role="button"], > div:first-child');
-                buttons.forEach(btn => {
-                  btn.style.display = 'none';
-                  btn.style.visibility = 'hidden';
-                  btn.style.opacity = '0';
-                });
-              }
-              
-              // Open chat window
-              window.LC_API.open_chat_window();
-              
-              // After opening, ensure chat window is compact (small box)
-              setTimeout(() => {
-                const chatWindow = document.querySelector('#chat-widget-container [class*="window"], #chat-widget-container [class*="chat-window"], iframe[src*="livechatinc.com"]');
-                if (chatWindow) {
-                  chatWindow.style.maxWidth = '400px';
-                  chatWindow.style.maxHeight = '600px';
-                  chatWindow.style.width = '400px';
-                  chatWindow.style.height = '600px';
-                  chatWindow.style.bottom = '100px';
-                  chatWindow.style.right = '20px';
-                  chatWindow.style.top = 'auto';
-                  chatWindow.style.left = 'auto';
-                  chatWindow.style.borderRadius = '12px';
-                  chatWindow.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.3)';
-                }
-              }, 100);
-            } catch (error) {
-              console.error('Error opening LiveChat:', error);
-            }
-            return;
-          }
-          
-          // LiveChat - Alternative method using LiveChatWidget
-          if (window.LiveChatWidget && typeof window.LiveChatWidget.call === 'function') {
-            console.log('Opening LiveChat using LiveChatWidget.call("maximize")');
-            try {
-              window.LiveChatWidget.call('maximize');
-            } catch (error) {
-              console.error('Error opening LiveChat:', error);
-            }
-            return;
-          }
-          
-          // Wait for LiveChat to load and then open
-          if (window.__lc && !window.LC_API) {
-            console.log('LiveChat script loaded but API not ready. Waiting...');
-            const checkInterval = setInterval(() => {
-              if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
-                clearInterval(checkInterval);
-                console.log('LiveChat API ready. Opening chat...');
-                window.LC_API.open_chat_window();
-              }
-            }, 100);
-            
-            // Stop checking after 5 seconds
-            setTimeout(() => {
-              clearInterval(checkInterval);
-              console.error('LiveChat API did not load within 5 seconds');
-            }, 5000);
-            return;
-          }
-          
-          // Fallback: Try to find and trigger LiveChat widget
-          console.log('Trying fallback method to open LiveChat...');
-          const liveChatIframe = document.querySelector('iframe[src*="livechatinc.com"]');
-          if (liveChatIframe) {
-            console.log('Found LiveChat iframe, attempting to open...');
-            liveChatIframe.style.display = 'block';
-            liveChatIframe.style.zIndex = '99999';
-            liveChatIframe.style.visibility = 'visible';
-            try {
-              const iframeWindow = liveChatIframe.contentWindow;
-              if (iframeWindow && iframeWindow.LC_API) {
-                iframeWindow.LC_API.open_chat_window();
-              }
-            } catch (e) {
-              console.error('Cannot access iframe:', e);
-            }
-            return;
-          }
-          
-          console.error('LiveChat not found. Please ensure LiveChat script is loaded.');
-        }}
-        aria-label="Live Chat"
-        style={{
-          position: 'fixed',
-          right: '20px',
-          bottom: '20px',
-          width: '56px',
-          height: '56px',
-          borderRadius: '9999px',
-          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-          boxShadow: '0 10px 25px rgba(59, 130, 246, 0.35)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#fff',
-          fontSize: '22px',
-          fontWeight: 800,
-          border: '1px solid rgba(255,255,255,0.25)',
-          cursor: 'pointer',
-          zIndex: 9999,
-        }}
-        title="Live Chat"
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.transition = 'transform 0.2s ease';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          <line x1="9" y1="10" x2="15" y2="10" />
-          <line x1="9" y1="14" x2="13" y2="14" />
-        </svg>
-      </button>
       <Toaster
         position="top-right"
         toastOptions={{
