@@ -27,6 +27,13 @@ function ResetPasswordPage() {
   
   // Prevent navigation away from reset password page
   useEffect(() => {
+    // Set flag immediately on mount
+    if (typeof window !== 'undefined') {
+      window.__onResetPasswordPage = true;
+      window.__preventRedirect = true;
+      console.log('🔐 [RESET PASSWORD] Set prevention flags on mount');
+    }
+    
     const preventNavigation = () => {
       if (hasValidSession && !success) {
         return 'Are you sure you want to leave? Your password reset is in progress.';
@@ -35,10 +42,41 @@ function ResetPasswordPage() {
     
     window.addEventListener('beforeunload', preventNavigation);
     
+    // Intercept router.push calls
+    const originalPush = router.push;
+    router.push = function(...args) {
+      const targetPath = typeof args[0] === 'string' ? args[0] : args[0]?.pathname || '';
+      console.log('🔐 [RESET PASSWORD] Router.push intercepted:', targetPath);
+      console.log('🔐 [RESET PASSWORD] Current pathname:', window.location.pathname);
+      console.log('🔐 [RESET PASSWORD] hasValidSession:', hasValidSession);
+      console.log('🔐 [RESET PASSWORD] success:', success);
+      console.log('🔐 [RESET PASSWORD] __preventRedirect:', window.__preventRedirect);
+      
+      // Allow redirect to login or forgot-password
+      if (targetPath === '/login' || targetPath === '/forgot-password' || success) {
+        console.log('🔐 [RESET PASSWORD] Allowing redirect to:', targetPath);
+        return originalPush.apply(router, args);
+      }
+      
+      // Prevent redirect if we have valid session and not success
+      if (hasValidSession && !success && window.location.pathname === '/reset-password') {
+        console.log('🔐 [RESET PASSWORD] ❌ BLOCKED redirect to:', targetPath);
+        console.log('🔐 [RESET PASSWORD] Staying on reset-password page');
+        return Promise.resolve(false);
+      }
+      
+      return originalPush.apply(router, args);
+    };
+    
     return () => {
       window.removeEventListener('beforeunload', preventNavigation);
+      router.push = originalPush;
+      if (typeof window !== 'undefined' && !success) {
+        window.__onResetPasswordPage = false;
+        window.__preventRedirect = false;
+      }
     };
-  }, [hasValidSession, success]);
+  }, [hasValidSession, success, router]);
 
   useEffect(() => {
     console.log('🔐 [RESET PASSWORD] ========== PAGE MOUNTED ==========');

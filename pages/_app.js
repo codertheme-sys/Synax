@@ -34,6 +34,27 @@ function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
 
+  // Load Crisp Chat Script
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    
+    // Check if Crisp is already loaded
+    if (window.$crisp && window.CRISP_WEBSITE_ID) return;
+    
+    // Crisp script configuration
+    window.$crisp = [];
+    window.CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID || "46509809-e3ea-44cc-a779-ad2283986e8f";
+    
+    // Load Crisp script
+    (function(){
+      const d = document;
+      const s = d.createElement("script");
+      s.src = "https://client.crisp.chat/l.js";
+      s.async = 1;
+      d.getElementsByTagName("head")[0].appendChild(s);
+    })();
+  }, []);
+
 
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
@@ -143,21 +164,26 @@ function MyApp({ Component, pageProps }) {
       
       setUser(session?.user || null);
       
-      // Don't redirect if we're on reset-password page (let the page handle it)
-      if (event === 'SIGNED_IN' && currentPath === '/reset-password') {
-        console.log('🔐 [AUTH STATE CHANGE] ✅ User signed in on reset-password page, staying on page');
-        console.log('🔐 [AUTH STATE CHANGE] Preventing redirect...');
+      // CRITICAL: Don't redirect if we're on reset-password page (let the page handle it)
+      if (currentPath === '/reset-password' || router.pathname === '/reset-password') {
+        console.log('🔐 [AUTH STATE CHANGE] ✅ On reset-password page, preventing any redirects');
+        console.log('🔐 [AUTH STATE CHANGE] Event type:', event);
+        console.log('🔐 [AUTH STATE CHANGE] Session exists:', !!session);
+        
         // Prevent any automatic redirects
         if (typeof window !== 'undefined') {
           window.__preventRedirect = true;
           window.__onResetPasswordPage = true;
           console.log('🔐 [AUTH STATE CHANGE] Set redirect prevention flags');
         }
+        
+        // Don't do anything else, just return
+        console.log('🔐 [AUTH STATE CHANGE] Returning early - no redirect');
         return;
       }
       
       // Clear prevent redirect flag if not on reset-password page
-      if (typeof window !== 'undefined' && currentPath !== '/reset-password') {
+      if (typeof window !== 'undefined' && currentPath !== '/reset-password' && router.pathname !== '/reset-password') {
         if (window.__preventRedirect || window.__onResetPasswordPage) {
           console.log('🔐 [AUTH STATE CHANGE] Clearing redirect prevention flags (not on reset-password page)');
         }
@@ -167,6 +193,30 @@ function MyApp({ Component, pageProps }) {
       
       console.log('🔐 [AUTH STATE CHANGE] ========== EVENT HANDLED ==========');
     });
+    
+    // Also intercept router events to prevent navigation
+    const handleRouteChangeStart = (url) => {
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
+      console.log('🔐 [ROUTER] Route change start:', url);
+      console.log('🔐 [ROUTER] Current path:', currentPath);
+      console.log('🔐 [ROUTER] __preventRedirect:', typeof window !== 'undefined' ? window.__preventRedirect : 'N/A');
+      
+      if (currentPath === '/reset-password' && typeof window !== 'undefined' && window.__preventRedirect) {
+        const targetPath = url.split('?')[0];
+        if (targetPath !== '/reset-password' && targetPath !== '/login' && targetPath !== '/forgot-password') {
+          console.log('🔐 [ROUTER] ❌ BLOCKED route change from /reset-password to:', targetPath);
+          router.events.emit('routeChangeError', new Error('Navigation blocked'), url, { shallow: false });
+          throw new Error('Navigation blocked - on reset password page');
+        }
+      }
+    };
+    
+    router.events.on('routeChangeStart', handleRouteChangeStart);
+    
+    return () => {
+      subscription.unsubscribe();
+      router.events.off('routeChangeStart', handleRouteChangeStart);
+    };
 
     return () => subscription.unsubscribe();
   }, []);
