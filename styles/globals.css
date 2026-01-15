@@ -285,9 +285,11 @@ body.home [data-reveal].reveal-show {
 }
 /* Crisp Chat Widget - Make it compact (small window) */
 /* Target Crisp chat window when opened */
+#crisp-chatbox,
+.crisp-client,
 #crisp-chatbox iframe,
 .crisp-client iframe,
-iframe[src*="crisp.chat"][src*="chatbox"] {
+iframe[src*="crisp.chat"] {
   max-width: 400px !important;
   max-height: 600px !important;
   width: 400px !important;
@@ -301,11 +303,19 @@ iframe[src*="crisp.chat"][src*="chatbox"] {
   position: fixed !important;
 }
 
-/* Crisp chat container */
-#crisp-chatbox,
-.crisp-client {
+/* Prevent Crisp from taking full screen */
+.crisp-client,
+#crisp-chatbox {
   max-width: 400px !important;
   max-height: 600px !important;
-  bottom: 100px !important;
-  right: 20px !important;
+  width: 400px !important;
+  height: 600px !important;
+  overflow: hidden !important;
+}
+
+/* Crisp chat container - ensure it stays compact */
+.crisp-client > div,
+#crisp-chatbox > div {
+  max-width: 400px !important;
+  max-height: 600px !important;
 }

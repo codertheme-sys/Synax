@@ -24,16 +24,32 @@ function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Parse URL hash for password reset token
+    // Check for error in URL hash first
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     const urlParams = new URLSearchParams(hash.substring(1)); // Remove # from hash
     
+    // Check for error parameters
+    const error = urlParams.get('error');
+    const errorCode = urlParams.get('error_code');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (error || errorCode) {
+      console.error('Password reset error:', { error, errorCode, errorDescription });
+      toast.error(errorDescription || 'Invalid or expired password reset link');
+      setTimeout(() => {
+        router.push('/login');
+      }, 3000);
+      return;
+    }
+    
+    // Parse URL hash for password reset token
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
     
     // Check if we have a valid recovery token in hash
     if (accessToken && refreshToken && type === 'recovery') {
+      console.log('Found recovery tokens in URL hash');
       // Set session from recovery token (this allows password update)
       supabase.auth.setSession({
         access_token: accessToken,
@@ -41,13 +57,15 @@ function ResetPasswordPage() {
       }).then(({ data, error }) => {
         if (error) {
           console.error('Error setting session:', error);
-          toast.error('Invalid or expired password reset link');
+          toast.error(error.message || 'Invalid or expired password reset link');
           setTimeout(() => {
             router.push('/login');
-          }, 2000);
+          }, 3000);
         } else {
           // Session set successfully, user can now reset password
           console.log('Recovery session set successfully');
+          // Clear the hash to clean up the URL
+          window.history.replaceState(null, '', window.location.pathname);
         }
       });
     } else {
@@ -56,15 +74,21 @@ function ResetPasswordPage() {
       const token = queryParams.get('token');
       const queryType = queryParams.get('type');
       
-      if (!token || queryType !== 'recovery') {
+      if (token && queryType === 'recovery') {
+        // Handle query param token if needed
+        console.log('Found recovery token in query params');
+      } else {
         // No valid token in hash or query params
         // Check if user already has a valid session (they might have clicked link before)
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) {
-            toast.error('Invalid or expired password reset link');
+            console.log('No valid session found');
+            toast.error('Invalid or expired password reset link. Please request a new one.');
             setTimeout(() => {
-              router.push('/login');
-            }, 2000);
+              router.push('/forgot-password');
+            }, 3000);
+          } else {
+            console.log('Valid session found, user can reset password');
           }
         });
       }
