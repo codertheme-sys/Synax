@@ -54,25 +54,21 @@ function MyApp({ Component, pageProps }) {
       d.getElementsByTagName("head")[0].appendChild(s);
     })();
     
-    // Function to force Crisp to compact size
-    const forceCrispCompact = () => {
-      // Find all Crisp elements including the button
-      const crispSelectors = [
-        '#crisp-chatbox',
-        '.crisp-client',
-        'iframe[src*="crisp.chat"]',
-        '.crisp-client > div',
-        '#crisp-chatbox > div',
-        '.crisp-client > div > div',
-        '#crisp-chatbox > div > div',
-        '[data-crisp-widget]',
-        '.crisp-client-container'
-      ];
+    // Function to manage Crisp chat visibility and size
+    const manageCrispChat = () => {
+      // Check if chat is opened
+      const isChatOpened = window.$crisp && window.$crisp.is && window.$crisp.is('chat:opened');
       
-      crispSelectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(el => {
-          if (el) {
+      // Find all Crisp elements
+      const crispChatElements = document.querySelectorAll('#crisp-chatbox, .crisp-client, iframe[src*="crisp.chat"]');
+      const crispButtons = document.querySelectorAll('[data-crisp-button], .crisp-client > button, .crisp-client > div > button');
+      
+      // Handle chat window
+      crispChatElements.forEach(el => {
+        if (el) {
+          if (isChatOpened) {
+            // Chat is opened - show it compact
+            el.setAttribute('data-crisp-opened', 'true');
             el.style.setProperty('max-width', '400px', 'important');
             el.style.setProperty('max-height', '600px', 'important');
             el.style.setProperty('width', '400px', 'important');
@@ -86,21 +82,43 @@ function MyApp({ Component, pageProps }) {
             el.style.setProperty('overflow', 'hidden', 'important');
             el.style.setProperty('transform', 'none', 'important');
             el.style.setProperty('z-index', '9999', 'important');
+            el.style.setProperty('display', 'block', 'important');
+            el.style.setProperty('visibility', 'visible', 'important');
+            el.style.setProperty('opacity', '1', 'important');
+          } else {
+            // Chat is closed - hide it completely
+            el.removeAttribute('data-crisp-opened');
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
           }
-        });
+        }
       });
       
-      // Also target Crisp button specifically to make it smaller
-      const crispButton = document.querySelector('[data-crisp-button], .crisp-client button, #crisp-chatbox button');
-      if (crispButton) {
-        crispButton.style.setProperty('width', '60px', 'important');
-        crispButton.style.setProperty('height', '60px', 'important');
-        crispButton.style.setProperty('max-width', '60px', 'important');
-        crispButton.style.setProperty('max-height', '60px', 'important');
-      }
+      // Handle buttons - always show them small
+      crispButtons.forEach(button => {
+        if (button) {
+          button.style.setProperty('width', '60px', 'important');
+          button.style.setProperty('height', '60px', 'important');
+          button.style.setProperty('max-width', '60px', 'important');
+          button.style.setProperty('max-height', '60px', 'important');
+          button.style.setProperty('min-width', '60px', 'important');
+          button.style.setProperty('min-height', '60px', 'important');
+          button.style.setProperty('bottom', '20px', 'important');
+          button.style.setProperty('right', '20px', 'important');
+          button.style.setProperty('top', 'auto', 'important');
+          button.style.setProperty('left', 'auto', 'important');
+          button.style.setProperty('position', 'fixed', 'important');
+          button.style.setProperty('z-index', '10000', 'important');
+          button.style.setProperty('display', 'block', 'important');
+          button.style.setProperty('visibility', 'visible', 'important');
+          button.style.setProperty('opacity', '1', 'important');
+        }
+      });
     };
     
-    // Wait for Crisp to load and configure window size
+    // Wait for Crisp to load and configure
     const configureCrisp = setInterval(() => {
       if (window.$crisp && window.$crisp.is) {
         // Set language to English only after Crisp is loaded
@@ -109,9 +127,9 @@ function MyApp({ Component, pageProps }) {
             window.$crisp.push(['set', 'locale', 'en']);
           }
         } catch (e) {
-          console.log('Crisp locale setting skipped:', e);
+          // Silently ignore locale errors
         }
-        forceCrispCompact();
+        manageCrispChat();
       }
     }, 200);
     
@@ -120,23 +138,29 @@ function MyApp({ Component, pageProps }) {
       clearInterval(configureCrisp);
     }, 30000);
     
-    // Also configure when chat opens
-    window.addEventListener('crisp:chat:opened', () => {
-      setTimeout(() => {
-        try {
-          if (window.$crisp && window.$crisp.push) {
-            window.$crisp.push(['set', 'locale', 'en']);
+    // Also configure when chat opens/closes
+    if (window.$crisp) {
+      window.$crisp.push(['on', 'chat:opened', () => {
+        setTimeout(() => {
+          try {
+            if (window.$crisp && window.$crisp.push) {
+              window.$crisp.push(['set', 'locale', 'en']);
+            }
+          } catch (e) {
+            // Silently ignore
           }
-        } catch (e) {
-          console.log('Crisp locale setting skipped on open:', e);
-        }
-        forceCrispCompact();
-      }, 100);
-    });
+          manageCrispChat();
+        }, 100);
+      }]);
+      
+      window.$crisp.push(['on', 'chat:closed', () => {
+        manageCrispChat();
+      }]);
+    }
     
     // Monitor DOM changes to catch Crisp elements
     const observer = new MutationObserver(() => {
-      forceCrispCompact();
+      manageCrispChat();
     });
     
     observer.observe(document.body, {
@@ -145,7 +169,7 @@ function MyApp({ Component, pageProps }) {
     });
     
     // Also run periodically to catch any missed elements
-    setInterval(forceCrispCompact, 500);
+    setInterval(manageCrispChat, 500);
   }, []);
 
   useEffect(() => {
