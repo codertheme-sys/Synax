@@ -34,143 +34,6 @@ function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
 
-  // Load Crisp Chat Script
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    
-    // Check if Crisp is already loaded
-    if (window.$crisp && window.CRISP_WEBSITE_ID) return;
-    
-    // Crisp script configuration
-    window.$crisp = [];
-    window.CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID || "46509809-e3ea-44cc-a779-ad2283986e8f";
-    
-    // Load Crisp script
-    (function() {
-      const d = document;
-      const s = d.createElement("script");
-      s.src = "https://client.crisp.chat/l.js";
-      s.async = 1;
-      d.getElementsByTagName("head")[0].appendChild(s);
-    })();
-    
-    // Function to manage Crisp chat visibility and size
-    const manageCrispChat = () => {
-      // Check if chat is opened
-      const isChatOpened = window.$crisp && window.$crisp.is && window.$crisp.is('chat:opened');
-      
-      // Find all Crisp elements
-      const crispChatElements = document.querySelectorAll('#crisp-chatbox, .crisp-client, iframe[src*="crisp.chat"]');
-      const crispButtons = document.querySelectorAll('[data-crisp-button], .crisp-client > button, .crisp-client > div > button');
-      
-      // Handle chat window
-      crispChatElements.forEach(el => {
-        if (el) {
-          if (isChatOpened) {
-            // Chat is opened - show it compact
-            el.setAttribute('data-crisp-opened', 'true');
-            el.style.setProperty('max-width', '400px', 'important');
-            el.style.setProperty('max-height', '600px', 'important');
-            el.style.setProperty('width', '400px', 'important');
-            el.style.setProperty('height', '600px', 'important');
-            el.style.setProperty('bottom', '100px', 'important');
-            el.style.setProperty('right', '20px', 'important');
-            el.style.setProperty('top', 'auto', 'important');
-            el.style.setProperty('left', 'auto', 'important');
-            el.style.setProperty('border-radius', '12px', 'important');
-            el.style.setProperty('position', 'fixed', 'important');
-            el.style.setProperty('overflow', 'hidden', 'important');
-            el.style.setProperty('transform', 'none', 'important');
-            el.style.setProperty('z-index', '9999', 'important');
-            el.style.setProperty('display', 'block', 'important');
-            el.style.setProperty('visibility', 'visible', 'important');
-            el.style.setProperty('opacity', '1', 'important');
-          } else {
-            // Chat is closed - hide it completely
-            el.removeAttribute('data-crisp-opened');
-            el.style.setProperty('display', 'none', 'important');
-            el.style.setProperty('visibility', 'hidden', 'important');
-            el.style.setProperty('opacity', '0', 'important');
-            el.style.setProperty('pointer-events', 'none', 'important');
-          }
-        }
-      });
-      
-      // Handle buttons - always show them small
-      crispButtons.forEach(button => {
-        if (button) {
-          button.style.setProperty('width', '60px', 'important');
-          button.style.setProperty('height', '60px', 'important');
-          button.style.setProperty('max-width', '60px', 'important');
-          button.style.setProperty('max-height', '60px', 'important');
-          button.style.setProperty('min-width', '60px', 'important');
-          button.style.setProperty('min-height', '60px', 'important');
-          button.style.setProperty('bottom', '20px', 'important');
-          button.style.setProperty('right', '20px', 'important');
-          button.style.setProperty('top', 'auto', 'important');
-          button.style.setProperty('left', 'auto', 'important');
-          button.style.setProperty('position', 'fixed', 'important');
-          button.style.setProperty('z-index', '10000', 'important');
-          button.style.setProperty('display', 'block', 'important');
-          button.style.setProperty('visibility', 'visible', 'important');
-          button.style.setProperty('opacity', '1', 'important');
-        }
-      });
-    };
-    
-    // Wait for Crisp to load and configure
-    const configureCrisp = setInterval(() => {
-      if (window.$crisp && window.$crisp.is) {
-        // Set language to English only after Crisp is loaded
-        try {
-          if (window.$crisp.push && typeof window.$crisp.push === 'function') {
-            window.$crisp.push(['set', 'locale', 'en']);
-          }
-        } catch (e) {
-          // Silently ignore locale errors
-        }
-        manageCrispChat();
-      }
-    }, 200);
-    
-    // Stop checking after 30 seconds but keep monitoring
-    setTimeout(() => {
-      clearInterval(configureCrisp);
-    }, 30000);
-    
-    // Also configure when chat opens/closes
-    if (window.$crisp) {
-      window.$crisp.push(['on', 'chat:opened', () => {
-        setTimeout(() => {
-          try {
-            if (window.$crisp && window.$crisp.push) {
-              window.$crisp.push(['set', 'locale', 'en']);
-            }
-          } catch (e) {
-            // Silently ignore
-          }
-          manageCrispChat();
-        }, 100);
-      }]);
-      
-      window.$crisp.push(['on', 'chat:closed', () => {
-        manageCrispChat();
-      }]);
-    }
-    
-    // Monitor DOM changes to catch Crisp elements
-    const observer = new MutationObserver(() => {
-      manageCrispChat();
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-    
-    // Also run periodically to catch any missed elements
-    setInterval(manageCrispChat, 500);
-  }, []);
 
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
@@ -263,23 +126,46 @@ function MyApp({ Component, pageProps }) {
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : 'N/A';
+      
+      console.log('🔐 [AUTH STATE CHANGE] ========== EVENT TRIGGERED ==========');
+      console.log('🔐 [AUTH STATE CHANGE] Event:', event);
+      console.log('🔐 [AUTH STATE CHANGE] Timestamp:', new Date().toISOString());
+      console.log('🔐 [AUTH STATE CHANGE] Current pathname:', currentPath);
+      console.log('🔐 [AUTH STATE CHANGE] Current URL:', currentUrl);
+      console.log('🔐 [AUTH STATE CHANGE] Router pathname:', router.pathname);
+      console.log('🔐 [AUTH STATE CHANGE] Has session:', !!session);
+      console.log('🔐 [AUTH STATE CHANGE] User ID:', session?.user?.id);
+      console.log('🔐 [AUTH STATE CHANGE] User email:', session?.user?.email);
+      console.log('🔐 [AUTH STATE CHANGE] __preventRedirect flag:', typeof window !== 'undefined' ? window.__preventRedirect : 'N/A');
+      console.log('🔐 [AUTH STATE CHANGE] __onResetPasswordPage flag:', typeof window !== 'undefined' ? window.__onResetPasswordPage : 'N/A');
+      
       setUser(session?.user || null);
       
       // Don't redirect if we're on reset-password page (let the page handle it)
-      const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
       if (event === 'SIGNED_IN' && currentPath === '/reset-password') {
-        console.log('User signed in on reset-password page, staying on page');
+        console.log('🔐 [AUTH STATE CHANGE] ✅ User signed in on reset-password page, staying on page');
+        console.log('🔐 [AUTH STATE CHANGE] Preventing redirect...');
         // Prevent any automatic redirects
         if (typeof window !== 'undefined') {
           window.__preventRedirect = true;
+          window.__onResetPasswordPage = true;
+          console.log('🔐 [AUTH STATE CHANGE] Set redirect prevention flags');
         }
         return;
       }
       
       // Clear prevent redirect flag if not on reset-password page
       if (typeof window !== 'undefined' && currentPath !== '/reset-password') {
+        if (window.__preventRedirect || window.__onResetPasswordPage) {
+          console.log('🔐 [AUTH STATE CHANGE] Clearing redirect prevention flags (not on reset-password page)');
+        }
         window.__preventRedirect = false;
+        window.__onResetPasswordPage = false;
       }
+      
+      console.log('🔐 [AUTH STATE CHANGE] ========== EVENT HANDLED ==========');
     });
 
     return () => subscription.unsubscribe();

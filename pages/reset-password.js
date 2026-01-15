@@ -41,9 +41,22 @@ function ResetPasswordPage() {
   }, [hasValidSession, success]);
 
   useEffect(() => {
+    console.log('🔐 [RESET PASSWORD] ========== PAGE MOUNTED ==========');
+    console.log('🔐 [RESET PASSWORD] Timestamp:', new Date().toISOString());
+    console.log('🔐 [RESET PASSWORD] Current URL:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+    console.log('🔐 [RESET PASSWORD] Current pathname:', typeof window !== 'undefined' ? window.location.pathname : 'N/A');
+    console.log('🔐 [RESET PASSWORD] Current hash:', typeof window !== 'undefined' ? window.location.hash : 'N/A');
+    console.log('🔐 [RESET PASSWORD] Current search:', typeof window !== 'undefined' ? window.location.search : 'N/A');
+    console.log('🔐 [RESET PASSWORD] Router pathname:', router.pathname);
+    console.log('🔐 [RESET PASSWORD] Router asPath:', router.asPath);
+    console.log('🔐 [RESET PASSWORD] Router query:', router.query);
+    
     // Check for error in URL hash first
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     const urlParams = new URLSearchParams(hash.substring(1)); // Remove # from hash
+    
+    console.log('🔐 [RESET PASSWORD] Parsed hash:', hash);
+    console.log('🔐 [RESET PASSWORD] URL params from hash:', Object.fromEntries(urlParams.entries()));
     
     // Check for error parameters
     const error = urlParams.get('error');
@@ -51,9 +64,10 @@ function ResetPasswordPage() {
     const errorDescription = urlParams.get('error_description');
     
     if (error || errorCode) {
-      console.error('Password reset error:', { error, errorCode, errorDescription });
+      console.error('🔐 [RESET PASSWORD] ❌ ERROR DETECTED IN URL:', { error, errorCode, errorDescription });
       toast.error(errorDescription || 'Invalid or expired password reset link');
       setTimeout(() => {
+        console.log('🔐 [RESET PASSWORD] Redirecting to /login due to error');
         router.push('/login');
       }, 3000);
       return;
@@ -64,33 +78,90 @@ function ResetPasswordPage() {
     const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
     
+    console.log('🔐 [RESET PASSWORD] Token check:', {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      type: type,
+      accessTokenLength: accessToken ? accessToken.length : 0,
+      refreshTokenLength: refreshToken ? refreshToken.length : 0
+    });
+    
     // Check if we have a valid recovery token in hash
     if (accessToken && refreshToken && type === 'recovery') {
-      console.log('Found recovery tokens in URL hash');
+      console.log('🔐 [RESET PASSWORD] ✅ Found recovery tokens in URL hash');
+      console.log('🔐 [RESET PASSWORD] Setting session with recovery token...');
+      
+      // Check current session before setting new one
+      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+        console.log('🔐 [RESET PASSWORD] Current session before setSession:', {
+          hasSession: !!currentSession,
+          userId: currentSession?.user?.id,
+          email: currentSession?.user?.email
+        });
+      });
+      
       // Set session from recovery token (this allows password update)
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       }).then(({ data, error }) => {
+        console.log('🔐 [RESET PASSWORD] setSession response:', {
+          hasData: !!data,
+          hasError: !!error,
+          errorMessage: error?.message,
+          userId: data?.user?.id,
+          email: data?.user?.email,
+          sessionExists: !!data?.session
+        });
+        
         if (error) {
-          console.error('Error setting session:', error);
+          console.error('🔐 [RESET PASSWORD] ❌ Error setting session:', error);
           toast.error(error.message || 'Invalid or expired password reset link');
           setTimeout(() => {
+            console.log('🔐 [RESET PASSWORD] Redirecting to /login due to session error');
             router.push('/login');
           }, 3000);
         } else {
           // Session set successfully, user can now reset password
-          console.log('Recovery session set successfully');
+          console.log('🔐 [RESET PASSWORD] ✅ Recovery session set successfully');
+          console.log('🔐 [RESET PASSWORD] Session data:', {
+            userId: data?.user?.id,
+            email: data?.user?.email,
+            sessionToken: data?.session?.access_token ? 'Present' : 'Missing'
+          });
+          
           setIsProcessingToken(false);
           setHasValidSession(true);
+          
           // Clear the hash to clean up the URL but stay on reset-password page
-          window.history.replaceState(null, '', '/reset-password');
+          const newUrl = '/reset-password';
+          console.log('🔐 [RESET PASSWORD] Replacing URL hash with:', newUrl);
+          window.history.replaceState(null, '', newUrl);
+          console.log('🔐 [RESET PASSWORD] URL after replaceState:', window.location.href);
+          
           // Set flag to prevent redirects
           if (typeof window !== 'undefined') {
             window.__preventRedirect = true;
             window.__onResetPasswordPage = true;
+            console.log('🔐 [RESET PASSWORD] Set redirect prevention flags:', {
+              __preventRedirect: window.__preventRedirect,
+              __onResetPasswordPage: window.__onResetPasswordPage
+            });
           }
+          
           toast.success('Please enter your new password below');
+          
+          // Verify session is still set after a short delay
+          setTimeout(() => {
+            supabase.auth.getSession().then(({ data: { session: verifySession } }) => {
+              console.log('🔐 [RESET PASSWORD] Session verification after 1s:', {
+                hasSession: !!verifySession,
+                userId: verifySession?.user?.id,
+                email: verifySession?.user?.email,
+                currentPath: window.location.pathname
+              });
+            });
+          }, 1000);
         }
       });
     } else {
@@ -99,23 +170,42 @@ function ResetPasswordPage() {
       const token = queryParams.get('token');
       const queryType = queryParams.get('type');
       
+      console.log('🔐 [RESET PASSWORD] Query params check:', {
+        hasToken: !!token,
+        queryType: queryType,
+        allQueryParams: Object.fromEntries(queryParams.entries())
+      });
+      
       if (token && queryType === 'recovery') {
         // Handle query param token if needed
-        console.log('Found recovery token in query params');
+        console.log('🔐 [RESET PASSWORD] Found recovery token in query params');
         setIsProcessingToken(false);
       } else {
         // No valid token in hash or query params
         // Check if user already has a valid session (they might have clicked link before)
+        console.log('🔐 [RESET PASSWORD] No tokens found, checking existing session...');
         supabase.auth.getSession().then(({ data: { session } }) => {
+          console.log('🔐 [RESET PASSWORD] Existing session check:', {
+            hasSession: !!session,
+            userId: session?.user?.id,
+            email: session?.user?.email
+          });
+          
           setIsProcessingToken(false);
           if (!session) {
-            console.log('No valid session found');
+            console.log('🔐 [RESET PASSWORD] ❌ No valid session found');
             toast.error('Invalid or expired password reset link. Please request a new one.');
             setTimeout(() => {
+              console.log('🔐 [RESET PASSWORD] Redirecting to /forgot-password');
               router.push('/forgot-password');
             }, 3000);
           } else {
-            console.log('Valid session found, user can reset password');
+            console.log('🔐 [RESET PASSWORD] ✅ Valid session found, user can reset password');
+            setHasValidSession(true);
+            if (typeof window !== 'undefined') {
+              window.__preventRedirect = true;
+              window.__onResetPasswordPage = true;
+            }
           }
         });
       }
