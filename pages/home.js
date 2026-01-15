@@ -280,8 +280,10 @@ function HomePage() {
             const lastPrice = parseFloat(o.last_price || 0);
             // Calculate P&L percentage
             let pnlPercent = '—';
+            let pnlPercentValue = null;
             if (initialPrice > 0 && lastPrice > 0) {
               const percent = ((lastPrice - initialPrice) / initialPrice) * 100;
+              pnlPercentValue = percent;
               pnlPercent = `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
             }
             return {
@@ -293,6 +295,7 @@ function HomePage() {
               lastPrice: lastPrice > 0 ? `$${lastPrice.toFixed(2)}` : '—',
               winLost: o.win_lost ? o.win_lost.toUpperCase() : '—',
               pnlPercent: pnlPercent,
+              pnlPercentValue: pnlPercentValue, // Store numeric value for color calculation
             };
           });
           setOrders(formattedOrders);
@@ -1220,31 +1223,8 @@ function HomePage() {
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: o.pnlPercent && o.pnlPercent !== '—' && parseFloat(o.pnlPercent) >= 0 ? '#4ade80' : o.pnlPercent && o.pnlPercent !== '—' ? '#f87171' : '#d1d5db', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: o.pnlPercentValue !== null && o.pnlPercentValue >= 0 ? '#4ade80' : o.pnlPercentValue !== null ? '#f87171' : '#d1d5db', fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {o.pnlPercent || '—'}
-                        </td>
-                            padding: '3px 8px',
-                            borderRadius: '8px',
-                            fontWeight: 700,
-                            border: '1px solid',
-                            background: o.status === 'Approved'
-                              ? 'rgba(34, 197, 94, 0.2)'
-                              : o.status === 'Rejected'
-                              ? 'rgba(239, 68, 68, 0.2)'
-                              : 'rgba(251, 191, 36, 0.2)',
-                            color: o.status === 'Approved'
-                              ? '#4ade80'
-                              : o.status === 'Rejected'
-                              ? '#f87171'
-                              : '#fbbf24',
-                            borderColor: o.status === 'Approved'
-                              ? 'rgba(34, 197, 94, 0.4)'
-                              : o.status === 'Rejected'
-                              ? 'rgba(239, 68, 68, 0.4)'
-                              : 'rgba(251, 191, 36, 0.4)',
-                          }}>
-                            {o.status}
-                          </span>
                         </td>
                       </tr>
                     ))
