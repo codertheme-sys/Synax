@@ -157,6 +157,12 @@ function ResetPasswordPage() {
       setSuccess(true);
       toast.success('Password reset successfully!');
       setLoading(false);
+      
+      // Clear prevent redirect flag
+      if (typeof window !== 'undefined') {
+        window.__preventRedirect = false;
+        window.__onResetPasswordPage = false;
+      }
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
