@@ -45,10 +45,6 @@ function MyApp({ Component, pageProps }) {
     window.$crisp = [];
     window.CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID || "46509809-e3ea-44cc-a779-ad2283986e8f";
     
-    // Configure Crisp language to English BEFORE loading script
-    window.$crisp.push(['set', 'locale', 'en']);
-    window.$crisp.push(['set', 'user:nickname', '']);
-    
     // Load Crisp script
     (function() {
       const d = document;
@@ -58,18 +54,9 @@ function MyApp({ Component, pageProps }) {
       d.getElementsByTagName("head")[0].appendChild(s);
     })();
     
-    // Configure Crisp settings
-    window.$crisp.push(['config', 'chat:opened', false]);
-    window.$crisp.push(['config', 'position:reverse', false]);
-    
     // Function to force Crisp to compact size
     const forceCrispCompact = () => {
-      // Set language to English
-      if (window.$crisp && window.$crisp.is) {
-        window.$crisp.push(['set', 'locale', 'en']);
-      }
-      
-      // Find all Crisp elements
+      // Find all Crisp elements including the button
       const crispSelectors = [
         '#crisp-chatbox',
         '.crisp-client',
@@ -77,7 +64,9 @@ function MyApp({ Component, pageProps }) {
         '.crisp-client > div',
         '#crisp-chatbox > div',
         '.crisp-client > div > div',
-        '#crisp-chatbox > div > div'
+        '#crisp-chatbox > div > div',
+        '[data-crisp-widget]',
+        '.crisp-client-container'
       ];
       
       crispSelectors.forEach(selector => {
@@ -96,14 +85,32 @@ function MyApp({ Component, pageProps }) {
             el.style.setProperty('position', 'fixed', 'important');
             el.style.setProperty('overflow', 'hidden', 'important');
             el.style.setProperty('transform', 'none', 'important');
+            el.style.setProperty('z-index', '9999', 'important');
           }
         });
       });
+      
+      // Also target Crisp button specifically to make it smaller
+      const crispButton = document.querySelector('[data-crisp-button], .crisp-client button, #crisp-chatbox button');
+      if (crispButton) {
+        crispButton.style.setProperty('width', '60px', 'important');
+        crispButton.style.setProperty('height', '60px', 'important');
+        crispButton.style.setProperty('max-width', '60px', 'important');
+        crispButton.style.setProperty('max-height', '60px', 'important');
+      }
     };
     
-    // Wait for Crisp to load and configure window size and language
+    // Wait for Crisp to load and configure window size
     const configureCrisp = setInterval(() => {
       if (window.$crisp && window.$crisp.is) {
+        // Set language to English only after Crisp is loaded
+        try {
+          if (window.$crisp.push && typeof window.$crisp.push === 'function') {
+            window.$crisp.push(['set', 'locale', 'en']);
+          }
+        } catch (e) {
+          console.log('Crisp locale setting skipped:', e);
+        }
         forceCrispCompact();
       }
     }, 200);
@@ -115,8 +122,16 @@ function MyApp({ Component, pageProps }) {
     
     // Also configure when chat opens
     window.addEventListener('crisp:chat:opened', () => {
-      window.$crisp.push(['set', 'locale', 'en']);
-      setTimeout(forceCrispCompact, 100);
+      setTimeout(() => {
+        try {
+          if (window.$crisp && window.$crisp.push) {
+            window.$crisp.push(['set', 'locale', 'en']);
+          }
+        } catch (e) {
+          console.log('Crisp locale setting skipped on open:', e);
+        }
+        forceCrispCompact();
+      }, 100);
     });
     
     // Monitor DOM changes to catch Crisp elements
@@ -130,7 +145,7 @@ function MyApp({ Component, pageProps }) {
     });
     
     // Also run periodically to catch any missed elements
-    setInterval(forceCrispCompact, 1000);
+    setInterval(forceCrispCompact, 500);
   }, []);
 
   useEffect(() => {
