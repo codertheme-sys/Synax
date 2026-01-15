@@ -96,7 +96,7 @@ function MyApp({ Component, pageProps }) {
         }
       });
       
-      // Handle buttons - always show them small
+      // Handle buttons - always show them small in bottom right
       crispButtons.forEach(button => {
         if (button) {
           button.style.setProperty('width', '60px', 'important');
@@ -114,8 +114,25 @@ function MyApp({ Component, pageProps }) {
           button.style.setProperty('display', 'block', 'important');
           button.style.setProperty('visibility', 'visible', 'important');
           button.style.setProperty('opacity', '1', 'important');
+          button.style.setProperty('pointer-events', 'auto', 'important');
         }
       });
+      
+      // Also ensure Crisp container itself is visible for button
+      const crispContainer = document.querySelector('.crisp-client, #crisp-chatbox');
+      if (crispContainer && !isChatOpened) {
+        crispContainer.style.setProperty('position', 'fixed', 'important');
+        crispContainer.style.setProperty('bottom', '20px', 'important');
+        crispContainer.style.setProperty('right', '20px', 'important');
+        crispContainer.style.setProperty('z-index', '10000', 'important');
+        crispContainer.style.setProperty('display', 'block', 'important');
+        crispContainer.style.setProperty('visibility', 'visible', 'important');
+        crispContainer.style.setProperty('opacity', '1', 'important');
+        crispContainer.style.setProperty('width', 'auto', 'important');
+        crispContainer.style.setProperty('height', 'auto', 'important');
+        crispContainer.style.setProperty('max-width', 'none', 'important');
+        crispContainer.style.setProperty('max-height', 'none', 'important');
+      }
     };
     
     // Wait for Crisp to load and configure
