@@ -118,16 +118,18 @@ function MyApp({ Component, pageProps }) {
 
   // Load LiveChat Script
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
     
     // Check if LiveChat is already loaded
-    if (window.LC_API || window.__lc) return;
+    if (window.LiveChatWidget || window.__lc?.license) return;
     
-    // LiveChat script - Replace YOUR_LICENSE_ID with your actual license ID
-    // You can find your license ID in LiveChat dashboard: Settings > Chat Widget > Installation
+    // LiveChat script configuration
     window.__lc = window.__lc || {};
-    window.__lc.license = process.env.NEXT_PUBLIC_LIVECHAT_LICENSE_ID || 'YOUR_LICENSE_ID';
+    window.__lc.license = 19453766;
+    window.__lc.integration_name = "manual_channels";
+    window.__lc.product_name = "livechat";
     
+    // LiveChat widget initialization
     (function(n, t, c) {
       function i(n) {
         return e._h ? e._h.apply(null, n) : e._q.push(n);
