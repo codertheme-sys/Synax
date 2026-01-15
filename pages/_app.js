@@ -467,8 +467,18 @@ function MyApp({ Component, pageProps }) {
         onClick={() => {
           // Try different live chat services
           if (typeof window !== 'undefined') {
+            // LiveChat - Check multiple API methods
+            if (window.LC_API && window.LC_API.open_chat_window) {
+              window.LC_API.open_chat_window();
+            }
+            else if (window.LiveChatWidget && window.LiveChatWidget.call) {
+              window.LiveChatWidget.call('maximize');
+            }
+            else if (window.__lc && window.__lc.trigger) {
+              window.__lc.trigger('chat');
+            }
             // Tawk.to
-            if (window.Tawk_API) {
+            else if (window.Tawk_API) {
               window.Tawk_API.maximize();
             }
             // Crisp
@@ -479,24 +489,27 @@ function MyApp({ Component, pageProps }) {
             else if (window.Intercom) {
               window.Intercom('show');
             }
-            // LiveChat
-            else if (window.LiveChatWidget) {
-              window.LiveChatWidget.call('maximize');
-            }
-            else if (window.LC_API) {
-              window.LC_API.open_chat_window();
-            }
             // Zendesk Chat
             else if (window.zE) {
               window.zE('messenger', 'open');
             }
             // Generic fallback - try to find and click live chat widget
             else {
-              const chatWidget = document.querySelector('[id*="chat"], [class*="chat"], [id*="livechat"], [class*="livechat"]');
-              if (chatWidget) {
-                chatWidget.click();
-              } else {
-                console.log('Live chat widget not found. Please ensure your live chat script is loaded.');
+              console.log('LiveChat API not found. Checking...', {
+                LC_API: !!window.LC_API,
+                LiveChatWidget: !!window.LiveChatWidget,
+                __lc: !!window.__lc
+              });
+              // Try to find LiveChat iframe and click it
+              const liveChatIframe = document.querySelector('iframe[src*="livechatinc.com"]');
+              if (liveChatIframe) {
+                liveChatIframe.style.display = 'block';
+                liveChatIframe.style.zIndex = '99999';
+                const iframeDoc = liveChatIframe.contentDocument || liveChatIframe.contentWindow.document;
+                const chatButton = iframeDoc.querySelector('button, [role="button"], [onclick*="chat"]');
+                if (chatButton) {
+                  chatButton.click();
+                }
               }
             }
           }
