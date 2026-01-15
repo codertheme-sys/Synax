@@ -138,43 +138,59 @@ function MyApp({ Component, pageProps }) {
   }, [router.pathname]);
 
 
-  // Check for password reset errors in URL hash and redirect to reset-password page
+  // Check for password reset tokens/errors in URL hash and redirect to reset-password page
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const checkHashForResetPasswordErrors = () => {
+    const checkHashForResetPassword = () => {
       const hash = window.location.hash;
       const pathname = window.location.pathname;
       
       // Only process if not already on reset-password page
       if (pathname === '/reset-password') return;
       
-      if (hash && hash.includes('error=')) {
-        const urlParams = new URLSearchParams(hash.substring(1));
-        const error = urlParams.get('error');
-        const errorCode = urlParams.get('error_code');
+      if (!hash || hash.length < 2) return; // No hash or just #
+      
+      const urlParams = new URLSearchParams(hash.substring(1)); // Remove # from hash
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+      const type = urlParams.get('type');
+      const error = urlParams.get('error');
+      const errorCode = urlParams.get('error_code');
+      
+      console.log('🔐 [APP] Checking hash for reset password:', {
+        pathname,
+        hasHash: !!hash,
+        hashLength: hash.length,
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        type,
+        error,
+        errorCode
+      });
+      
+      // Check if this is a password reset token (valid or expired)
+      const isResetPasswordToken = (accessToken && refreshToken && type === 'recovery') || 
+                                   (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired'));
+      
+      if (isResetPasswordToken) {
+        console.log('🔐 [APP] ✅ Password reset token detected in hash, redirecting to /reset-password');
+        console.log('🔐 [APP] Full hash:', hash);
+        console.log('🔐 [APP] Current pathname:', pathname);
         
-        // Check if this is a password reset error
-        if (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired')) {
-          console.log('🔐 [APP] Password reset error detected in hash, redirecting to /reset-password');
-          console.log('🔐 [APP] Error:', error);
-          console.log('🔐 [APP] Error code:', errorCode);
-          console.log('🔐 [APP] Current pathname:', pathname);
-          
-          // Redirect to reset-password page with the hash preserved
-          router.push(`/reset-password${hash}`);
-        }
+        // Redirect to reset-password page with the hash preserved
+        router.push(`/reset-password${hash}`);
       }
     };
     
     // Check immediately
-    checkHashForResetPasswordErrors();
+    checkHashForResetPassword();
     
     // Also listen for hash changes
-    window.addEventListener('hashchange', checkHashForResetPasswordErrors);
+    window.addEventListener('hashchange', checkHashForResetPassword);
     
     return () => {
-      window.removeEventListener('hashchange', checkHashForResetPasswordErrors);
+      window.removeEventListener('hashchange', checkHashForResetPassword);
     };
   }, [router]);
 

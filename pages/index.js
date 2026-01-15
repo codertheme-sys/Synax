@@ -52,6 +52,26 @@ export default function Home() {
       checkMobile();
       window.addEventListener('resize', checkMobile);
       
+      // Check for password reset token in hash and redirect
+      const hash = window.location.hash;
+      if (hash && hash.length > 1) {
+        const urlParams = new URLSearchParams(hash.substring(1));
+        const accessToken = urlParams.get('access_token');
+        const refreshToken = urlParams.get('refresh_token');
+        const type = urlParams.get('type');
+        const error = urlParams.get('error');
+        const errorCode = urlParams.get('error_code');
+        
+        // Check if this is a password reset token
+        const isResetPasswordToken = (accessToken && refreshToken && type === 'recovery') || 
+                                     (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired'));
+        
+        if (isResetPasswordToken) {
+          console.log('🔐 [INDEX] Password reset token detected, redirecting to /reset-password');
+          router.push(`/reset-password${hash}`);
+        }
+      }
+      
       return () => {
         clearInterval(interval);
         window.removeEventListener('resize', checkMobile);
@@ -61,7 +81,7 @@ export default function Home() {
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const textBox = document.getElementById('text-box');
