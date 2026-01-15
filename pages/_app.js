@@ -33,6 +33,7 @@ function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
+  const [liveChatLoaded, setLiveChatLoaded] = useState(false);
 
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
@@ -114,6 +115,35 @@ function MyApp({ Component, pageProps }) {
       clearTimeout(timeoutId);
     };
   }, [router.pathname]);
+
+  // Load Live Chat Script
+  useEffect(() => {
+    // Check if live chat script is already loaded
+    if (typeof window === 'undefined') return;
+    
+    // You can add your live chat script here
+    // Example for Tawk.to:
+    // const script = document.createElement('script');
+    // script.async = true;
+    // script.src = 'https://embed.tawk.to/YOUR_PROPERTY_ID/YOUR_WIDGET_ID';
+    // script.charset = 'UTF-8';
+    // script.setAttribute('crossorigin', '*');
+    // document.head.appendChild(script);
+    
+    // Example for Crisp:
+    // window.$crisp = [];
+    // window.CRISP_WEBSITE_ID = "YOUR_WEBSITE_ID";
+    // (function() {
+    //   const d = document;
+    //   const s = d.createElement("script");
+    //   s.src = "https://client.crisp.chat/l.js";
+    //   s.async = 1;
+    //   d.getElementsByTagName("head")[0].appendChild(s);
+    // })();
+    
+    // Add your live chat script code above this comment
+    // The button will automatically detect and open the chat widget
+  }, []);
 
   // Check for user session
   useEffect(() => {
@@ -371,10 +401,43 @@ function MyApp({ Component, pageProps }) {
         <link rel="canonical" href="https://synax.vip/" />
       </Head>
       <Component {...pageProps} />
-      {/* Floating Contact Icon */}
-      <Link
-        href="/contact"
-        aria-label="Contact"
+      {/* Floating Live Chat Icon */}
+      <button
+        onClick={() => {
+          // Try different live chat services
+          if (typeof window !== 'undefined') {
+            // Tawk.to
+            if (window.Tawk_API) {
+              window.Tawk_API.maximize();
+            }
+            // Crisp
+            else if (window.$crisp) {
+              window.$crisp.push(["do", "chat:open"]);
+            }
+            // Intercom
+            else if (window.Intercom) {
+              window.Intercom('show');
+            }
+            // LiveChat
+            else if (window.LC_API) {
+              window.LC_API.open_chat_window();
+            }
+            // Zendesk Chat
+            else if (window.zE) {
+              window.zE('messenger', 'open');
+            }
+            // Generic fallback - try to find and click live chat widget
+            else {
+              const chatWidget = document.querySelector('[id*="chat"], [class*="chat"], [id*="livechat"], [class*="livechat"]');
+              if (chatWidget) {
+                chatWidget.click();
+              } else {
+                console.log('Live chat widget not found. Please ensure your live chat script is loaded.');
+              }
+            }
+          }
+        }}
+        aria-label="Live Chat"
         style={{
           position: 'fixed',
           right: '20px',
@@ -390,18 +453,25 @@ function MyApp({ Component, pageProps }) {
           color: '#fff',
           fontSize: '22px',
           fontWeight: 800,
-          textDecoration: 'none',
-          zIndex: 9999,
           border: '1px solid rgba(255,255,255,0.25)',
           cursor: 'pointer',
+          zIndex: 9999,
         }}
-        title="Contact"
+        title="Live Chat"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.transition = 'transform 0.2s ease';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
       >
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-          <polyline points="22,6 12,13 2,6" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <line x1="9" y1="10" x2="15" y2="10" />
+          <line x1="9" y1="14" x2="13" y2="14" />
         </svg>
-      </Link>
+      </button>
       <Toaster
         position="top-right"
         toastOptions={{
