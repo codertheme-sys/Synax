@@ -465,54 +465,76 @@ function MyApp({ Component, pageProps }) {
       {/* Floating Live Chat Icon */}
       <button
         onClick={() => {
-          // Try different live chat services
-          if (typeof window !== 'undefined') {
-            // LiveChat - Check multiple API methods
-            if (window.LC_API && window.LC_API.open_chat_window) {
+          if (typeof window === 'undefined') return;
+          
+          console.log('LiveChat button clicked. Checking API availability...', {
+            LC_API: !!window.LC_API,
+            LiveChatWidget: !!window.LiveChatWidget,
+            __lc: !!window.__lc,
+            LC_API_open_chat_window: !!(window.LC_API && window.LC_API.open_chat_window)
+          });
+          
+          // LiveChat - Primary method
+          if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
+            console.log('Opening LiveChat using LC_API.open_chat_window()');
+            try {
               window.LC_API.open_chat_window();
+            } catch (error) {
+              console.error('Error opening LiveChat:', error);
             }
-            else if (window.LiveChatWidget && window.LiveChatWidget.call) {
-              window.LiveChatWidget.call('maximize');
-            }
-            else if (window.__lc && window.__lc.trigger) {
-              window.__lc.trigger('chat');
-            }
-            // Tawk.to
-            else if (window.Tawk_API) {
-              window.Tawk_API.maximize();
-            }
-            // Crisp
-            else if (window.$crisp) {
-              window.$crisp.push(["do", "chat:open"]);
-            }
-            // Intercom
-            else if (window.Intercom) {
-              window.Intercom('show');
-            }
-            // Zendesk Chat
-            else if (window.zE) {
-              window.zE('messenger', 'open');
-            }
-            // Generic fallback - try to find and click live chat widget
-            else {
-              console.log('LiveChat API not found. Checking...', {
-                LC_API: !!window.LC_API,
-                LiveChatWidget: !!window.LiveChatWidget,
-                __lc: !!window.__lc
-              });
-              // Try to find LiveChat iframe and click it
-              const liveChatIframe = document.querySelector('iframe[src*="livechatinc.com"]');
-              if (liveChatIframe) {
-                liveChatIframe.style.display = 'block';
-                liveChatIframe.style.zIndex = '99999';
-                const iframeDoc = liveChatIframe.contentDocument || liveChatIframe.contentWindow.document;
-                const chatButton = iframeDoc.querySelector('button, [role="button"], [onclick*="chat"]');
-                if (chatButton) {
-                  chatButton.click();
-                }
-              }
-            }
+            return;
           }
+          
+          // LiveChat - Alternative method using LiveChatWidget
+          if (window.LiveChatWidget && typeof window.LiveChatWidget.call === 'function') {
+            console.log('Opening LiveChat using LiveChatWidget.call("maximize")');
+            try {
+              window.LiveChatWidget.call('maximize');
+            } catch (error) {
+              console.error('Error opening LiveChat:', error);
+            }
+            return;
+          }
+          
+          // Wait for LiveChat to load and then open
+          if (window.__lc && !window.LC_API) {
+            console.log('LiveChat script loaded but API not ready. Waiting...');
+            const checkInterval = setInterval(() => {
+              if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
+                clearInterval(checkInterval);
+                console.log('LiveChat API ready. Opening chat...');
+                window.LC_API.open_chat_window();
+              }
+            }, 100);
+            
+            // Stop checking after 5 seconds
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              console.error('LiveChat API did not load within 5 seconds');
+            }, 5000);
+            return;
+          }
+          
+          // Fallback: Try to find and trigger LiveChat widget
+          console.log('Trying fallback method to open LiveChat...');
+          const liveChatIframe = document.querySelector('iframe[src*="livechatinc.com"]');
+          if (liveChatIframe) {
+            console.log('Found LiveChat iframe, attempting to open...');
+            liveChatIframe.style.display = 'block';
+            liveChatIframe.style.zIndex = '99999';
+            liveChatIframe.style.visibility = 'visible';
+            try {
+              const iframeWindow = liveChatIframe.contentWindow;
+              if (iframeWindow && iframeWindow.LC_API) {
+                iframeWindow.LC_API.open_chat_window();
+              }
+            } catch (e) {
+              console.error('Cannot access iframe:', e);
+            }
+            return;
+          }
+          
+          console.error('LiveChat not found. Please ensure LiveChat script is loaded.');
         }}
         aria-label="Live Chat"
         style={{
