@@ -34,28 +34,6 @@ function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
 
-  // Load Crisp Chat Script
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    
-    // Check if Crisp is already loaded
-    if (window.$crisp && window.CRISP_WEBSITE_ID) return;
-    
-    // Crisp script configuration
-    window.$crisp = [];
-    window.CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID || "46509809-e3ea-44cc-a779-ad2283986e8f";
-    
-    // Load Crisp script
-    (function(){
-      const d = document;
-      const s = d.createElement("script");
-      s.src = "https://client.crisp.chat/l.js";
-      s.async = 1;
-      d.getElementsByTagName("head")[0].appendChild(s);
-    })();
-  }, []);
-
-
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
     const cleanupTradingView = () => {
