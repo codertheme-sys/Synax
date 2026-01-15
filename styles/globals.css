@@ -285,10 +285,9 @@ body.home [data-reveal].reveal-show {
 }
 
 /* Hide LiveChat default widget button completely - we use custom button instead */
-/* Hide the entire LiveChat widget container (button + widget) */
-/* The chat window will be opened programmatically via API */
+/* Hide LiveChat's default button/container, but keep chat window functional when opened via API */
 
-/* Hide LiveChat's default widget container completely */
+/* Hide LiveChat's default widget button container */
 #chat-widget-container,
 [id*="livechat-widget"],
 [class*="livechat-widget"],
@@ -296,6 +295,19 @@ div[data-livechat-widget],
 iframe[src*="livechatinc.com"][src*="widget"] {
   display: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide any buttons inside LiveChat containers */
+#chat-widget-container button,
+#chat-widget-container [role="button"],
+[id*="livechat-widget"] button,
+[id*="livechat-widget"] [role="button"],
+[class*="livechat-widget"] button,
+[class*="livechat-widget"] [role="button"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 /* BUT: When chat window is opened via API, make it visible */
@@ -307,6 +319,7 @@ iframe[src*="livechatinc.com"][src*="widget"] {
 iframe[src*="livechatinc.com"][src*="chat"] {
   display: block !important;
   visibility: visible !important;
+  opacity: 1 !important;
   z-index: 9999 !important;
   pointer-events: auto !important;
   position: fixed !important;
