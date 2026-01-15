@@ -120,13 +120,25 @@ function OrderBook({ symbol }) {
     const fetchOrderBook = async () => {
       try {
         const response = await fetch(`/api/binance/orderbook?symbol=${symbol}&limit=20`);
+        
+        if (!response.ok) {
+          console.error(`Order book fetch failed: ${response.status} ${response.statusText}`);
+          setOrderBook(null);
+          setLoading(false);
+          return;
+        }
+        
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data) {
           setOrderBook(result.data);
+        } else {
+          console.error('Order book API returned error:', result.error);
+          setOrderBook(null);
         }
       } catch (error) {
         console.error('Error fetching order book:', error);
+        setOrderBook(null);
       } finally {
         setLoading(false);
       }
