@@ -285,11 +285,19 @@ body.home [data-reveal].reveal-show {
 }
 
 /* Hide LiveChat default widget button - we use custom button instead */
+/* Hide only the button, keep the chat window functional */
+#chat-widget-container button,
+#chat-widget-container [role="button"],
+[id*="livechat-widget"] button,
+[class*="livechat-widget"] button,
+iframe[src*="livechatinc.com"][src*="widget"] + button {
+  display: none !important;
+}
+
+/* Keep the chat window visible when opened via API */
 #chat-widget-container,
 [id*="livechat-widget"],
-[class*="livechat-widget"],
-iframe[src*="livechatinc.com"][src*="widget"],
-div[data-livechat-widget] {
-  display: none !important;
+[class*="livechat-widget"] {
+  pointer-events: auto !important;
 }
 
