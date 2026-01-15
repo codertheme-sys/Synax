@@ -133,10 +133,20 @@ export default async function handler(req, res) {
     // Helper function to add email and username to deposits/withdrawals
     const addEmailToItems = (items) => {
       return items?.map(item => {
-        const userProfile = paymentUserMap[item.user_id] || { email: item.user_id, full_name: null, user_name: null };
+        const userProfile = paymentUserMap[item.user_id];
+        if (!userProfile) {
+          console.log(`[Admin Data] No profile found for user_id: ${item.user_id}`);
+        } else {
+          console.log(`[Admin Data] Profile for user_id ${item.user_id}:`, {
+            user_name: userProfile.user_name,
+            username: userProfile.username,
+            full_name: userProfile.full_name,
+            email: userProfile.email
+          });
+        }
         return {
           ...item,
-          profiles: userProfile
+          profiles: userProfile || { email: item.user_id, full_name: null, user_name: null, username: null }
         };
       }) || [];
     };
