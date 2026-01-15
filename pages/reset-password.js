@@ -530,21 +530,50 @@ function ResetPasswordPage() {
             </button>
           </form>
 
-          <div className="text-center mt-8">
-            <Link 
-              href="/login" 
-              style={{ 
-                color: '#60a5fa', 
-                textDecoration: 'none', 
-                fontSize: '14px',
-                fontWeight: 600,
-                transition: 'color 0.2s',
-              }}
-              onMouseEnter={(e) => e.target.style.color = '#93c5fd'}
-              onMouseLeave={(e) => e.target.style.color = '#60a5fa'}
-            >
-              ← Back to Login
-            </Link>
+          <div className="text-center mt-8 space-y-3">
+            {!hasValidSession && !isProcessingToken && (
+              <Link 
+                href="/forgot-password" 
+                style={{ 
+                  display: 'inline-block',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  marginBottom: '12px',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 10px 20px rgba(16, 185, 129, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                Request New Reset Link
+              </Link>
+            )}
+            <div>
+              <Link 
+                href="/login" 
+                style={{ 
+                  color: '#60a5fa', 
+                  textDecoration: 'none', 
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#93c5fd'}
+                onMouseLeave={(e) => e.target.style.color = '#60a5fa'}
+              >
+                ← Back to Login
+              </Link>
+            </div>
           </div>
         </div>
       </main>
