@@ -443,6 +443,9 @@ function MyApp({ Component, pageProps }) {
               window.Intercom('show');
             }
             // LiveChat
+            else if (window.LiveChatWidget) {
+              window.LiveChatWidget.call('maximize');
+            }
             else if (window.LC_API) {
               window.LC_API.open_chat_window();
             }
