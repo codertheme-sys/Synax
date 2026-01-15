@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -270,7 +270,7 @@ button {
   transform: translateY(0);
 }
 
-/* Home sayfasında scroll animasyonu kapalı, içerik direkt görünür */
+/* Home sayfasÄ±nda scroll animasyonu kapalÄ±, iÃ§erik direkt gÃ¶rÃ¼nÃ¼r */
 body.home [data-reveal],
 body.home [data-reveal].reveal-show {
   opacity: 1;
@@ -282,4 +282,30 @@ body.home [data-reveal].reveal-show {
   .contact-horizontal-image {
     display: none !important;
   }
+}
+/* Crisp Chat Widget - Make it compact (small window) */
+/* Target Crisp chat window when opened */
+#crisp-chatbox iframe,
+.crisp-client iframe,
+iframe[src*="crisp.chat"][src*="chatbox"] {
+  max-width: 400px !important;
+  max-height: 600px !important;
+  width: 400px !important;
+  height: 600px !important;
+  bottom: 100px !important;
+  right: 20px !important;
+  top: auto !important;
+  left: auto !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  position: fixed !important;
+}
+
+/* Crisp chat container */
+#crisp-chatbox,
+.crisp-client {
+  max-width: 400px !important;
+  max-height: 600px !important;
+  bottom: 100px !important;
+  right: 20px !important;
 }
