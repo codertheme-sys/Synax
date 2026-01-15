@@ -3,6 +3,86 @@
 
 const BINANCE_API_BASE = 'https://api.binance.com/api/v3';
 
+// Generate mock orderbook data as fallback when Binance API is unavailable (451 error)
+function generateMockOrderBook(symbol, limit = 20) {
+  // Get approximate price for common symbols
+  const priceMap = {
+    'BTCUSDT': 50000,
+    'ETHUSDT': 3000,
+    'BNBUSDT': 600,
+    'SOLUSDT': 100,
+    'XRPUSDT': 0.6,
+    'ADAUSDT': 0.5,
+    'DOGEUSDT': 0.08,
+    'DOTUSDT': 7,
+    'AVAXUSDT': 35,
+    'LTCUSDT': 70,
+  };
+  
+  const basePrice = priceMap[symbol] || 1000;
+  const spread = basePrice * 0.001; // 0.1% spread
+  
+  // Generate bids (buy orders) - below base price
+  const bids = [];
+  for (let i = 0; i < limit; i++) {
+    const price = basePrice - (spread * (i + 1) / limit);
+    const quantity = Math.random() * 10 + 1;
+    bids.push({
+      price: parseFloat(price.toFixed(2)),
+      quantity: parseFloat(quantity.toFixed(4)),
+      total: parseFloat((price * quantity).toFixed(2)),
+      cumulative: 0
+    });
+  }
+  
+  // Generate asks (sell orders) - above base price
+  const asks = [];
+  for (let i = 0; i < limit; i++) {
+    const price = basePrice + (spread * (i + 1) / limit);
+    const quantity = Math.random() * 10 + 1;
+    asks.push({
+      price: parseFloat(price.toFixed(2)),
+      quantity: parseFloat(quantity.toFixed(4)),
+      total: parseFloat((price * quantity).toFixed(2)),
+      cumulative: 0
+    });
+  }
+  
+  // Calculate cumulative totals
+  let cumulativeBids = 0;
+  const bidsWithCumulative = bids.map(bid => {
+    cumulativeBids += bid.total;
+    return { ...bid, cumulative: cumulativeBids };
+  });
+  
+  let cumulativeAsks = 0;
+  const asksWithCumulative = asks.map(ask => {
+    cumulativeAsks += ask.total;
+    return { ...ask, cumulative: cumulativeAsks };
+  });
+  
+  const bestBid = bidsWithCumulative[0]?.price || basePrice;
+  const bestAsk = asksWithCumulative[0]?.price || basePrice + spread;
+  const spreadValue = bestAsk - bestBid;
+  const spreadPercent = (spreadValue / bestBid) * 100;
+  
+  return {
+    success: true,
+    data: {
+      symbol: symbol,
+      bids: bidsWithCumulative,
+      asks: asksWithCumulative,
+      spread: spreadValue,
+      spreadPercent: spreadPercent,
+      bestBid: bestBid,
+      bestAsk: bestAsk,
+      lastUpdateId: Date.now(),
+      timestamp: Date.now(),
+      isMock: true // Flag to indicate this is mock data
+    }
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -53,6 +133,14 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Binance OrderBook] API error ${response.status}:`, errorText);
+      
+      // Handle 451 (Unavailable For Legal Reasons) - Geographic restriction
+      if (response.status === 451) {
+        console.log(`[Binance OrderBook] 451 error - Using fallback mock data for ${binanceSymbol}`);
+        // Return mock orderbook data as fallback
+        const mockData = generateMockOrderBook(binanceSymbol, limit);
+        return res.status(200).json(mockData);
+      }
       
       if (response.status === 400) {
         return res.status(400).json({ 
@@ -136,6 +224,18 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Binance Order Book API error:', error);
+    
+    // If it's a 451 or network error, try to return mock data
+    if (error.message && error.message.includes('451')) {
+      console.log(`[Binance OrderBook] Error contains 451 - Using fallback mock data`);
+      const { symbol } = req.query;
+      const binanceSymbol = symbol?.toUpperCase().endsWith('USDT') 
+        ? symbol.toUpperCase() 
+        : `${symbol?.toUpperCase()}USDT`;
+      const mockData = generateMockOrderBook(binanceSymbol, req.query.limit || 20);
+      return res.status(200).json(mockData);
+    }
+    
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch order book data'
