@@ -99,7 +99,7 @@ function HomePage() {
 
   const coins = ['USDT', 'BTC', 'ETH'];
   const networks = {
-    USDT: ['Ethereum (ERC20)', 'Tron (TRC20)', 'Polygon', 'BSC (BEP20)'],
+    USDT: ['Tron (TRC20)'],
     BTC: ['Bitcoin', 'Lightning Network'],
     ETH: ['Ethereum', 'Polygon', 'Arbitrum', 'Optimism'],
   };
@@ -276,15 +276,23 @@ function HomePage() {
           const formattedOrders = (binaryTradesData || []).map(o => {
             const date = new Date(o.created_at);
             const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const initialPrice = parseFloat(o.initial_price || 0);
+            const lastPrice = parseFloat(o.last_price || 0);
+            // Calculate P&L percentage
+            let pnlPercent = '—';
+            if (initialPrice > 0 && lastPrice > 0) {
+              const percent = ((lastPrice - initialPrice) / initialPrice) * 100;
+              pnlPercent = `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
+            }
             return {
               time,
               symbol: o.asset_symbol,
               side: o.side === 'buy' ? 'LONG' : 'SHORT',
               qty: `$${parseFloat(o.trade_amount || 0).toFixed(2)}`,
-              initialPrice: `$${parseFloat(o.initial_price || 0).toFixed(2)}`,
-              lastPrice: o.last_price ? `$${parseFloat(o.last_price).toFixed(2)}` : '—',
+              initialPrice: `$${initialPrice.toFixed(2)}`,
+              lastPrice: lastPrice > 0 ? `$${lastPrice.toFixed(2)}` : '—',
               winLost: o.win_lost ? o.win_lost.toUpperCase() : '—',
-              status: o.admin_status === 'approved' ? 'Approved' : o.admin_status === 'rejected' ? 'Rejected' : 'Pending',
+              pnlPercent: pnlPercent,
             };
           });
           setOrders(formattedOrders);
@@ -1144,7 +1152,7 @@ function HomePage() {
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Initial</th>
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Last</th>
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Win/Lost</th>
-                    <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Status</th>
+                    <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>P&L %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1212,9 +1220,9 @@ function HomePage() {
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ padding: '8px' }}>
-                          <span style={{
-                            fontSize: '10px',
+                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: o.pnlPercent && o.pnlPercent !== '—' && parseFloat(o.pnlPercent) >= 0 ? '#4ade80' : o.pnlPercent && o.pnlPercent !== '—' ? '#f87171' : '#d1d5db', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {o.pnlPercent || '—'}
+                        </td>
                             padding: '3px 8px',
                             borderRadius: '8px',
                             fontWeight: 700,
