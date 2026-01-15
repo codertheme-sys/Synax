@@ -283,7 +283,7 @@ body.home [data-reveal].reveal-show {
     display: none !important;
   }
 }
-/* Crisp Chat Widget - Show button, hide chat window when closed */
+/* Crisp Chat Widget - Hide chat window, show only small button */
 /* Hide the chat window/iframe completely when closed */
 #crisp-chatbox:not([data-crisp-opened]),
 .crisp-client:not([data-crisp-opened]),
@@ -326,17 +326,14 @@ iframe[src*="crisp.chat"][data-crisp-opened] {
   pointer-events: auto !important;
 }
 
-/* Crisp button - make it small and always visible in bottom right */
+/* Crisp button - make it small and always visible */
 [data-crisp-button],
 .crisp-client button,
 #crisp-chatbox button,
 .crisp-client [role="button"],
 #crisp-chatbox [role="button"],
 .crisp-client > button,
-.crisp-client > div > button,
-.crisp-client > div > div > button,
-button[aria-label*="chat"],
-button[aria-label*="Crisp"] {
+.crisp-client > div > button {
   width: 60px !important;
   height: 60px !important;
   max-width: 60px !important;
@@ -353,15 +350,6 @@ button[aria-label*="Crisp"] {
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-}
-
-/* Ensure Crisp button container is visible */
-.crisp-client,
-#crisp-chatbox {
-  position: fixed !important;
-  bottom: 20px !important;
-  right: 20px !important;
-  z-index: 10000 !important;
 }
 
 /* Prevent Crisp from taking full screen */
