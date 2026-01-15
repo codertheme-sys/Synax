@@ -468,6 +468,14 @@ function MyApp({ Component, pageProps }) {
           if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
             console.log('Opening LiveChat using LC_API.open_chat_window()');
             try {
+              // First, make sure LiveChat widget is visible (but button hidden)
+              const lcContainer = document.querySelector('#chat-widget-container, [id*="livechat-widget"], [class*="livechat-widget"]');
+              if (lcContainer) {
+                lcContainer.style.display = 'block';
+                lcContainer.style.visibility = 'visible';
+                lcContainer.style.zIndex = '9999';
+              }
+              // Open chat window
               window.LC_API.open_chat_window();
             } catch (error) {
               console.error('Error opening LiveChat:', error);
