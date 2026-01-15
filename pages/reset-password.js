@@ -360,7 +360,7 @@ function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white pb-16">
       <Header />
-      <main className="max-w-md mx-auto px-6 lg:px-8 pt-24">
+      <main className="max-w-md mx-auto px-6 lg:px-[200px] pt-24">
         <div style={{ ...cardStyle, padding: '40px' }}>
           <div className="text-center mb-8">
             <p style={{ fontSize: '11px', fontWeight: 600, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px' }}>
