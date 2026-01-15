@@ -20,26 +20,67 @@ export default async function handler(req, res) {
       ? symbol.toUpperCase() 
       : `${symbol.toUpperCase()}USDT`;
 
-    // Fetch order book from Binance
-    const response = await fetch(
-      `${BINANCE_API_BASE}/depth?symbol=${binanceSymbol}&limit=${limit}`,
-      {
-        headers: {
-          'Accept': 'application/json'
+    console.log(`[Binance OrderBook] Fetching order book for ${binanceSymbol}`);
+
+    // Fetch order book from Binance with timeout
+    let response;
+    try {
+      response = await fetch(
+        `${BINANCE_API_BASE}/depth?symbol=${binanceSymbol}&limit=${limit}`,
+        {
+          headers: {
+            'Accept': 'application/json'
+          },
+          // Add timeout
+          signal: AbortSignal.timeout(10000) // 10 second timeout
         }
+      );
+    } catch (fetchError) {
+      console.error('[Binance OrderBook] Fetch error:', fetchError);
+      if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+        return res.status(504).json({
+          success: false,
+          error: 'Request timeout: Binance API did not respond in time'
+        });
       }
-    );
+      throw fetchError;
+    }
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Binance OrderBook] API error ${response.status}:`, errorText);
+      
       if (response.status === 400) {
         return res.status(400).json({ 
+          success: false,
           error: `Invalid symbol: ${binanceSymbol}. Symbol may not be available on Binance.` 
         });
       }
-      throw new Error(`Binance API error: ${response.status} ${response.statusText}`);
+      return res.status(response.status).json({
+        success: false,
+        error: `Binance API error: ${response.status} ${response.statusText}`,
+        details: errorText
+      });
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('[Binance OrderBook] JSON parse error:', parseError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to parse Binance API response'
+      });
+    }
+
+    if (!data || !data.bids || !data.asks) {
+      console.error('[Binance OrderBook] Invalid response structure:', data);
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid order book data structure from Binance'
+      });
+    }
 
     // Format bids (buy orders) - highest price first
     const bids = (data.bids || []).map(([price, quantity]) => ({
@@ -97,6 +138,8 @@ export default async function handler(req, res) {
     });
   }
 }
+
+
 
 
 

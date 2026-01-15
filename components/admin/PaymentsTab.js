@@ -137,7 +137,7 @@ function PaymentsTab({ adminData, onRefresh }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff', marginBottom: '8px' }}>
-              {item.profiles?.username || item.profiles?.user_name || item.profiles?.email || item.user_id}
+              {item.profiles?.user_name || item.profiles?.username || item.profiles?.full_name || item.profiles?.email || item.user_id}
             </div>
             <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
               Type: <span style={{ color: '#ffffff', fontWeight: 600 }}>{isDeposit ? 'Deposit' : 'Withdrawal'}</span>
