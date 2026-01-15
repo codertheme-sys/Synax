@@ -279,21 +279,24 @@ function HomePage() {
             const initialPrice = parseFloat(o.initial_price || 0);
             const lastPrice = parseFloat(o.last_price || 0);
             const tradeAmount = parseFloat(o.trade_amount || 0);
+            const potentialProfitPercent = parseFloat(o.potential_profit_percentage || 0);
+            const winLost = o.win_lost ? o.win_lost.toLowerCase() : null;
             
-            // Calculate P&L in dollars
-            // For LONG: profit when price goes up, loss when price goes down
-            // For SHORT: profit when price goes down, loss when price goes up
+            // Calculate P&L in dollars based on binary trade rules
+            // Binary trades: 
+            // - WIN: gain = trade_amount * (potential_profit_percentage / 100)
+            // - LOST: loss = trade_amount * 0.10 (fixed 10% loss)
             let pnlDollar = '—';
             let pnlDollarValue = null;
-            if (initialPrice > 0 && lastPrice > 0 && tradeAmount > 0) {
-              if (o.side === 'buy') {
-                // LONG: profit/loss based on price change
-                const priceChangePercent = ((lastPrice - initialPrice) / initialPrice) * 100;
-                pnlDollarValue = (tradeAmount * priceChangePercent) / 100;
-              } else {
-                // SHORT: profit when price decreases, loss when price increases
-                const priceChangePercent = ((initialPrice - lastPrice) / initialPrice) * 100;
-                pnlDollarValue = (tradeAmount * priceChangePercent) / 100;
+            if (tradeAmount > 0 && winLost) {
+              if (winLost === 'win') {
+                // WIN: gain = trade_amount * (potential_profit_percentage / 100)
+                // Example: $100 trade with 80% profit = $80 gain
+                pnlDollarValue = (tradeAmount * potentialProfitPercent) / 100;
+              } else if (winLost === 'lost') {
+                // LOST: loss = trade_amount * 0.10 (fixed 10% loss)
+                // Example: $100 trade with 10% loss = -$10 loss
+                pnlDollarValue = -(tradeAmount * 0.10);
               }
               pnlDollar = `${pnlDollarValue >= 0 ? '+' : ''}$${Math.abs(pnlDollarValue).toFixed(2)}`;
             }
