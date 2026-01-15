@@ -32,37 +32,42 @@ function ResetPasswordPage() {
     const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
     
-    // Check if we have a valid recovery token
-    if (!accessToken || type !== 'recovery') {
-      // Check if token is in query params (for copied links)
-      const queryParams = new URLSearchParams(window.location.search);
-      const token = queryParams.get('token');
-      const queryType = queryParams.get('type');
-      
-      if (!token || queryType !== 'recovery') {
-        // No valid token, redirect to login
-        toast.error('Invalid or expired password reset link');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-        return;
-      }
-    }
-    
-    // If we have tokens in hash, set the session
+    // Check if we have a valid recovery token in hash
     if (accessToken && refreshToken && type === 'recovery') {
+      // Set session from recovery token (this allows password update)
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
-      }).then(({ error }) => {
+      }).then(({ data, error }) => {
         if (error) {
           console.error('Error setting session:', error);
           toast.error('Invalid or expired password reset link');
           setTimeout(() => {
             router.push('/login');
           }, 2000);
+        } else {
+          // Session set successfully, user can now reset password
+          console.log('Recovery session set successfully');
         }
       });
+    } else {
+      // Check query params (for copied links)
+      const queryParams = new URLSearchParams(window.location.search);
+      const token = queryParams.get('token');
+      const queryType = queryParams.get('type');
+      
+      if (!token || queryType !== 'recovery') {
+        // No valid token in hash or query params
+        // Check if user already has a valid session (they might have clicked link before)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            toast.error('Invalid or expired password reset link');
+            setTimeout(() => {
+              router.push('/login');
+            }, 2000);
+          }
+        });
+      }
     }
   }, [router]);
 
