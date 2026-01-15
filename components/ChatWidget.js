@@ -47,7 +47,12 @@ const ChatWidget = ({ user }) => {
         },
         (payload) => {
           console.log('New message received:', payload);
-          setMessages((prev) => [...prev, payload.new]);
+          setMessages((prev) => {
+            // Check if message already exists to prevent duplicates
+            const exists = prev.find((m) => m.id === payload.new.id);
+            if (exists) return prev;
+            return [...prev, payload.new];
+          });
           scrollToBottom();
           
           // Show notification if chat is minimized or not focused
@@ -71,7 +76,7 @@ const ChatWidget = ({ user }) => {
           if (payload.new.user_id === user.id || payload.new.is_admin) {
             console.log('New admin message received:', payload);
             setMessages((prev) => {
-              // Avoid duplicates
+              // Check if message already exists to prevent duplicates
               const exists = prev.find((m) => m.id === payload.new.id);
               if (exists) return prev;
               return [...prev, payload.new];
@@ -147,10 +152,8 @@ const ChatWidget = ({ user }) => {
 
       if (error) throw error;
 
-      // Message will be added via Realtime subscription
-      // But add it immediately for better UX
-      setMessages((prev) => [...prev, data]);
-      scrollToBottom();
+      // Don't add immediately - let Realtime subscription handle it
+      // This prevents duplicate messages
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');

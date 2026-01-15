@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import ContactMessageCard from '../components/admin/ContactMessageCard';
 import PaymentsTab from '../components/admin/PaymentsTab';
+import ChatMessagesTab from '../components/admin/ChatMessagesTab';
 
 // Global CSS for select dropdown options
 if (typeof document !== 'undefined') {
