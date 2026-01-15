@@ -122,7 +122,7 @@ export default async function handler(req, res) {
     const allPaymentUserIds = [...new Set([...depositUserIds, ...withdrawalUserIds])];
     
     const { data: paymentUserProfiles } = allPaymentUserIds.length > 0 
-      ? await supabaseAdmin.from('profiles').select('id, email, full_name, user_name').in('id', allPaymentUserIds)
+      ? await supabaseAdmin.from('profiles').select('id, email, full_name, username, user_name').in('id', allPaymentUserIds)
       : { data: [] };
 
     const paymentUserMap = {};
@@ -144,9 +144,14 @@ export default async function handler(req, res) {
             email: userProfile.email
           });
         }
+        // Use user_name if available, otherwise fallback to username or full_name
+        const displayName = userProfile?.user_name || userProfile?.username || userProfile?.full_name || null;
         return {
           ...item,
-          profiles: userProfile || { email: item.user_id, full_name: null, user_name: null, username: null }
+          profiles: userProfile ? {
+            ...userProfile,
+            user_name: displayName // Ensure user_name is set for display
+          } : { email: item.user_id, full_name: null, user_name: null, username: null }
         };
       }) || [];
     };
@@ -167,7 +172,7 @@ export default async function handler(req, res) {
     // Fetch user emails for trades
     const tradeUserIds = [...new Set(recentTrades?.map(t => t.user_id) || [])];
     const { data: tradeUserProfiles } = tradeUserIds.length > 0 
-      ? await supabaseAdmin.from('profiles').select('id, email, full_name, user_name').in('id', tradeUserIds)
+      ? await supabaseAdmin.from('profiles').select('id, email, full_name, username, user_name').in('id', tradeUserIds)
       : { data: [] };
 
     const tradeUserMap = {};
@@ -201,7 +206,7 @@ export default async function handler(req, res) {
 
     const binaryUserIds = [...new Set(recentBinary?.map(t => t.user_id) || [])];
     const { data: binaryUserProfiles } = binaryUserIds.length
-      ? await supabaseAdmin.from('profiles').select('id,email,full_name,user_name').in('id', binaryUserIds)
+      ? await supabaseAdmin.from('profiles').select('id,email,full_name,username,user_name').in('id', binaryUserIds)
       : { data: [] };
     const binaryUserMap = {};
     (binaryUserProfiles || []).forEach(u => { binaryUserMap[u.id] = u; });

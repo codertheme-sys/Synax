@@ -107,3 +107,5 @@ CREATE POLICY "Users can delete their own alerts" ON alerts
 
 
 
+
+

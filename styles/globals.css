@@ -277,3 +277,10 @@ body.home [data-reveal].reveal-show {
   transform: translateY(0);
 }
 
+/* Contact page - Hide horizontal image on mobile */
+@media (max-width: 768px) {
+  .contact-horizontal-image {
+    display: none !important;
+  }
+}
+

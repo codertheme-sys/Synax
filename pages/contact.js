@@ -215,8 +215,9 @@ export default function ContactPage() {
 
         {/* Three Container Layout */}
         <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '40px' }}>
-          {/* Container 1 - Image (1000px width, 400px height) */}
+          {/* Container 1 - Image (1000px width, 400px height) - Hidden on mobile */}
           <div
+            className="contact-horizontal-image"
             style={{
               ...cardStyle,
               width: '1000px',

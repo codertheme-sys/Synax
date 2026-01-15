@@ -45,3 +45,5 @@ CREATE INDEX IF NOT EXISTS idx_earn_subscriptions_cancellation_type ON earn_subs
 
 
 
+
+

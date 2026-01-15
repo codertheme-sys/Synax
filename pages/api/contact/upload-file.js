@@ -20,11 +20,17 @@ export default async function handler(req, res) {
     const { file_base64, file_name, file_type } = req.body;
 
     if (!file_base64) {
-      return res.status(400).json({ error: 'Missing file data' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Missing file data' 
+      });
     }
 
     if (!file_name) {
-      return res.status(400).json({ error: 'Missing file name' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Missing file name' 
+      });
     }
 
     // Validate file type
@@ -34,6 +40,7 @@ export default async function handler(req, res) {
     const fileExt = file_name.split('.').pop()?.toLowerCase();
     if (!allowedExtensions.includes(fileExt)) {
       return res.status(400).json({ 
+        success: false,
         error: 'Invalid file type. Only JPEG, PNG, PDF, and TXT files are allowed.' 
       });
     }
@@ -45,6 +52,7 @@ export default async function handler(req, res) {
     
     if (fileSizeMB > 10) {
       return res.status(400).json({ 
+        success: false,
         error: 'File size exceeds 10MB limit.' 
       });
     }
@@ -65,6 +73,7 @@ export default async function handler(req, res) {
     if (uploadError) {
       console.error('Contact file upload error:', uploadError);
       return res.status(500).json({ 
+        success: false,
         error: `Failed to upload file: ${uploadError.message}` 
       });
     }
@@ -84,8 +93,11 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Contact file upload exception:', error);
     return res.status(500).json({ 
+      success: false,
       error: error.message || 'Internal server error' 
     });
   }
 }
+
+
 

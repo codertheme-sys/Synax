@@ -305,3 +305,5 @@ Alert'ler `alerts` tablosunda saklanır. Tablo şeması için `database-alerts-t
 
 
 
+
+

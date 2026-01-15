@@ -281,3 +281,5 @@ TradingView'in ücretli Charting Library'sini kullanarak alert özelliğini tam 
 
 
 
+
+

@@ -55,9 +55,11 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('Error inserting contact message:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return res.status(500).json({ 
         success: false,
-        error: 'Failed to submit message. Please try again later.' 
+        error: error.message || 'Failed to submit message. Please try again later.',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
       });
     }
 
