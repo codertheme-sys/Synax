@@ -128,6 +128,16 @@ function MyApp({ Component, pageProps }) {
     window.__lc.license = 19453766;
     window.__lc.integration_name = "manual_channels";
     window.__lc.product_name = "livechat";
+    // Prevent auto-opening of chat window
+    window.__lc.params = window.__lc.params || [];
+    window.__lc.params.push({
+      name: 'hide_widget_on_load',
+      value: true
+    });
+    window.__lc.params.push({
+      name: 'hide_widget_on_start',
+      value: true
+    });
     
     // LiveChat widget initialization
     (function(n, t, c) {

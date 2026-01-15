@@ -284,45 +284,35 @@ body.home [data-reveal].reveal-show {
   }
 }
 
-/* Hide LiveChat default widget button - we use custom button instead */
-/* Keep widget container visible for API to work, but hide only the button */
+/* Hide LiveChat default widget button completely - we use custom button instead */
+/* Keep widget container functional but hidden, show only when opened via API */
 
-/* Keep LiveChat widget container visible and functional */
+/* Hide LiveChat widget container completely (button + widget) */
 #chat-widget-container,
 [id*="livechat-widget"],
 [class*="livechat-widget"],
 div[data-livechat-widget] {
-  display: block !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  z-index: 9998 !important;
-}
-
-/* Hide LiveChat's default button (first child is usually the button) */
-#chat-widget-container > div:first-child,
-#chat-widget-container > button:first-child,
-[id*="livechat-widget"] > div:first-child,
-[id*="livechat-widget"] > button:first-child,
-[class*="livechat-widget"] > div:first-child,
-[class*="livechat-widget"] > button:first-child {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
 }
 
-/* Hide any buttons inside LiveChat containers */
+/* Hide LiveChat's default button */
 #chat-widget-container button,
 #chat-widget-container [role="button"],
 [id*="livechat-widget"] button,
 [id*="livechat-widget"] [role="button"],
 [class*="livechat-widget"] button,
-[class*="livechat-widget"] [role="button"] {
+[class*="livechat-widget"] [role="button"],
+#chat-widget-container > div:first-child,
+[id*="livechat-widget"] > div:first-child,
+[class*="livechat-widget"] > div:first-child {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
 }
 
-/* Ensure chat window is visible when opened via API */
+/* When chat window is opened via API, make it visible and compact */
 #chat-widget-container [class*="window"],
 #chat-widget-container [class*="chat-window"],
 [id*="livechat-widget"] [class*="window"],
@@ -334,5 +324,16 @@ iframe[src*="livechatinc.com"] {
   z-index: 9999 !important;
   pointer-events: auto !important;
   position: fixed !important;
+  /* Make chat window compact - not full screen */
+  max-width: 400px !important;
+  max-height: 600px !important;
+  width: 400px !important;
+  height: 600px !important;
+  bottom: 100px !important;
+  right: 20px !important;
+  top: auto !important;
+  left: auto !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
 }
 
