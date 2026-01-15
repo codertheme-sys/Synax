@@ -852,28 +852,34 @@ function AdminPage() {
         )}
 
         {activeTab === 'messages' && (
-          <div style={{ ...cardStyle, padding: '28px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>Contact Messages</h2>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading messages...</div>
-            ) : (
-              <div className="space-y-4">
-                {contactMessages.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No messages yet</div>
-                ) : (
-                  contactMessages.map((message) => (
-                    <ContactMessageCard 
-                      key={message.id} 
-                      message={message} 
-                      onUpdate={async () => {
-                        await fetchAdminData();
-                      }}
-                    />
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <>
+            <div style={{ ...cardStyle, padding: '28px', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>Live Chat Messages</h2>
+              <ChatMessagesTab />
+            </div>
+            <div style={{ ...cardStyle, padding: '28px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>Contact Messages</h2>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading messages...</div>
+              ) : (
+                <div className="space-y-4">
+                  {contactMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No messages yet</div>
+                  ) : (
+                    contactMessages.map((message) => (
+                      <ContactMessageCard 
+                        key={message.id} 
+                        message={message} 
+                        onUpdate={async () => {
+                          await fetchAdminData();
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {activeTab === 'settings' && (
