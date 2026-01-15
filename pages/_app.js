@@ -506,15 +506,43 @@ function MyApp({ Component, pageProps }) {
           if (window.LC_API && typeof window.LC_API.open_chat_window === 'function') {
             console.log('Opening LiveChat using LC_API.open_chat_window()');
             try {
-              // First, make sure LiveChat widget is visible (but button hidden)
+              // Make sure LiveChat widget container exists and is functional
               const lcContainer = document.querySelector('#chat-widget-container, [id*="livechat-widget"], [class*="livechat-widget"]');
               if (lcContainer) {
+                // Show container temporarily for API to work
                 lcContainer.style.display = 'block';
                 lcContainer.style.visibility = 'visible';
                 lcContainer.style.zIndex = '9999';
+                lcContainer.style.pointerEvents = 'auto';
+                
+                // Hide any buttons inside
+                const buttons = lcContainer.querySelectorAll('button, [role="button"], > div:first-child');
+                buttons.forEach(btn => {
+                  btn.style.display = 'none';
+                  btn.style.visibility = 'hidden';
+                  btn.style.opacity = '0';
+                });
               }
+              
               // Open chat window
               window.LC_API.open_chat_window();
+              
+              // After opening, ensure chat window is compact (small box)
+              setTimeout(() => {
+                const chatWindow = document.querySelector('#chat-widget-container [class*="window"], #chat-widget-container [class*="chat-window"], iframe[src*="livechatinc.com"]');
+                if (chatWindow) {
+                  chatWindow.style.maxWidth = '400px';
+                  chatWindow.style.maxHeight = '600px';
+                  chatWindow.style.width = '400px';
+                  chatWindow.style.height = '600px';
+                  chatWindow.style.bottom = '100px';
+                  chatWindow.style.right = '20px';
+                  chatWindow.style.top = 'auto';
+                  chatWindow.style.left = 'auto';
+                  chatWindow.style.borderRadius = '12px';
+                  chatWindow.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.3)';
+                }
+              }, 100);
             } catch (error) {
               console.error('Error opening LiveChat:', error);
             }
