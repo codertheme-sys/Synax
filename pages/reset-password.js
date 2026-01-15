@@ -103,11 +103,17 @@ function ResetPasswordPage() {
     
     if (error || errorCode) {
       console.error('🔐 [RESET PASSWORD] ❌ ERROR DETECTED IN URL:', { error, errorCode, errorDescription });
-      toast.error(errorDescription || 'Invalid or expired password reset link');
-      setTimeout(() => {
-        console.log('🔐 [RESET PASSWORD] Redirecting to /login due to error');
-        router.push('/login');
-      }, 3000);
+      console.log('🔐 [RESET PASSWORD] Showing error message and staying on page');
+      toast.error(errorDescription || 'Invalid or expired password reset link. Please request a new one.');
+      setIsProcessingToken(false);
+      setHasValidSession(false);
+      
+      // Clear the hash to clean up the URL
+      const newUrl = '/reset-password';
+      console.log('🔐 [RESET PASSWORD] Replacing URL hash with:', newUrl);
+      window.history.replaceState(null, '', newUrl);
+      
+      // Don't redirect - stay on page and show error
       return;
     }
     
@@ -154,11 +160,17 @@ function ResetPasswordPage() {
         
         if (error) {
           console.error('🔐 [RESET PASSWORD] ❌ Error setting session:', error);
-          toast.error(error.message || 'Invalid or expired password reset link');
-          setTimeout(() => {
-            console.log('🔐 [RESET PASSWORD] Redirecting to /login due to session error');
-            router.push('/login');
-          }, 3000);
+          console.log('🔐 [RESET PASSWORD] Showing error message and staying on page');
+          toast.error(error.message || 'Invalid or expired password reset link. Please request a new one.');
+          setIsProcessingToken(false);
+          setHasValidSession(false);
+          
+          // Clear the hash to clean up the URL
+          const newUrl = '/reset-password';
+          console.log('🔐 [RESET PASSWORD] Replacing URL hash with:', newUrl);
+          window.history.replaceState(null, '', newUrl);
+          
+          // Don't redirect - stay on page and show error
         } else {
           // Session set successfully, user can now reset password
           console.log('🔐 [RESET PASSWORD] ✅ Recovery session set successfully');
@@ -232,11 +244,10 @@ function ResetPasswordPage() {
           setIsProcessingToken(false);
           if (!session) {
             console.log('🔐 [RESET PASSWORD] ❌ No valid session found');
+            console.log('🔐 [RESET PASSWORD] Showing error message and staying on page');
             toast.error('Invalid or expired password reset link. Please request a new one.');
-            setTimeout(() => {
-              console.log('🔐 [RESET PASSWORD] Redirecting to /forgot-password');
-              router.push('/forgot-password');
-            }, 3000);
+            setHasValidSession(false);
+            // Don't redirect - stay on page and show error
           } else {
             console.log('🔐 [RESET PASSWORD] ✅ Valid session found, user can reset password');
             setHasValidSession(true);
@@ -375,6 +386,7 @@ function ResetPasswordPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  disabled={isProcessingToken || !hasValidSession}
                   placeholder="Enter new password"
                   style={{
                     width: '100%',
@@ -432,6 +444,7 @@ function ResetPasswordPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
+                  disabled={isProcessingToken || !hasValidSession}
                   placeholder="Confirm new password"
                   style={{
                     width: '100%',
@@ -480,19 +493,19 @@ function ResetPasswordPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isProcessingToken || !hasValidSession}
               style={{
                 width: '100%',
                 padding: '16px',
                 borderRadius: '12px',
-                background: loading ? 'rgba(59, 130, 246, 0.5)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                background: (loading || isProcessingToken || !hasValidSession) ? 'rgba(59, 130, 246, 0.5)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 border: 'none',
                 color: '#ffffff',
                 fontSize: '16px',
                 fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: (loading || isProcessingToken || !hasValidSession) ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
-                opacity: loading ? 0.7 : 1,
+                opacity: (loading || isProcessingToken || !hasValidSession) ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!loading) {

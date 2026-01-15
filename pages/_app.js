@@ -138,6 +138,46 @@ function MyApp({ Component, pageProps }) {
   }, [router.pathname]);
 
 
+  // Check for password reset errors in URL hash and redirect to reset-password page
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const checkHashForResetPasswordErrors = () => {
+      const hash = window.location.hash;
+      const pathname = window.location.pathname;
+      
+      // Only process if not already on reset-password page
+      if (pathname === '/reset-password') return;
+      
+      if (hash && hash.includes('error=')) {
+        const urlParams = new URLSearchParams(hash.substring(1));
+        const error = urlParams.get('error');
+        const errorCode = urlParams.get('error_code');
+        
+        // Check if this is a password reset error
+        if (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired')) {
+          console.log('🔐 [APP] Password reset error detected in hash, redirecting to /reset-password');
+          console.log('🔐 [APP] Error:', error);
+          console.log('🔐 [APP] Error code:', errorCode);
+          console.log('🔐 [APP] Current pathname:', pathname);
+          
+          // Redirect to reset-password page with the hash preserved
+          router.push(`/reset-password${hash}`);
+        }
+      }
+    };
+    
+    // Check immediately
+    checkHashForResetPasswordErrors();
+    
+    // Also listen for hash changes
+    window.addEventListener('hashchange', checkHashForResetPasswordErrors);
+    
+    return () => {
+      window.removeEventListener('hashchange', checkHashForResetPasswordErrors);
+    };
+  }, [router]);
+
   // Check for user session
   useEffect(() => {
     const checkUser = async () => {
