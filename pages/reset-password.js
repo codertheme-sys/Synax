@@ -24,14 +24,45 @@ function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if we have a valid session hash (password reset token)
+    // Parse URL hash for password reset token
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    if (!hash.includes('access_token=') && !hash.includes('type=recovery')) {
-      // No valid token, redirect to login
-      toast.error('Invalid or expired password reset link');
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+    const urlParams = new URLSearchParams(hash.substring(1)); // Remove # from hash
+    
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    const type = urlParams.get('type');
+    
+    // Check if we have a valid recovery token
+    if (!accessToken || type !== 'recovery') {
+      // Check if token is in query params (for copied links)
+      const queryParams = new URLSearchParams(window.location.search);
+      const token = queryParams.get('token');
+      const queryType = queryParams.get('type');
+      
+      if (!token || queryType !== 'recovery') {
+        // No valid token, redirect to login
+        toast.error('Invalid or expired password reset link');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+        return;
+      }
+    }
+    
+    // If we have tokens in hash, set the session
+    if (accessToken && refreshToken && type === 'recovery') {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Error setting session:', error);
+          toast.error('Invalid or expired password reset link');
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000);
+        }
+      });
     }
   }, [router]);
 

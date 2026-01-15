@@ -43,7 +43,7 @@ function MyApp({ Component, pageProps }) {
     
     // Crisp script configuration
     window.$crisp = [];
-    window.CRISP_WEBSITE_ID = "46509809-e3ea-44cc-a779-ad2283986e8f";
+    window.CRISP_WEBSITE_ID = process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID || "46509809-e3ea-44cc-a779-ad2283986e8f";
     
     // Load Crisp script
     (function() {
@@ -53,6 +53,37 @@ function MyApp({ Component, pageProps }) {
       s.async = 1;
       d.getElementsByTagName("head")[0].appendChild(s);
     })();
+    
+    // Configure Crisp to open in compact mode
+    if (window.$crisp) {
+      window.$crisp.push(['config', 'chat:opened', false]);
+      window.$crisp.push(['config', 'position:reverse', false]);
+    }
+    
+    // Wait for Crisp to load and configure window size
+    const configureCrisp = setInterval(() => {
+      if (window.$crisp && window.$crisp.is) {
+        // Set Crisp chat window to compact size
+        const crispBox = document.querySelector('#crisp-chatbox, .crisp-client, iframe[src*="crisp.chat"]');
+        if (crispBox) {
+          crispBox.style.maxWidth = '400px';
+          crispBox.style.maxHeight = '600px';
+          crispBox.style.width = '400px';
+          crispBox.style.height = '600px';
+          crispBox.style.bottom = '100px';
+          crispBox.style.right = '20px';
+          crispBox.style.top = 'auto';
+          crispBox.style.left = 'auto';
+          crispBox.style.borderRadius = '12px';
+        }
+        clearInterval(configureCrisp);
+      }
+    }, 500);
+    
+    // Stop checking after 10 seconds
+    setTimeout(() => {
+      clearInterval(configureCrisp);
+    }, 10000);
   }, []);
 
   useEffect(() => {
