@@ -24,6 +24,9 @@ export default async function handler(req, res) {
 
     // Fetch order book from Binance with timeout
     let response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     try {
       response = await fetch(
         `${BINANCE_API_BASE}/depth?symbol=${binanceSymbol}&limit=${limit}`,
@@ -31,11 +34,12 @@ export default async function handler(req, res) {
           headers: {
             'Accept': 'application/json'
           },
-          // Add timeout
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+          signal: controller.signal
         }
       );
+      clearTimeout(timeoutId);
     } catch (fetchError) {
+      clearTimeout(timeoutId);
       console.error('[Binance OrderBook] Fetch error:', fetchError);
       if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
         return res.status(504).json({
