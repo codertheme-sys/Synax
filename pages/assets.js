@@ -44,7 +44,7 @@ function AssetsPage() {
 
   const coins = ['USDT', 'BTC', 'ETH'];
   const networks = {
-    USDT: ['Ethereum (ERC20)', 'Tron (TRC20)', 'Polygon', 'BSC (BEP20)'],
+    USDT: ['Tron (TRC20)'],
     BTC: ['Bitcoin Network'],
     ETH: ['Ethereum (ERC20)'],
   };

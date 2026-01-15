@@ -278,24 +278,35 @@ function HomePage() {
             const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             const initialPrice = parseFloat(o.initial_price || 0);
             const lastPrice = parseFloat(o.last_price || 0);
-            // Calculate P&L percentage
-            let pnlPercent = '—';
-            let pnlPercentValue = null;
-            if (initialPrice > 0 && lastPrice > 0) {
-              const percent = ((lastPrice - initialPrice) / initialPrice) * 100;
-              pnlPercentValue = percent;
-              pnlPercent = `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
+            const tradeAmount = parseFloat(o.trade_amount || 0);
+            
+            // Calculate P&L in dollars
+            // For LONG: profit when price goes up, loss when price goes down
+            // For SHORT: profit when price goes down, loss when price goes up
+            let pnlDollar = '—';
+            let pnlDollarValue = null;
+            if (initialPrice > 0 && lastPrice > 0 && tradeAmount > 0) {
+              if (o.side === 'buy') {
+                // LONG: profit/loss based on price change
+                const priceChangePercent = ((lastPrice - initialPrice) / initialPrice) * 100;
+                pnlDollarValue = (tradeAmount * priceChangePercent) / 100;
+              } else {
+                // SHORT: profit when price decreases, loss when price increases
+                const priceChangePercent = ((initialPrice - lastPrice) / initialPrice) * 100;
+                pnlDollarValue = (tradeAmount * priceChangePercent) / 100;
+              }
+              pnlDollar = `${pnlDollarValue >= 0 ? '+' : ''}$${Math.abs(pnlDollarValue).toFixed(2)}`;
             }
             return {
               time,
               symbol: o.asset_symbol,
               side: o.side === 'buy' ? 'LONG' : 'SHORT',
-              qty: `$${parseFloat(o.trade_amount || 0).toFixed(2)}`,
+              qty: `$${tradeAmount.toFixed(2)}`,
               initialPrice: `$${initialPrice.toFixed(2)}`,
               lastPrice: lastPrice > 0 ? `$${lastPrice.toFixed(2)}` : '—',
               winLost: o.win_lost ? o.win_lost.toUpperCase() : '—',
-              pnlPercent: pnlPercent,
-              pnlPercentValue: pnlPercentValue, // Store numeric value for color calculation
+              pnlDollar: pnlDollar,
+              pnlDollarValue: pnlDollarValue, // Store numeric value for color calculation
             };
           });
           setOrders(formattedOrders);
@@ -1155,7 +1166,7 @@ function HomePage() {
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Initial</th>
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Last</th>
                     <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>Win/Lost</th>
-                    <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>P&L %</th>
+                    <th style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '9px' : '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap' }}>P&L</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1223,8 +1234,8 @@ function HomePage() {
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: o.pnlPercentValue !== null && o.pnlPercentValue >= 0 ? '#4ade80' : o.pnlPercentValue !== null ? '#f87171' : '#d1d5db', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {o.pnlPercent || '—'}
+                        <td style={{ padding: isMobile ? '6px 4px' : '8px', fontSize: isMobile ? '10px' : '11px', color: o.pnlDollarValue !== null && o.pnlDollarValue >= 0 ? '#4ade80' : o.pnlDollarValue !== null ? '#f87171' : '#d1d5db', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {o.pnlDollar || '—'}
                         </td>
                       </tr>
                     ))
