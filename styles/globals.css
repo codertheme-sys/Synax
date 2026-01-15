@@ -284,15 +284,27 @@ body.home [data-reveal].reveal-show {
   }
 }
 
-/* Hide LiveChat default widget button completely - we use custom button instead */
-/* Hide LiveChat's default button/container, but keep chat window functional when opened via API */
+/* Hide LiveChat default widget button - we use custom button instead */
+/* Keep widget container visible for API to work, but hide only the button */
 
-/* Hide LiveChat's default widget button container */
+/* Keep LiveChat widget container visible and functional */
 #chat-widget-container,
 [id*="livechat-widget"],
 [class*="livechat-widget"],
-div[data-livechat-widget],
-iframe[src*="livechatinc.com"][src*="widget"] {
+div[data-livechat-widget] {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 9998 !important;
+}
+
+/* Hide LiveChat's default button (first child is usually the button) */
+#chat-widget-container > div:first-child,
+#chat-widget-container > button:first-child,
+[id*="livechat-widget"] > div:first-child,
+[id*="livechat-widget"] > button:first-child,
+[class*="livechat-widget"] > div:first-child,
+[class*="livechat-widget"] > button:first-child {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -310,13 +322,12 @@ iframe[src*="livechatinc.com"][src*="widget"] {
   opacity: 0 !important;
 }
 
-/* BUT: When chat window is opened via API, make it visible */
-/* LiveChat creates a separate element for the chat window when opened */
+/* Ensure chat window is visible when opened via API */
 #chat-widget-container [class*="window"],
 #chat-widget-container [class*="chat-window"],
 [id*="livechat-widget"] [class*="window"],
 [id*="livechat-widget"] [class*="chat-window"],
-iframe[src*="livechatinc.com"][src*="chat"] {
+iframe[src*="livechatinc.com"] {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;

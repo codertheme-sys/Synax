@@ -166,48 +166,51 @@ function MyApp({ Component, pageProps }) {
       n.LiveChatWidget = n.LiveChatWidget || e;
     })(window, document, [].slice);
     
-    // Hide LiveChat's default widget button completely (we use our custom button instead)
-    // Wait for LiveChat to load, then hide the default button
+    // Hide LiveChat's default widget button (we use our custom button instead)
+    // Keep widget container visible for API to work, but hide only the button
     const hideLiveChatButton = setInterval(() => {
       if (window.LC_API) {
         // LiveChat is loaded
         window.LC_API.on_ready = function() {
           console.log('LiveChat ready. Hiding default button...');
-          // Hide LiveChat's default button container
+          // Find LiveChat container
           const lcContainer = document.querySelector('#chat-widget-container, [id*="livechat"], [class*="livechat-widget"]');
           if (lcContainer) {
-            // Hide the entire container (button + widget)
-            // But we'll show it when chat window is opened via API
-            lcContainer.style.display = 'none';
-            console.log('LiveChat default button hidden');
+            // Keep container visible for API to work
+            lcContainer.style.display = 'block';
+            lcContainer.style.visibility = 'visible';
+            lcContainer.style.zIndex = '9998';
+            
+            // Hide only the button (first child is usually the button)
+            const button = lcContainer.querySelector('button, [role="button"], > div:first-child, > button:first-child');
+            if (button) {
+              button.style.display = 'none';
+              button.style.visibility = 'hidden';
+              button.style.opacity = '0';
+              console.log('LiveChat default button hidden');
+            }
           }
-          
-          // Also try to find and hide button specifically
-          const buttons = document.querySelectorAll('[id*="livechat"] button, [class*="livechat"] button, [data-livechat] button');
-          buttons.forEach(btn => {
-            btn.style.display = 'none';
-            btn.style.visibility = 'hidden';
-          });
         };
         clearInterval(hideLiveChatButton);
       }
     }, 100);
     
-    // Also continuously check and hide LiveChat button (in case it appears later)
+    // Continuously check and hide LiveChat button (in case it appears later)
     const continuousHide = setInterval(() => {
-      // Find LiveChat button containers
-      const lcButtons = document.querySelectorAll(
+      // Find LiveChat containers
+      const lcContainers = document.querySelectorAll(
         '#chat-widget-container, [id*="livechat-widget"], [class*="livechat-widget"], [data-livechat-widget]'
       );
-      lcButtons.forEach(container => {
-        // Hide the container itself
-        container.style.display = 'none';
-        container.style.visibility = 'hidden';
-        // Also hide any buttons inside
-        const buttons = container.querySelectorAll('button, [role="button"]');
+      lcContainers.forEach(container => {
+        // Keep container visible
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+        // Hide any buttons inside
+        const buttons = container.querySelectorAll('button, [role="button"], > div:first-child');
         buttons.forEach(btn => {
           btn.style.display = 'none';
           btn.style.visibility = 'hidden';
+          btn.style.opacity = '0';
         });
       });
     }, 500);
