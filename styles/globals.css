@@ -284,16 +284,23 @@ body.home [data-reveal].reveal-show {
   }
 }
 /* Crisp Chat Widget - Make it compact (small window) */
-/* Target Crisp chat window when opened */
+/* Target Crisp chat window when opened - Very aggressive styling */
 #crisp-chatbox,
 .crisp-client,
 #crisp-chatbox iframe,
 .crisp-client iframe,
-iframe[src*="crisp.chat"] {
+iframe[src*="crisp.chat"],
+iframe[src*="crisp.chat"]:not([src*="widget"]),
+.crisp-client > div,
+#crisp-chatbox > div,
+.crisp-client > div > div,
+#crisp-chatbox > div > div {
   max-width: 400px !important;
   max-height: 600px !important;
   width: 400px !important;
   height: 600px !important;
+  min-width: 400px !important;
+  min-height: auto !important;
   bottom: 100px !important;
   right: 20px !important;
   top: auto !important;
@@ -301,9 +308,11 @@ iframe[src*="crisp.chat"] {
   border-radius: 12px !important;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
   position: fixed !important;
+  overflow: hidden !important;
+  transform: none !important;
 }
 
-/* Prevent Crisp from taking full screen */
+/* Prevent Crisp from taking full screen - Force compact size */
 .crisp-client,
 #crisp-chatbox {
   max-width: 400px !important;
@@ -311,11 +320,29 @@ iframe[src*="crisp.chat"] {
   width: 400px !important;
   height: 600px !important;
   overflow: hidden !important;
+  transform: scale(1) !important;
+  transform-origin: bottom right !important;
 }
 
 /* Crisp chat container - ensure it stays compact */
 .crisp-client > div,
-#crisp-chatbox > div {
+#crisp-chatbox > div,
+.crisp-client > div > div,
+#crisp-chatbox > div > div {
+  max-width: 400px !important;
+  max-height: 600px !important;
+  width: 400px !important;
+  height: 600px !important;
+  overflow: hidden !important;
+}
+
+/* Override any fullscreen styles */
+.crisp-client[style*="width: 100%"],
+#crisp-chatbox[style*="width: 100%"],
+.crisp-client[style*="height: 100%"],
+#crisp-chatbox[style*="height: 100%"] {
+  width: 400px !important;
+  height: 600px !important;
   max-width: 400px !important;
   max-height: 600px !important;
 }

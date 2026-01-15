@@ -62,65 +62,75 @@ function MyApp({ Component, pageProps }) {
     window.$crisp.push(['config', 'chat:opened', false]);
     window.$crisp.push(['config', 'position:reverse', false]);
     
+    // Function to force Crisp to compact size
+    const forceCrispCompact = () => {
+      // Set language to English
+      if (window.$crisp && window.$crisp.is) {
+        window.$crisp.push(['set', 'locale', 'en']);
+      }
+      
+      // Find all Crisp elements
+      const crispSelectors = [
+        '#crisp-chatbox',
+        '.crisp-client',
+        'iframe[src*="crisp.chat"]',
+        '.crisp-client > div',
+        '#crisp-chatbox > div',
+        '.crisp-client > div > div',
+        '#crisp-chatbox > div > div'
+      ];
+      
+      crispSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (el) {
+            el.style.setProperty('max-width', '400px', 'important');
+            el.style.setProperty('max-height', '600px', 'important');
+            el.style.setProperty('width', '400px', 'important');
+            el.style.setProperty('height', '600px', 'important');
+            el.style.setProperty('bottom', '100px', 'important');
+            el.style.setProperty('right', '20px', 'important');
+            el.style.setProperty('top', 'auto', 'important');
+            el.style.setProperty('left', 'auto', 'important');
+            el.style.setProperty('border-radius', '12px', 'important');
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('overflow', 'hidden', 'important');
+            el.style.setProperty('transform', 'none', 'important');
+          }
+        });
+      });
+    };
+    
     // Wait for Crisp to load and configure window size and language
     const configureCrisp = setInterval(() => {
       if (window.$crisp && window.$crisp.is) {
-        // Set language to English
-        window.$crisp.push(['set', 'locale', 'en']);
-        
-        // Set Crisp chat window to compact size
-        const crispBox = document.querySelector('#crisp-chatbox, .crisp-client');
-        const crispIframe = document.querySelector('iframe[src*="crisp.chat"]');
-        
-        if (crispBox) {
-          crispBox.style.maxWidth = '400px';
-          crispBox.style.maxHeight = '600px';
-          crispBox.style.width = '400px';
-          crispBox.style.height = '600px';
-          crispBox.style.bottom = '100px';
-          crispBox.style.right = '20px';
-          crispBox.style.top = 'auto';
-          crispBox.style.left = 'auto';
-          crispBox.style.borderRadius = '12px';
-          crispBox.style.position = 'fixed';
-        }
-        
-        if (crispIframe) {
-          crispIframe.style.maxWidth = '400px';
-          crispIframe.style.maxHeight = '600px';
-          crispIframe.style.width = '400px';
-          crispIframe.style.height = '600px';
-          crispIframe.style.bottom = '100px';
-          crispIframe.style.right = '20px';
-          crispIframe.style.top = 'auto';
-          crispIframe.style.left = 'auto';
-          crispIframe.style.borderRadius = '12px';
-          crispIframe.style.position = 'fixed';
-        }
-        
-        clearInterval(configureCrisp);
+        forceCrispCompact();
       }
-    }, 500);
+    }, 200);
     
-    // Stop checking after 10 seconds
+    // Stop checking after 30 seconds but keep monitoring
     setTimeout(() => {
       clearInterval(configureCrisp);
-    }, 10000);
+    }, 30000);
     
     // Also configure when chat opens
     window.addEventListener('crisp:chat:opened', () => {
       window.$crisp.push(['set', 'locale', 'en']);
-      const crispBox = document.querySelector('#crisp-chatbox, .crisp-client');
-      const crispIframe = document.querySelector('iframe[src*="crisp.chat"]');
-      if (crispBox) {
-        crispBox.style.maxWidth = '400px';
-        crispBox.style.maxHeight = '600px';
-      }
-      if (crispIframe) {
-        crispIframe.style.maxWidth = '400px';
-        crispIframe.style.maxHeight = '600px';
-      }
+      setTimeout(forceCrispCompact, 100);
     });
+    
+    // Monitor DOM changes to catch Crisp elements
+    const observer = new MutationObserver(() => {
+      forceCrispCompact();
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Also run periodically to catch any missed elements
+    setInterval(forceCrispCompact, 1000);
   }, []);
 
   useEffect(() => {
@@ -215,6 +225,13 @@ function MyApp({ Component, pageProps }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
+      
+      // Don't redirect if we're on reset-password page (let the page handle it)
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
+      if (event === 'SIGNED_IN' && currentPath === '/reset-password') {
+        console.log('User signed in on reset-password page, staying on page');
+        return;
+      }
     });
 
     return () => subscription.unsubscribe();

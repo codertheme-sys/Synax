@@ -21,6 +21,7 @@ function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isProcessingToken, setIsProcessingToken] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -64,8 +65,10 @@ function ResetPasswordPage() {
         } else {
           // Session set successfully, user can now reset password
           console.log('Recovery session set successfully');
-          // Clear the hash to clean up the URL
-          window.history.replaceState(null, '', window.location.pathname);
+          setIsProcessingToken(false);
+          // Clear the hash to clean up the URL but stay on reset-password page
+          window.history.replaceState(null, '', '/reset-password');
+          toast.success('Please enter your new password below');
         }
       });
     } else {
@@ -77,10 +80,12 @@ function ResetPasswordPage() {
       if (token && queryType === 'recovery') {
         // Handle query param token if needed
         console.log('Found recovery token in query params');
+        setIsProcessingToken(false);
       } else {
         // No valid token in hash or query params
         // Check if user already has a valid session (they might have clicked link before)
         supabase.auth.getSession().then(({ data: { session } }) => {
+          setIsProcessingToken(false);
           if (!session) {
             console.log('No valid session found');
             toast.error('Invalid or expired password reset link. Please request a new one.');
