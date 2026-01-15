@@ -166,6 +166,43 @@ function MyApp({ Component, pageProps }) {
       n.LiveChatWidget = n.LiveChatWidget || e;
     })(window, document, [].slice);
     
+    // Hide LiveChat's default widget button (we use our custom button instead)
+    // Wait for LiveChat to load, then hide its default button
+    const hideLiveChatButton = setInterval(() => {
+      if (window.LC_API && window.LC_API.on_ready) {
+        window.LC_API.on_ready = function() {
+          // Hide LiveChat's default button
+          const lcButton = document.querySelector('#chat-widget-container, [id*="livechat"], [class*="livechat-widget"]');
+          if (lcButton) {
+            lcButton.style.display = 'none';
+          }
+          // Also hide via CSS
+          const style = document.createElement('style');
+          style.textContent = `
+            #chat-widget-container,
+            [id*="livechat-widget"],
+            [class*="livechat-widget"],
+            iframe[src*="livechatinc.com"] {
+              display: none !important;
+            }
+          `;
+          document.head.appendChild(style);
+        };
+        clearInterval(hideLiveChatButton);
+      }
+    }, 100);
+    
+    // Also add CSS to hide LiveChat button immediately
+    const hideStyle = document.createElement('style');
+    hideStyle.textContent = `
+      #chat-widget-container,
+      [id*="livechat-widget"],
+      [class*="livechat-widget"] {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(hideStyle);
+    
     setLiveChatLoaded(true);
   }, []);
 
