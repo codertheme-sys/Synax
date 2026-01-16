@@ -11,7 +11,10 @@ const ChatMessagesTab = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [isUserTyping, setIsUserTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingChannelRef = useRef(null);
 
   // Load conversations (users with messages)
   useEffect(() => {
@@ -426,38 +429,72 @@ const ChatMessagesTab = () => {
                           marginTop: '8px', 
                           paddingTop: '8px', 
                           borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
                         }}>
-                          {message.attachment_type === 'pdf' || message.attachment_type === 'doc' || message.attachment_type === 'docx' || message.attachment_type === 'txt' ? (
-                            <FiFile size={16} color="#ffffff" />
+                          {message.attachment_type?.startsWith('image/') ? (
+                            <div>
+                              <img
+                                src={message.attachment_url}
+                                alt={message.attachment_name || 'Attachment'}
+                                style={{
+                                  maxWidth: '100%',
+                                  maxHeight: '300px',
+                                  borderRadius: '8px',
+                                  marginBottom: '8px',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => window.open(message.attachment_url, '_blank')}
+                              />
+                              <a
+                                href={message.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  color: '#ffffff',
+                                  textDecoration: 'none',
+                                  fontSize: '13px',
+                                  fontWeight: 500,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.textDecoration = 'underline';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.textDecoration = 'none';
+                                }}
+                              >
+                                <FiImage size={16} color="#ffffff" />
+                                {message.attachment_name || 'Attachment'}
+                                <FiDownload size={14} />
+                              </a>
+                            </div>
                           ) : (
-                            <FiImage size={16} color="#ffffff" />
+                            <a
+                              href={message.attachment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: '#ffffff',
+                                textDecoration: 'none',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.textDecoration = 'underline';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.textDecoration = 'none';
+                              }}
+                            >
+                              <FiFile size={16} color="#ffffff" />
+                              {message.attachment_name || 'Attachment'}
+                              <FiDownload size={14} />
+                            </a>
                           )}
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              color: '#ffffff',
-                              textDecoration: 'none',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.textDecoration = 'underline';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.textDecoration = 'none';
-                            }}
-                          >
-                            {message.attachment_name || 'Attachment'}
-                            <FiDownload size={14} />
-                          </a>
                         </div>
                       )}
                     </div>
@@ -473,6 +510,36 @@ const ChatMessagesTab = () => {
                     </div>
                   </div>
                 ))
+              )}
+              {isUserTyping && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 16px',
+                  color: '#9ca3af',
+                  fontSize: '13px',
+                  fontStyle: 'italic',
+                }}>
+                  <span>{selectedConversation?.user_name || selectedConversation?.user_email || 'User'} is typing</span>
+                  <span style={{
+                    display: 'inline-flex',
+                    gap: '4px',
+                  }}>
+                    <span style={{
+                      animation: 'typing 1.4s infinite',
+                      animationDelay: '0s',
+                    }}>.</span>
+                    <span style={{
+                      animation: 'typing 1.4s infinite',
+                      animationDelay: '0.2s',
+                    }}>.</span>
+                    <span style={{
+                      animation: 'typing 1.4s infinite',
+                      animationDelay: '0.4s',
+                    }}>.</span>
+                  </span>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
@@ -490,7 +557,17 @@ const ChatMessagesTab = () => {
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    // Broadcast typing indicator
+                    if (typingChannelRef.current && selectedConversation && e.target.value.trim()) {
+                      typingChannelRef.current.send({
+                        type: 'broadcast',
+                        event: 'typing',
+                        payload: { isAdmin: true, userId: selectedConversation.user_id }
+                      });
+                    }
+                  }}
                   placeholder="Type your reply..."
                   disabled={sending}
                   style={{

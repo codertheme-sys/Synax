@@ -12,9 +12,12 @@ const ChatWidget = ({ user }) => {
   const [sending, setSending] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isAdminTyping, setIsAdminTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingChannelRef = useRef(null);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -96,8 +99,32 @@ const ChatWidget = ({ user }) => {
       )
       .subscribe();
 
+    // Subscribe to typing indicator
+    const typingChannel = supabase
+      .channel(`typing:${user.id}`)
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload.payload.isAdmin) {
+          setIsAdminTyping(true);
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsAdminTyping(false);
+          }, 3000);
+        }
+      })
+      .subscribe();
+
+    typingChannelRef.current = typingChannel;
+
     return () => {
       supabase.removeChannel(channel);
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [user, isOpen, isMinimized]);
 
@@ -467,33 +494,69 @@ const ChatWidget = ({ user }) => {
                         {message.message}
                         {message.attachment_url && (
                           <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                            <a
-                              href={message.attachment_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                color: '#ffffff',
-                                textDecoration: 'none',
-                                fontSize: '13px',
-                                fontWeight: 500,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.textDecoration = 'underline';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.textDecoration = 'none';
-                              }}
-                            >
-                              {message.attachment_type === 'pdf' || message.attachment_type === 'doc' || message.attachment_type === 'docx' ? (
+                            {message.attachment_type?.startsWith('image/') ? (
+                              <div>
+                                <img
+                                  src={message.attachment_url}
+                                  alt={message.attachment_name || 'Attachment'}
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '300px',
+                                    borderRadius: '8px',
+                                    marginBottom: '8px',
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() => window.open(message.attachment_url, '_blank')}
+                                />
+                                <a
+                                  href={message.attachment_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    color: '#ffffff',
+                                    textDecoration: 'none',
+                                    fontSize: '13px',
+                                    fontWeight: 500,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.textDecoration = 'underline';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.textDecoration = 'none';
+                                  }}
+                                >
+                                  <FiImage size={16} />
+                                  {message.attachment_name || 'Attachment'}
+                                </a>
+                              </div>
+                            ) : (
+                              <a
+                                href={message.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  color: '#ffffff',
+                                  textDecoration: 'none',
+                                  fontSize: '13px',
+                                  fontWeight: 500,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.textDecoration = 'underline';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.textDecoration = 'none';
+                                }}
+                              >
                                 <FiFile size={16} />
-                              ) : (
-                                <FiImage size={16} />
-                              )}
-                              {message.attachment_name || 'Attachment'}
-                            </a>
+                                {message.attachment_name || 'Attachment'}
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>
@@ -509,6 +572,36 @@ const ChatWidget = ({ user }) => {
                       </div>
                     </div>
                   ))
+                )}
+                {isAdminTyping && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 16px',
+                    color: '#9ca3af',
+                    fontSize: '13px',
+                    fontStyle: 'italic',
+                  }}>
+                    <span>Support is typing</span>
+                    <span style={{
+                      display: 'inline-flex',
+                      gap: '4px',
+                    }}>
+                      <span style={{
+                        animation: 'typing 1.4s infinite',
+                        animationDelay: '0s',
+                      }}>.</span>
+                      <span style={{
+                        animation: 'typing 1.4s infinite',
+                        animationDelay: '0.2s',
+                      }}>.</span>
+                      <span style={{
+                        animation: 'typing 1.4s infinite',
+                        animationDelay: '0.4s',
+                      }}>.</span>
+                    </span>
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -603,7 +696,17 @@ const ChatWidget = ({ user }) => {
                   <input
                     type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      // Broadcast typing indicator
+                      if (typingChannelRef.current && e.target.value.trim()) {
+                        typingChannelRef.current.send({
+                          type: 'broadcast',
+                          event: 'typing',
+                          payload: { isAdmin: false, userId: user.id }
+                        });
+                      }
+                    }}
                     placeholder={selectedFile ? "Add a message (optional)..." : "Type your message..."}
                     disabled={sending || uploadingFile}
                     style={{

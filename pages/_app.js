@@ -33,6 +33,7 @@ import ChatWidget from '../components/ChatWidget';
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
 
   useEffect(() => {
@@ -255,6 +256,140 @@ function MyApp({ Component, pageProps }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(profile?.is_admin === true);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdmin();
+  }, [user]);
+
+  // Admin notifications for new chat/contact messages
+  useEffect(() => {
+    if (!isAdmin || !user) return;
+
+    // Play notification sound
+    const playNotificationSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (error) {
+        console.error('Error playing notification sound:', error);
+      }
+    };
+
+    // Subscribe to new chat messages
+    const chatChannel = supabase
+      .channel('admin_chat_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: 'is_admin=eq.false',
+        },
+        (payload) => {
+          console.log('New chat message for admin:', payload);
+          playNotificationSound();
+          toast.success(
+            `💬 New chat message from ${payload.new.user_name || payload.new.user_email || 'User'}`,
+            {
+              duration: 5000,
+              position: 'top-right',
+              style: {
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: '#ffffff',
+                border: '2px solid rgba(59, 130, 246, 0.5)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                boxShadow: '0 8px 16px rgba(59, 130, 246, 0.4)',
+              },
+              icon: '💬',
+            }
+          );
+        }
+      )
+      .subscribe();
+
+    // Subscribe to new contact messages
+    const contactChannel = supabase
+      .channel('admin_contact_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'contact_messages',
+        },
+        (payload) => {
+          console.log('New contact message for admin:', payload);
+          playNotificationSound();
+          toast.success(
+            `📧 New contact message from ${payload.new.full_name || payload.new.email || 'User'}`,
+            {
+              duration: 5000,
+              position: 'top-right',
+              style: {
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                color: '#ffffff',
+                border: '2px solid rgba(139, 92, 246, 0.5)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                boxShadow: '0 8px 16px rgba(139, 92, 246, 0.4)',
+              },
+              icon: '📧',
+            }
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chatChannel);
+      supabase.removeChannel(contactChannel);
+    };
+  }, [isAdmin, user]);
 
   // Global Price Alert System - Check active alerts and trigger them
   useEffect(() => {

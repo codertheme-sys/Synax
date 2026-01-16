@@ -283,3 +283,13 @@ body.home [data-reveal].reveal-show {
     display: none !important;
   }
 }
+
+/* Typing indicator animation */
+@keyframes typing {
+  0%, 60%, 100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+}

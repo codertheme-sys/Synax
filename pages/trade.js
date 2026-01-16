@@ -1589,6 +1589,19 @@ function TradePage() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-6" data-trade-page>
+          {/* News & Signals - Above Chart */}
+          <div className="lg:col-span-12" style={{ marginBottom: '24px' }}>
+            <div style={{ ...cardStyle, padding: '16px', height: isMobile ? '300px' : '400px', display: 'flex', flexDirection: 'column' }}>
+              <div className="flex items-center justify-between mb-3">
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>News & Signals</h2>
+                <span className="text-xs text-gray-400">Today</span>
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: isMobile ? '250px' : '350px', height: '100%' }}>
+                <TradingViewNewsWidget />
+              </div>
+            </div>
+          </div>
+
           {/* Left Side - Chart and Crypto Screener */}
           <div className="lg:col-span-8">
             {/* TradingView Chart */}
@@ -1681,7 +1694,7 @@ function TradePage() {
             </div>
           </div>
 
-          {/* Right Side - Order Book and News & Signals */}
+          {/* Right Side - Order Book */}
           <div className="lg:col-span-4">
             <div style={{ 
               display: 'flex', 
@@ -1693,19 +1706,6 @@ function TradePage() {
               <div style={{ ...cardStyle, padding: '20px', flex: 1, minWidth: '200px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px', color: '#ffffff' }}>Order Book</h2>
                 <OrderBook symbol={selectedAsset} />
-              </div>
-              
-              {/* News & Signals */}
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ ...cardStyle, padding: '16px', height: isMobile ? '300px' : '400px', display: 'flex', flexDirection: 'column' }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff' }}>News & Signals</h2>
-                    <span className="text-xs text-gray-400">Today</span>
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: isMobile ? '250px' : '350px', height: '100%' }}>
-                    <TradingViewNewsWidget />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1985,7 +1985,12 @@ function TradePage() {
               {/* Submit Buttons - BUY/LONG and SELL/SHORT */}
               <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
               <button
-                type="submit"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSide('buy');
+                  handleSubmit(e);
+                }}
                   disabled={loading || !tradeAmount}
                 style={{
                   width: '100%',

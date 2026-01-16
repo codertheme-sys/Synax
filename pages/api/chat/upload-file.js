@@ -91,9 +91,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ 
       success: true, 
-      file_url: urlData.publicUrl,
-      file_name: file_name,
-      file_type: fileExt
+      attachment_url: urlData.publicUrl,
+      attachment_name: file_name,
+      attachment_type: file_type || `application/${fileExt}`
     });
 
   } catch (error) {
