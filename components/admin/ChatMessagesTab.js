@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FiSend, FiMessageCircle, FiUser, FiClock } from 'react-icons/fi';
+import { FiSend, FiMessageCircle, FiUser, FiClock, FiFile, FiImage, FiDownload } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const ChatMessagesTab = () => {
@@ -421,6 +421,45 @@ const ChatMessagesTab = () => {
                       }}
                     >
                       {message.message}
+                      {message.attachment_url && (
+                        <div style={{ 
+                          marginTop: '8px', 
+                          paddingTop: '8px', 
+                          borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}>
+                          {message.attachment_type === 'pdf' || message.attachment_type === 'doc' || message.attachment_type === 'docx' || message.attachment_type === 'txt' ? (
+                            <FiFile size={16} color="#ffffff" />
+                          ) : (
+                            <FiImage size={16} color="#ffffff" />
+                          )}
+                          <a
+                            href={message.attachment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: '#ffffff',
+                              textDecoration: 'none',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.textDecoration = 'underline';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.textDecoration = 'none';
+                            }}
+                          >
+                            {message.attachment_name || 'Attachment'}
+                            <FiDownload size={14} />
+                          </a>
+                        </div>
+                      )}
                     </div>
                     <div
                       style={{
