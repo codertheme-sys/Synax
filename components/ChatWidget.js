@@ -221,9 +221,9 @@ const ChatWidget = ({ user }) => {
           user_email: user.email || profile?.email,
           user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
           message: `📎 ${selectedFile.name}`,
-          attachment_url: uploadResult.file_url,
-          attachment_name: uploadResult.file_name,
-          attachment_type: uploadResult.file_type,
+          attachment_url: uploadResult.attachment_url,
+          attachment_name: uploadResult.attachment_name,
+          attachment_type: uploadResult.attachment_type,
           is_admin: false,
           is_read: false,
         })
