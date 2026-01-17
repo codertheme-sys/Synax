@@ -698,13 +698,18 @@ const ChatWidget = ({ user }) => {
                     value={newMessage}
                     onChange={(e) => {
                       setNewMessage(e.target.value);
-                      // Broadcast typing indicator
+                      // Broadcast typing indicator with debounce
                       if (typingChannelRef.current && e.target.value.trim()) {
+                        // Clear existing timeout
+                        if (typingTimeoutRef.current) {
+                          clearTimeout(typingTimeoutRef.current);
+                        }
+                        // Send typing indicator
                         typingChannelRef.current.send({
                           type: 'broadcast',
                           event: 'typing',
                           payload: { isAdmin: false, userId: user.id }
-                        });
+                        }).catch(err => console.error('Error sending typing indicator:', err));
                       }
                     }}
                     placeholder={selectedFile ? "Add a message (optional)..." : "Type your message..."}

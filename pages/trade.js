@@ -1281,10 +1281,12 @@ function TradePage() {
   //   console.log('Watchlist length:', watchlist?.length);
   // }, [watchlist]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, tradeSide = null) => {
     e.preventDefault();
+    // Use passed side parameter or fallback to state
+    const currentSide = tradeSide || side;
     console.log('=== BINARY TRADE SUBMIT ===');
-    console.log('BUY/LONG or SELL/SHORT clicked', { side, tradeAmount, timeFrame, selectedAsset, currentAsset });
+    console.log('BUY/LONG or SELL/SHORT clicked', { side: currentSide, tradeSide, tradeAmount, timeFrame, selectedAsset, currentAsset });
     
     // Normalize trade amount: replace comma with dot
     const normalizedAmount = tradeAmount.replace(',', '.');
@@ -1378,7 +1380,7 @@ function TradePage() {
         asset_id: assetId,
         asset_symbol: assetSymbol,
         asset_name: assetName,
-        side: side, // 'buy' (LONG) or 'sell' (SHORT)
+        side: currentSide, // 'buy' (LONG) or 'sell' (SHORT)
         time_frame: timeFrame,
         potential_profit_percentage: potentialProfitPercentage,
         trade_amount: amountValue,
@@ -1407,7 +1409,7 @@ function TradePage() {
       console.log('Response Data:', result);
 
       if (result.success) {
-        toast.success(`Trade placed successfully! ${side === 'buy' ? 'BUY/LONG' : 'SELL/SHORT'} $${amountValue.toFixed(2)}`, {
+        toast.success(`Trade placed successfully! ${currentSide === 'buy' ? 'BUY/LONG' : 'SELL/SHORT'} $${amountValue.toFixed(2)}`, {
           duration: 4000,
           style: {
             background: 'rgba(34, 197, 94, 0.15)',
@@ -1988,8 +1990,7 @@ function TradePage() {
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  setSide('buy');
-                  handleSubmit(e);
+                  handleSubmit(e, 'buy');
                 }}
                   disabled={loading || !tradeAmount}
                 style={{
@@ -2019,8 +2020,7 @@ function TradePage() {
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    setSide('sell');
-                    handleSubmit(e);
+                    handleSubmit(e, 'sell');
                   }}
                   disabled={loading || !tradeAmount}
                   style={{

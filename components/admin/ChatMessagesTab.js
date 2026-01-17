@@ -54,8 +54,44 @@ const ChatMessagesTab = () => {
       )
       .subscribe();
 
+    // Subscribe to typing indicator for selected conversation
+    if (selectedConversation) {
+      const typingChannel = supabase
+        .channel(`typing:${selectedConversation.user_id}`)
+        .on('broadcast', { event: 'typing' }, (payload) => {
+          if (!payload.payload.isAdmin && payload.payload.userId === selectedConversation.user_id) {
+            setIsUserTyping(true);
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+            typingTimeoutRef.current = setTimeout(() => {
+              setIsUserTyping(false);
+            }, 3000);
+          }
+        })
+        .subscribe();
+
+      typingChannelRef.current = typingChannel;
+
+      return () => {
+        supabase.removeChannel(channel);
+        if (typingChannelRef.current) {
+          supabase.removeChannel(typingChannelRef.current);
+        }
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+      };
+    }
+
     return () => {
       supabase.removeChannel(channel);
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [selectedConversation]);
 
@@ -559,13 +595,18 @@ const ChatMessagesTab = () => {
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
-                    // Broadcast typing indicator
+                    // Broadcast typing indicator with debounce
                     if (typingChannelRef.current && selectedConversation && e.target.value.trim()) {
+                      // Clear existing timeout
+                      if (typingTimeoutRef.current) {
+                        clearTimeout(typingTimeoutRef.current);
+                      }
+                      // Send typing indicator
                       typingChannelRef.current.send({
                         type: 'broadcast',
                         event: 'typing',
                         payload: { isAdmin: true, userId: selectedConversation.user_id }
-                      });
+                      }).catch(err => console.error('Error sending typing indicator:', err));
                     }
                   }}
                   placeholder="Type your reply..."
