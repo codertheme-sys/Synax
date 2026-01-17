@@ -99,18 +99,21 @@ const ChatWidget = ({ user }) => {
       )
       .subscribe();
 
-    // Subscribe to typing indicator
+    // Subscribe to typing indicator for admin messages
     const typingChannel = supabase
       .channel(`typing:${user.id}`)
       .on('broadcast', { event: 'typing' }, (payload) => {
-        if (payload.payload.isAdmin) {
+        console.log('Typing broadcast received:', payload);
+        if (payload.payload && payload.payload.isAdmin) {
           setIsAdminTyping(true);
+          // Clear existing timeout
           if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
           }
+          // Reset timeout to 5 seconds after last typing indicator
           typingTimeoutRef.current = setTimeout(() => {
             setIsAdminTyping(false);
-          }, 3000);
+          }, 5000);
         }
       })
       .subscribe();
@@ -704,12 +707,16 @@ const ChatWidget = ({ user }) => {
                         if (typingTimeoutRef.current) {
                           clearTimeout(typingTimeoutRef.current);
                         }
-                        // Send typing indicator
-                        typingChannelRef.current.send({
-                          type: 'broadcast',
-                          event: 'typing',
-                          payload: { isAdmin: false, userId: user.id }
-                        }).catch(err => console.error('Error sending typing indicator:', err));
+                        // Send typing indicator - debounced
+                        typingTimeoutRef.current = setTimeout(() => {
+                          if (typingChannelRef.current) {
+                            typingChannelRef.current.send({
+                              type: 'broadcast',
+                              event: 'typing',
+                              payload: { isAdmin: false, userId: user.id }
+                            }).catch(err => console.error('Error sending typing indicator:', err));
+                          }
+                        }, 300); // Debounce 300ms
                       }
                     }}
                     placeholder={selectedFile ? "Add a message (optional)..." : "Type your message..."}
