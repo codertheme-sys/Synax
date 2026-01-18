@@ -52,25 +52,159 @@ export default function Home() {
       checkMobile();
       window.addEventListener('resize', checkMobile);
       
-      // Check for password reset token in hash and redirect
-      const hash = window.location.hash;
-      if (hash && hash.length > 1) {
-        const urlParams = new URLSearchParams(hash.substring(1));
-        const accessToken = urlParams.get('access_token');
-        const refreshToken = urlParams.get('refresh_token');
-        const type = urlParams.get('type');
-        const error = urlParams.get('error');
-        const errorCode = urlParams.get('error_code');
-        
-        // Check if this is a password reset token
-        const isResetPasswordToken = (accessToken && refreshToken && type === 'recovery') || 
-                                     (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired'));
-        
-        if (isResetPasswordToken) {
-          console.log('🔐 [INDEX] Password reset token detected, redirecting to /reset-password');
-          router.push(`/reset-password${hash}`);
+      // CRITICAL: Check if user has a session but shouldn't (email confirmation auto-login)
+      // This must run BEFORE hash check to prevent session being set
+      const checkForAutoLogin = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && window.location.pathname === '/') {
+          // Check if this is from email confirmation (hash contains access_token or type=signup)
+          const hash = window.location.hash || '';
+          const urlParams = new URLSearchParams(hash.substring(1));
+          const type = urlParams.get('type');
+          const accessToken = urlParams.get('access_token');
+          const urlSearchParams = new URLSearchParams(window.location.search);
+          const queryType = urlSearchParams.get('type');
+          const actualType = type || queryType;
+          
+          // If hash contains access_token or type=signup, this is email confirmation auto-login
+          if (accessToken || actualType === 'signup') {
+            console.log('🔐 [INDEX] ⚠️ Email confirmation auto-login detected on home page, clearing session');
+            console.log('🔐 [INDEX] Hash:', hash);
+            console.log('🔐 [INDEX] Type:', actualType);
+            
+            // Clear session immediately
+            await supabase.auth.signOut();
+            
+            // Redirect to login page with hash preserved
+            const redirectUrl = hash ? `/login${hash}` : '/login';
+            window.location.replace(redirectUrl);
+            return true; // Indicate redirect happened
+          }
         }
-      }
+        return false;
+      };
+      
+      // Check for auto-login first (must be async)
+      checkForAutoLogin().then((redirected) => {
+        if (redirected) return; // Already redirected
+        
+        // Check for email confirmation or password reset token in hash and redirect
+        // This check must be EARLY to prevent page rendering with wrong route
+        const hash = window.location.hash;
+        const search = window.location.search;
+        const fullUrl = window.location.href;
+        
+        console.log('🔐 [INDEX] ========== HASH CHECK START ==========');
+        console.log('🔐 [INDEX] Full URL:', fullUrl);
+        console.log('🔐 [INDEX] Pathname:', window.location.pathname);
+        console.log('🔐 [INDEX] Search:', search);
+        console.log('🔐 [INDEX] Hash:', hash);
+        console.log('🔐 [INDEX] Hash length:', hash?.length || 0);
+        
+        if (hash && hash.length > 1) {
+          const urlParams = new URLSearchParams(hash.substring(1));
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+          const type = urlParams.get('type');
+          const error = urlParams.get('error');
+          const errorCode = urlParams.get('error_code');
+          const errorDescription = urlParams.get('error_description');
+          
+          console.log('🔐 [INDEX] Hash parameters:', {
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken,
+            type,
+            error,
+            errorCode,
+            errorDescription,
+            accessTokenLength: accessToken?.length || 0,
+            refreshTokenLength: refreshToken?.length || 0
+          });
+          
+          // FIRST: Check URL query params for type (Supabase verify endpoint may have type in query, not hash)
+          const urlSearchParams = new URLSearchParams(search);
+          const queryType = urlSearchParams.get('type');
+          const queryToken = urlSearchParams.get('token');
+          
+          console.log('🔐 [INDEX] Query parameters:', {
+            queryType,
+            queryToken: queryToken ? 'Present' : 'Missing'
+          });
+          
+          // Combine type from both hash and query params
+          const actualType = type || queryType;
+          
+          console.log('🔐 [INDEX] Type resolution:', { 
+            hashType: type, 
+            queryType, 
+            actualType,
+            finalDecision: actualType || 'NO TYPE FOUND'
+          });
+          
+          // CRITICAL: If access_token exists, this is likely email confirmation (even without type)
+          // Supabase verify endpoint doesn't always include type in hash
+          if (accessToken) {
+            console.log('🔐 [INDEX] ✅ Access token detected in hash');
+            
+            // If type=signup explicitly, definitely email confirmation
+            if (actualType === 'signup') {
+              console.log('🔐 [INDEX] ✅ Type=signup confirmed, redirecting to /login');
+              window.location.replace(`/login${hash}`);
+              return;
+            }
+            
+            // If type=recovery explicitly, definitely password reset
+            if (actualType === 'recovery') {
+              console.log('🔐 [INDEX] ✅ Type=recovery confirmed, redirecting to /reset-password');
+              window.location.replace(`/reset-password${hash}`);
+              return;
+            }
+            
+            // If no type but access_token exists, assume email confirmation (default behavior)
+            // This handles the case where Supabase verify endpoint doesn't include type in hash
+            console.log('🔐 [INDEX] ⚠️ Access token found but no type parameter');
+            console.log('🔐 [INDEX] ⚠️ Assuming email confirmation (default), redirecting to /login');
+            window.location.replace(`/login${hash}`);
+            return;
+          }
+          
+          // FIRST: Check if this is an email confirmation link (type=signup) - even if expired
+          if (actualType === 'signup') {
+            console.log('🔐 [INDEX] ✅ Email confirmation link detected (type=signup), redirecting to /login');
+            window.location.replace(`/login${hash}`);
+            return;
+          }
+          
+          // SECOND: Check if this is a password reset token (type=recovery)
+          if (actualType === 'recovery' && accessToken && refreshToken) {
+            console.log('🔐 [INDEX] ✅ Password reset token detected (type=recovery + tokens), redirecting to /reset-password');
+            window.location.replace(`/reset-password${hash}`);
+            return;
+          }
+          
+          // THIRD: Handle errors (expired tokens)
+          if (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired')) {
+            console.log('🔐 [INDEX] ⚠️ Expired token error detected');
+            console.log('🔐 [INDEX] Error details:', { error, errorCode, errorDescription, actualType });
+            
+            if (actualType === 'recovery') {
+              console.log('🔐 [INDEX] ✅ Expired password reset token (type=recovery), redirecting to /reset-password');
+              window.location.replace(`/reset-password${hash}`);
+            } else {
+              // Default: treat as expired email confirmation
+              console.log('🔐 [INDEX] ⚠️ Expired email confirmation token (no type or type!=recovery), redirecting to /login');
+              window.location.replace(`/login${hash}`);
+            }
+            return;
+          }
+          
+          console.log('🔐 [INDEX] ⚠️ Hash found but no matching pattern, staying on current page');
+        } else {
+          console.log('🔐 [INDEX] ⏭️ No hash or hash too short, skipping');
+        }
+        
+        console.log('🔐 [INDEX] ========== HASH CHECK END ==========');
+      });
       
       return () => {
         clearInterval(interval);

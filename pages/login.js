@@ -46,24 +46,45 @@ function LoginPage() {
         if (hash.includes('access_token=')) {
           const params = new URLSearchParams(hash.substring(1));
           const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
           const type = params.get('type');
           
-          if (accessToken && type === 'signup') {
+          // Check query params for type (Supabase verify endpoint may have type in query, not hash)
+          const urlSearchParams = new URLSearchParams(window.location.search);
+          const queryType = urlSearchParams.get('type');
+          const actualType = type || queryType;
+          
+          console.log('🔐 [LOGIN] Email confirmation check:', {
+            hasAccessToken: !!accessToken,
+            hashType: type,
+            queryType,
+            actualType
+          });
+          
+          // If access_token exists, treat as email confirmation (even if type is missing)
+          // Supabase verify endpoint doesn't always include type in hash
+          if (accessToken && (actualType === 'signup' || !actualType)) {
             // Email confirmed successfully
+            // CRITICAL: Supabase's verify endpoint automatically sets session when redirecting
+            // We need to clear the session to prevent auto-login
+            console.log('🔐 [LOGIN] ✅ Email confirmation detected (type=' + (actualType || 'missing') + '), clearing auto-set session');
             try {
-              // Set the session with the access token
-              const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: params.get('refresh_token') || '',
-              });
+              // Sign out to prevent auto-login (Supabase verify endpoint sets session automatically)
+              await supabase.auth.signOut();
               
-              if (!sessionError && sessionData?.user) {
-                toast.success('Email confirmed successfully! You can now log in.');
-                // Clear the hash from URL
-                window.history.replaceState(null, '', '/login');
-              }
+              // Wait a moment for sign out to complete
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              // Show success message
+              toast.success('Email confirmed successfully! Please log in with your credentials.');
+              
+              // Clear the hash from URL
+              window.history.replaceState(null, '', '/login');
             } catch (error) {
-              console.error('Error setting session:', error);
+              console.error('🔐 [LOGIN] Error processing confirmation:', error);
+              toast.error('Email confirmation processed, but there was an issue. Please try logging in.');
+              // Clear the hash from URL anyway
+              window.history.replaceState(null, '', '/login');
             }
           }
         }

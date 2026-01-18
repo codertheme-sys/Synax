@@ -25,23 +25,88 @@ function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Validation errors
+  const [errors, setErrors] = useState({
+    name: '',
+    surname: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    kycFile: '',
+  });
+  
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+    // Reset errors
+    const newErrors = {
+      name: '',
+      surname: '',
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      kycFile: '',
+    };
+    
+    // Validate all fields
+    let hasError = false;
+    
+    if (!name || !name.trim()) {
+      newErrors.name = 'Name is required';
+      hasError = true;
     }
-
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
+    
+    if (!surname || !surname.trim()) {
+      newErrors.surname = 'Surname is required';
+      hasError = true;
     }
-
+    
+    if (!username || !username.trim()) {
+      newErrors.username = 'User name is required';
+      hasError = true;
+    }
+    
+    if (!email || !email.trim()) {
+      newErrors.email = 'Email is required';
+      hasError = true;
+    } else {
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        newErrors.email = 'Please enter a valid email address';
+        hasError = true;
+      }
+    }
+    
+    if (!password) {
+      newErrors.password = 'Password is required';
+      hasError = true;
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+      hasError = true;
+    }
+    
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+      hasError = true;
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+      hasError = true;
+    }
+    
     if (!kycFile) {
-      toast.error('Please upload KYC document');
+      newErrors.kycFile = 'Please upload KYC document';
+      hasError = true;
+    }
+    
+    // Set errors and return if validation fails
+    setErrors(newErrors);
+    if (hasError) {
       return;
     }
 
@@ -91,39 +156,36 @@ function SignUpPage() {
         // Wait a bit for session to be fully established
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Create profile (trigger should handle this, but we try manually too)
-        // The trigger handle_new_user() creates profile with SECURITY DEFINER,
-        // but we also try manual insert in case trigger fails
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: email.trim(),
-            full_name: `${name} ${surname}`,
-            username: username,
-            balance: 0,
-            kyc_verified: false,
-            kyc_status: 'pending',
-          })
-          .select();
+        // Create profile via API endpoint (bypasses RLS using service role)
+        // This prevents 401 errors during signup
+        console.log('🔐 [SIGNUP] Creating profile via API...');
+        try {
+          const profileResponse = await fetch('/api/auth/create-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: authData.user.id,
+              email: email.trim(),
+              full_name: `${name} ${surname}`,
+              username: username,
+            }),
+          });
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Continue anyway - trigger might have created it or it might already exist
-          // Check if profile exists
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', authData.user.id)
-            .single();
+          const profileResult = await profileResponse.json();
           
-          if (!existingProfile) {
-            console.warn('Profile was not created by trigger or manual insert');
+          if (!profileResponse.ok || !profileResult.success) {
+            console.error('🔐 [SIGNUP] Profile creation API error:', profileResult);
+            // Continue anyway - trigger might have created it
+            console.warn('🔐 [SIGNUP] Profile API failed, but continuing (trigger may have created it)');
           } else {
-            console.log('Profile exists (created by trigger or already exists)');
+            console.log('🔐 [SIGNUP] ✅ Profile created/updated successfully via API:', profileResult.message);
           }
-        } else {
-          console.log('Profile created successfully');
+        } catch (profileApiError) {
+          console.error('🔐 [SIGNUP] Profile creation API exception:', profileApiError);
+          // Continue anyway - trigger might have created it
+          console.warn('🔐 [SIGNUP] Profile API exception, but continuing (trigger may have created it)');
         }
 
         // Upload KYC file via API (bypasses RLS using service role)
@@ -320,29 +382,35 @@ function SignUpPage() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors({ ...errors, name: '' });
+              }}
               required
               style={{
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: errors.name ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
                 fontSize: '15px',
                 outline: 'none',
                 transition: 'all 0.2s',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                e.currentTarget.style.borderColor = errors.name ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = errors.name ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
               }}
               placeholder="John"
             />
+            {errors.name && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.name}</p>
+            )}
           </div>
 
           <div>
@@ -352,29 +420,35 @@ function SignUpPage() {
             <input
               type="text"
               value={surname}
-              onChange={(e) => setSurname(e.target.value)}
+              onChange={(e) => {
+                setSurname(e.target.value);
+                if (errors.surname) setErrors({ ...errors, surname: '' });
+              }}
               required
               style={{
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: errors.surname ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
                 fontSize: '15px',
                 outline: 'none',
                 transition: 'all 0.2s',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                e.currentTarget.style.borderColor = errors.surname ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = errors.surname ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
               }}
               placeholder="Doe"
             />
+            {errors.surname && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.surname}</p>
+            )}
           </div>
 
           <div>
@@ -384,29 +458,35 @@ function SignUpPage() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (errors.username) setErrors({ ...errors, username: '' });
+              }}
               required
               style={{
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: errors.username ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
                 fontSize: '15px',
                 outline: 'none',
                 transition: 'all 0.2s',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                e.currentTarget.style.borderColor = errors.username ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = errors.username ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
               }}
               placeholder="johndoe"
             />
+            {errors.username && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.username}</p>
+            )}
           </div>
 
           <div>
@@ -416,29 +496,35 @@ function SignUpPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) setErrors({ ...errors, email: '' });
+              }}
               required
               style={{
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: errors.email ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
                 fontSize: '15px',
                 outline: 'none',
                 transition: 'all 0.2s',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                e.currentTarget.style.borderColor = errors.email ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = errors.email ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
               }}
               placeholder="you@example.com"
             />
+            {errors.email && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.email}</p>
+            )}
           </div>
 
           <div>
@@ -449,25 +535,28 @@ function SignUpPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors({ ...errors, password: '' });
+                }}
                 required
                 style={{
                   width: '100%',
                   padding: '12px 45px 12px 16px',
                   borderRadius: '10px',
                   background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: errors.password ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                   color: '#ffffff',
                   fontSize: '15px',
                   outline: 'none',
                   transition: 'all 0.2s',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                 }}
                 placeholder="••••••••"
@@ -493,6 +582,9 @@ function SignUpPage() {
                 {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.password}</p>
+            )}
           </div>
 
           <div>
@@ -503,25 +595,28 @@ function SignUpPage() {
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                }}
                 required
                 style={{
                   width: '100%',
                   padding: '12px 45px 12px 16px',
                   borderRadius: '10px',
                   background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: errors.confirmPassword ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                   color: '#ffffff',
                   fontSize: '15px',
                   outline: 'none',
                   transition: 'all 0.2s',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                  e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : 'rgba(59, 130, 246, 0.5)';
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.borderColor = errors.confirmPassword ? '#ef4444' : 'rgba(255, 255, 255, 0.1)';
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                 }}
                 placeholder="••••••••"
@@ -547,6 +642,9 @@ function SignUpPage() {
                 {showConfirmPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
+            {errors.confirmPassword && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.confirmPassword}</p>
+            )}
           </div>
 
           <div>
@@ -559,7 +657,7 @@ function SignUpPage() {
                 padding: '12px 16px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: errors.kycFile ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
@@ -570,7 +668,10 @@ function SignUpPage() {
                 type="file"
                 id="kyc-file-input"
                 accept="image/*,.pdf"
-                onChange={(e) => setKycFile(e.target.files[0])}
+                onChange={(e) => {
+                  setKycFile(e.target.files[0]);
+                  if (errors.kycFile) setErrors({ ...errors, kycFile: '' });
+                }}
                 required
                 style={{
                   display: 'none',
@@ -605,10 +706,13 @@ function SignUpPage() {
                 {kycFile ? kycFile.name : 'No file selected'}
               </span>
             </div>
-            {kycFile && (
+            {kycFile && !errors.kycFile && (
               <p style={{ fontSize: '12px', color: '#4ade80', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span>✓</span> File selected successfully
               </p>
+            )}
+            {errors.kycFile && (
+              <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{errors.kycFile}</p>
             )}
           </div>
 

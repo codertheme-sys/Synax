@@ -207,6 +207,7 @@ function AdminPage() {
       );
 
       setUserDetails({
+        ...result.data?.profile,
         trades: allTrades,
         portfolio: result.data?.portfolio || [],
         deposits: result.data?.deposits || [],
@@ -214,6 +215,7 @@ function AdminPage() {
         balance: result.data?.balance ?? user.balance ?? 0,
         earn_subscriptions: result.data?.earn_subscriptions || [],
         binary_trades: result.data?.binary_trades || [],
+        kyc_documents: result.data?.kyc_documents || [],
       });
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -1003,7 +1005,7 @@ function AdminPage() {
         )}
       </main>
 
-      {/* User Details Modal */}
+      {/* User Details Page - Full Screen */}
       {showUserDetails && selectedUser && (
         <div
           style={{
@@ -1012,39 +1014,40 @@ function AdminPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.95)',
             zIndex: 1000,
-            padding: '20px',
+            overflow: 'auto',
           }}
-          onClick={() => setShowUserDetails(false)}
         >
-          <div
-            style={{
-              ...cardStyle,
-              maxWidth: '900px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              padding: '32px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>User Details: {selectedUser.username || selectedUser.user_name || selectedUser.email || selectedUser.id}</h2>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '12px', 
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  color: '#ffffff',
+                }}>
+                  👤
+                </div>
+                <h2 style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>User Details</h2>
+              </div>
               <button
                 onClick={() => setShowUserDetails(false)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#9ca3af',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#ffffff',
                   fontSize: '24px',
                   cursor: 'pointer',
-                  padding: '0',
-                  width: '32px',
-                  height: '32px',
+                  padding: '8px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1052,12 +1055,161 @@ function AdminPage() {
               >
                 ×
               </button>
-    </div>
+            </div>
 
             {loadingUserDetails ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading...</div>
+              <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>Loading...</div>
             ) : userDetails ? (
               <div className="space-y-6">
+                {/* General Information Section */}
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '8px', 
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      color: '#ffffff',
+                    }}>
+                      📄
+                    </div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#ffffff' }}>General Information</h3>
+                  </div>
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                    gap: '20px',
+                    padding: '20px',
+                    background: 'rgba(15, 17, 36, 0.5)',
+                    borderRadius: '12px',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>User Name</div>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{userDetails.username || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>User e-mail</div>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{userDetails.email || selectedUser.email || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Full Name</div>
+                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{userDetails.full_name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>KYC Status</div>
+                      <div style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        display: 'inline-block',
+                        background: userDetails.kyc_status === 'approved' ? 'rgba(34, 197, 94, 0.15)' : userDetails.kyc_status === 'pending' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: userDetails.kyc_status === 'approved' ? '#4ade80' : userDetails.kyc_status === 'pending' ? '#fbbf24' : '#f87171',
+                      }}>
+                        {userDetails.kyc_status || 'pending'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Balance (Total)</div>
+                      <div style={{ fontSize: '24px', fontWeight: 700, color: '#4ade80' }}>
+                        ${parseFloat(userDetails.balance || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Status</div>
+                      <div style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        color: '#4ade80',
+                      }}>
+                        <span>✓</span> Active
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KYC Document Section */}
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '8px', 
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      color: '#ffffff',
+                    }}>
+                      🆔
+                    </div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#ffffff' }}>ID KYC Document</h3>
+                  </div>
+                  
+                  {userDetails.kyc_documents && userDetails.kyc_documents.length > 0 ? (() => {
+                    // Find the most recent ID document
+                    const idDoc = userDetails.kyc_documents
+                      .filter(d => d.document_type === 'id_card' && d.document_url)
+                      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                    const documentUrl = idDoc?.document_url || userDetails.kyc_document_url;
+                    
+                    return documentUrl ? (
+                      <div style={{ padding: '20px', background: 'rgba(15, 17, 36, 0.5)', borderRadius: '12px' }}>
+                        {documentUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) || documentUrl.startsWith('data:image') ? (
+                          <img 
+                            src={documentUrl} 
+                            alt="KYC ID Document" 
+                            style={{ 
+                              maxWidth: '100%', 
+                              maxHeight: '600px', 
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              objectFit: 'contain',
+                            }} 
+                          />
+                        ) : (
+                          <a 
+                            href={documentUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-block',
+                              padding: '12px 24px',
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                              color: '#ffffff',
+                              textDecoration: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            View ID Document
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '40px', background: 'rgba(15, 17, 36, 0.5)', borderRadius: '12px', textAlign: 'center', color: '#9ca3af' }}>
+                        No ID document available
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ padding: '40px', background: 'rgba(15, 17, 36, 0.5)', borderRadius: '12px', textAlign: 'center', color: '#9ca3af' }}>
+                      No KYC document uploaded
+                    </div>
+                  )}
+                </div>
+
                 {/* Balance Section */}
                 <div style={{ ...cardStyle, padding: '20px', background: 'rgba(59, 130, 246, 0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1101,7 +1253,7 @@ function AdminPage() {
                 </div>
 
                 {/* Assets Section */}
-                <div>
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Assets</h3>
                   {userDetails.portfolio && userDetails.portfolio.length > 0 ? (
                     <div className="overflow-x-auto">
@@ -1130,7 +1282,7 @@ function AdminPage() {
                 </div>
 
                 {/* Deposits Section */}
-                <div>
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Deposits ({userDetails.deposits?.length || 0})</h3>
                   {userDetails.deposits && userDetails.deposits.length > 0 ? (
                     <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1181,7 +1333,7 @@ function AdminPage() {
                 </div>
 
                 {/* Withdrawals Section */}
-                <div>
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Withdrawals ({userDetails.withdrawals?.length || 0})</h3>
                   {userDetails.withdrawals && userDetails.withdrawals.length > 0 ? (
                     <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1232,7 +1384,7 @@ function AdminPage() {
                 </div>
 
                 {/* Trades Section */}
-                <div>
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Trades ({userDetails.trades?.length || 0})</h3>
                   {userDetails.trades && userDetails.trades.length > 0 ? (
                     <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>

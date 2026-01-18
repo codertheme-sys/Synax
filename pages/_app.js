@@ -118,18 +118,34 @@ function MyApp({ Component, pageProps }) {
   }, [router.pathname]);
 
 
-  // Check for password reset tokens/errors in URL hash and redirect to reset-password page
+  // Check for email confirmation and password reset tokens in URL hash
+  // This must run BEFORE component mount to catch redirects early
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const checkHashForResetPassword = () => {
+    const checkHashForAuthRedirects = () => {
       const hash = window.location.hash;
       const pathname = window.location.pathname;
+      const search = window.location.search;
+      const fullUrl = window.location.href;
       
-      // Only process if not already on reset-password page
-      if (pathname === '/reset-password') return;
+      console.log('🔐 [APP] ========== HASH CHECK START ==========');
+      console.log('🔐 [APP] Full URL:', fullUrl);
+      console.log('🔐 [APP] Pathname:', pathname);
+      console.log('🔐 [APP] Search:', search);
+      console.log('🔐 [APP] Hash:', hash);
+      console.log('🔐 [APP] Hash length:', hash?.length || 0);
       
-      if (!hash || hash.length < 2) return; // No hash or just #
+      // Skip if already on target pages
+      if (pathname === '/reset-password' || pathname === '/login') {
+        console.log('🔐 [APP] ⏭️ Already on target page, skipping hash check');
+        return;
+      }
+      
+      if (!hash || hash.length < 2) {
+        console.log('🔐 [APP] ⏭️ No hash or hash too short, skipping');
+        return; // No hash or just #
+      }
       
       const urlParams = new URLSearchParams(hash.substring(1)); // Remove # from hash
       const accessToken = urlParams.get('access_token');
@@ -137,42 +153,113 @@ function MyApp({ Component, pageProps }) {
       const type = urlParams.get('type');
       const error = urlParams.get('error');
       const errorCode = urlParams.get('error_code');
+      const errorDescription = urlParams.get('error_description');
       
-      console.log('🔐 [APP] Checking hash for reset password:', {
-        pathname,
-        hasHash: !!hash,
-        hashLength: hash.length,
+      console.log('🔐 [APP] Hash parameters:', {
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
         type,
         error,
-        errorCode
+        errorCode,
+        errorDescription,
+        accessTokenLength: accessToken?.length || 0,
+        refreshTokenLength: refreshToken?.length || 0
       });
       
-      // Check if this is a password reset token (valid or expired)
-      const isResetPasswordToken = (accessToken && refreshToken && type === 'recovery') || 
-                                   (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired'));
+      // FIRST: Check URL query params for type (Supabase verify endpoint may have type in query, not hash)
+      const urlSearchParams = new URLSearchParams(search);
+      const queryType = urlSearchParams.get('type');
+      const queryToken = urlSearchParams.get('token');
       
-      if (isResetPasswordToken) {
-        console.log('🔐 [APP] ✅ Password reset token detected in hash, redirecting to /reset-password');
-        console.log('🔐 [APP] Full hash:', hash);
-        console.log('🔐 [APP] Current pathname:', pathname);
+      console.log('🔐 [APP] Query parameters:', {
+        queryType,
+        queryToken: queryToken ? 'Present' : 'Missing'
+      });
+      
+      // Combine type from both hash and query params
+      const actualType = type || queryType;
+      
+      console.log('🔐 [APP] Type resolution:', { 
+        hashType: type, 
+        queryType, 
+        actualType,
+        finalDecision: actualType || 'NO TYPE FOUND'
+      });
+      
+      // CRITICAL: If access_token exists, this is likely email confirmation (even without type)
+      // Supabase verify endpoint doesn't always include type in hash
+      if (accessToken) {
+        console.log('🔐 [APP] ✅ Access token detected in hash');
         
-        // Redirect to reset-password page with the hash preserved
-        router.push(`/reset-password${hash}`);
+        // If type=signup explicitly, definitely email confirmation
+        if (actualType === 'signup') {
+          console.log('🔐 [APP] ✅ Type=signup confirmed, redirecting to /login');
+          window.location.replace(`/login${hash}`);
+          return;
+        }
+        
+        // If type=recovery explicitly, definitely password reset
+        if (actualType === 'recovery') {
+          console.log('🔐 [APP] ✅ Type=recovery confirmed, redirecting to /reset-password');
+          window.location.replace(`/reset-password${hash}`);
+          return;
+        }
+        
+        // If no type but access_token exists, assume email confirmation (default behavior)
+        // This handles the case where Supabase verify endpoint doesn't include type in hash
+        console.log('🔐 [APP] ⚠️ Access token found but no type parameter');
+        console.log('🔐 [APP] ⚠️ Assuming email confirmation (default), redirecting to /login');
+        window.location.replace(`/login${hash}`);
+        return;
       }
+      
+      // FIRST: Check if this is an email confirmation link (type=signup) - even if expired
+      if (actualType === 'signup') {
+        console.log('🔐 [APP] ✅ Email confirmation link detected (type=signup), redirecting to /login');
+        // Use window.location.replace for immediate redirect (more reliable than router.push)
+        window.location.replace(`/login${hash}`);
+        return;
+      }
+      
+      // SECOND: Check if this is a password reset token (type=recovery)
+      // CRITICAL: Only treat as reset password if EXPLICITLY type=recovery
+      // If type is missing, assume it's email confirmation (not reset password!)
+      if (actualType === 'recovery' && accessToken && refreshToken) {
+        console.log('🔐 [APP] ✅ Password reset token detected (type=recovery + tokens), redirecting to /reset-password');
+        window.location.replace(`/reset-password${hash}`);
+        return;
+      }
+      
+      // THIRD: Handle errors (expired tokens)
+      if (error === 'access_denied' && (errorCode === 'otp_expired' || errorCode === 'token_expired')) {
+        console.log('🔐 [APP] ⚠️ Expired token error detected');
+        console.log('🔐 [APP] Error details:', { error, errorCode, errorDescription, actualType });
+        
+        if (actualType === 'recovery') {
+          console.log('🔐 [APP] ✅ Expired password reset token (type=recovery), redirecting to /reset-password');
+          window.location.replace(`/reset-password${hash}`);
+        } else {
+          // Default: treat as expired email confirmation
+          console.log('🔐 [APP] ⚠️ Expired email confirmation token (no type or type!=recovery), redirecting to /login');
+          window.location.replace(`/login${hash}`);
+        }
+        return;
+      }
+      
+      console.log('🔐 [APP] ⚠️ Hash found but no matching pattern, staying on current page');
+      console.log('🔐 [APP] ========== HASH CHECK END ==========');
     };
     
-    // Check immediately
-    checkHashForResetPassword();
+    // Check immediately (critical - must run before page renders)
+    checkHashForAuthRedirects();
     
-    // Also listen for hash changes
-    window.addEventListener('hashchange', checkHashForResetPassword);
+    // Also listen for hash changes (in case hash is added after page load)
+    window.addEventListener('hashchange', checkHashForAuthRedirects);
     
     return () => {
-      window.removeEventListener('hashchange', checkHashForResetPassword);
+      window.removeEventListener('hashchange', checkHashForAuthRedirects);
     };
-  }, [router]);
+  }, []); // Empty dependency array - run once on mount
 
   // Check for user session
   useEffect(() => {
@@ -182,7 +269,7 @@ function MyApp({ Component, pageProps }) {
     };
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : router.pathname;
       const currentUrl = typeof window !== 'undefined' ? window.location.href : 'N/A';
       
@@ -197,6 +284,38 @@ function MyApp({ Component, pageProps }) {
       console.log('🔐 [AUTH STATE CHANGE] User email:', session?.user?.email);
       console.log('🔐 [AUTH STATE CHANGE] __preventRedirect flag:', typeof window !== 'undefined' ? window.__preventRedirect : 'N/A');
       console.log('🔐 [AUTH STATE CHANGE] __onResetPasswordPage flag:', typeof window !== 'undefined' ? window.__onResetPasswordPage : 'N/A');
+      
+      // CRITICAL: If session was set by email confirmation (type=signup), clear it immediately
+      if (event === 'SIGNED_IN' && session && currentPath === '/') {
+        if (typeof window !== 'undefined') {
+          const hash = window.location.hash || '';
+          const urlParams = new URLSearchParams(hash.substring(1));
+          const type = urlParams.get('type');
+          const urlSearchParams = new URLSearchParams(window.location.search);
+          const queryType = urlSearchParams.get('type');
+          const actualType = type || queryType;
+          
+          // Check if this is from email confirmation (type=signup in hash or query, or hash contains access_token)
+          const isEmailConfirmation = actualType === 'signup' || (hash && hash.includes('access_token'));
+          
+          if (isEmailConfirmation) {
+            console.log('🔐 [AUTH STATE CHANGE] ⚠️ Email confirmation auto-login detected, clearing session and redirecting to /login');
+            console.log('🔐 [AUTH STATE CHANGE] Hash:', hash);
+            console.log('🔐 [AUTH STATE CHANGE] Type:', actualType);
+            
+            // Clear session immediately to prevent auto-login
+            await supabase.auth.signOut();
+            
+            // Wait a moment for sign out to complete
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Redirect to login page with hash preserved if it exists
+            const redirectUrl = hash ? `/login${hash}` : '/login';
+            window.location.replace(redirectUrl);
+            return;
+          }
+        }
+      }
       
       setUser(session?.user || null);
       

@@ -96,31 +96,44 @@ function ResetPasswordPage() {
     console.log('🔐 [RESET PASSWORD] Parsed hash:', hash);
     console.log('🔐 [RESET PASSWORD] URL params from hash:', Object.fromEntries(urlParams.entries()));
     
-    // Check for error parameters
+    // Parse URL hash for password reset token
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    const type = urlParams.get('type');
+    
+    // FIRST: Check if this is an email confirmation link (not a password reset link)
+    if (type === 'signup') {
+      console.log('🔐 [RESET PASSWORD] ❌ Email confirmation link detected on reset-password page, redirecting to /login');
+      toast.error('This is an email confirmation link. Redirecting to login page...');
+      // Redirect to login page with the hash preserved
+      router.push(`/login${hash}`);
+      return;
+    }
+    
+    // SECOND: Check for error parameters
     const error = urlParams.get('error');
     const errorCode = urlParams.get('error_code');
     const errorDescription = urlParams.get('error_description');
     
     if (error || errorCode) {
-      console.error('🔐 [RESET PASSWORD] ❌ ERROR DETECTED IN URL:', { error, errorCode, errorDescription });
-      console.log('🔐 [RESET PASSWORD] Showing error message and staying on page');
-      toast.error(errorDescription || 'Invalid or expired password reset link. Please request a new one.');
-      setIsProcessingToken(false);
-      setHasValidSession(false);
-      
-      // Clear the hash to clean up the URL
-      const newUrl = '/reset-password';
-      console.log('🔐 [RESET PASSWORD] Replacing URL hash with:', newUrl);
-      window.history.replaceState(null, '', newUrl);
-      
-      // Don't redirect - stay on page and show error
-      return;
+      // Only show error if this is actually a recovery-related error
+      // Don't show error for signup confirmation links that ended up here
+      if (type !== 'signup') {
+        console.error('🔐 [RESET PASSWORD] ❌ ERROR DETECTED IN URL:', { error, errorCode, errorDescription });
+        console.log('🔐 [RESET PASSWORD] Showing error message and staying on page');
+        toast.error(errorDescription || 'Invalid or expired password reset link. Please request a new one.');
+        setIsProcessingToken(false);
+        setHasValidSession(false);
+        
+        // Clear the hash to clean up the URL
+        const newUrl = '/reset-password';
+        console.log('🔐 [RESET PASSWORD] Replacing URL hash with:', newUrl);
+        window.history.replaceState(null, '', newUrl);
+        
+        // Don't redirect - stay on page and show error
+        return;
+      }
     }
-    
-    // Parse URL hash for password reset token
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    const type = urlParams.get('type');
     
     console.log('🔐 [RESET PASSWORD] Token check:', {
       hasAccessToken: !!accessToken,

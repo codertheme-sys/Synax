@@ -40,6 +40,7 @@ export default async function handler(req, res) {
       { data: subscriptions },
       { data: tradingHistory },
       { data: binaryTrades },
+      { data: kycDocuments },
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*').eq('id', user_id).single(),
       supabaseAdmin.from('portfolio').select('*').eq('user_id', user_id),
@@ -48,6 +49,7 @@ export default async function handler(req, res) {
       supabaseAdmin.from('earn_subscriptions').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
       supabaseAdmin.from('trading_history').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
       supabaseAdmin.from('binary_trades').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
+      supabaseAdmin.from('kyc_documents').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
     ]);
 
     return res.status(200).json({
@@ -61,6 +63,7 @@ export default async function handler(req, res) {
         earn_subscriptions: subscriptions || [],
         trading_history: tradingHistory || [],
         binary_trades: binaryTrades || [],
+        kyc_documents: kycDocuments || [],
       },
     });
   } catch (error) {
