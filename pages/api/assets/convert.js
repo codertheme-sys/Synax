@@ -20,9 +20,9 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { portfolio_id, asset_id, asset_type, asset_symbol, quantity, usd_value } = req.body;
+    const { portfolio_id, asset_id, asset_type, asset_symbol, quantity } = req.body;
 
-    if (!portfolio_id || !asset_id || !asset_type || !asset_symbol || !quantity || !usd_value) {
+    if (!portfolio_id || !asset_id || !asset_type || !asset_symbol || !quantity) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -47,22 +47,106 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Insufficient quantity' });
     }
 
-    // Get current price from price_history
-    const { data: priceData, error: priceError } = await supabaseAdmin
-      .from('price_history')
-      .select('price')
-      .eq('asset_id', asset_id)
-      .eq('asset_type', asset_type)
-      .single();
+    // Get current price in USDT from CoinGecko API
+    let currentPriceInUSDT = 0;
+    try {
+      // CoinGecko ID mapping
+      const coinGeckoIds = {
+        'BTC': 'bitcoin',
+        'ETH': 'ethereum',
+        'USDT': 'tether',
+        'BNB': 'binancecoin',
+        'SOL': 'solana',
+        'XRP': 'ripple',
+        'ADA': 'cardano',
+        'DOGE': 'dogecoin',
+        'DOT': 'polkadot',
+        'AVAX': 'avalanche-2',
+        'LTC': 'litecoin',
+        'TRX': 'tron',
+        'LINK': 'chainlink',
+        'SHIB': 'shiba-inu',
+      };
+      
+      // Get coin symbol (asset_symbol might be BTC, ETH, etc.)
+      const coinSymbol = asset_symbol?.toUpperCase() || asset_id?.toUpperCase();
+      const coinGeckoId = coinGeckoIds[coinSymbol];
+      
+      if (!coinGeckoId) {
+        // Fallback: Try to get price from price_history
+        const { data: priceData } = await supabaseAdmin
+          .from('price_history')
+          .select('price')
+          .eq('asset_id', asset_id)
+          .eq('asset_type', asset_type)
+          .order('last_updated', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (priceData?.price) {
+          currentPriceInUSDT = parseFloat(priceData.price);
+          console.log(`Convert - Using cached price for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
+        } else {
+          throw new Error(`Unsupported coin: ${coinSymbol}`);
+        }
+      } else {
+        // Fetch USDT price from CoinGecko
+        const priceResponse = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usdt&include_24hr_change=true`,
+          {
+            headers: {
+              'Accept': 'application/json',
+            }
+          }
+        );
 
-    if (priceError || !priceData) {
-      return res.status(404).json({ error: 'Price data not found' });
+        if (!priceResponse.ok) {
+          throw new Error(`CoinGecko API error: ${priceResponse.status}`);
+        }
+
+        const priceData = await priceResponse.json();
+        const coinData = priceData[coinGeckoId];
+        
+        if (!coinData || !coinData.usdt) {
+          throw new Error(`Price data not found for ${coinSymbol}`);
+        }
+
+        currentPriceInUSDT = parseFloat(coinData.usdt);
+        console.log(`Convert - Fetched ${coinSymbol} price from CoinGecko: ${currentPriceInUSDT} USDT`);
+      }
+    } catch (priceError) {
+      console.error('Convert - Price fetch error:', priceError);
+      // Fallback: Use price_history table
+      try {
+        const { data: priceData } = await supabaseAdmin
+          .from('price_history')
+          .select('price')
+          .eq('asset_id', asset_id)
+          .eq('asset_type', asset_type)
+          .order('last_updated', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (priceData?.price) {
+          currentPriceInUSDT = parseFloat(priceData.price);
+          console.log(`Convert - Using fallback price for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
+        } else {
+          return res.status(500).json({ 
+            error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Convert - Fallback price fetch failed:', fallbackError);
+        return res.status(500).json({ 
+          error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
+        });
+      }
     }
 
-    const currentPrice = parseFloat(priceData.price);
-    const actualUsdValue = quantity * currentPrice;
+    // Calculate USDT value
+    const usdtValue = quantity * currentPriceInUSDT;
 
-    // Update user balance
+    // Update user balance (add USDT)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('balance')
@@ -73,7 +157,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
-    const newBalance = parseFloat(profile.balance || 0) + actualUsdValue;
+    const newBalance = parseFloat(profile.balance || 0) + usdtValue;
 
     const { error: balanceUpdateError } = await supabaseAdmin
       .from('profiles')
@@ -99,17 +183,17 @@ export default async function handler(req, res) {
       }
     } else {
       // Update portfolio item
-      const newTotalValue = newQuantity * currentPrice;
+      const newTotalValue = newQuantity * currentPriceInUSDT;
       const profitLoss = newTotalValue - (newQuantity * parseFloat(portfolioItem.average_price));
       const profitLossPercent = parseFloat(portfolioItem.average_price) > 0
-        ? ((currentPrice - parseFloat(portfolioItem.average_price)) / parseFloat(portfolioItem.average_price)) * 100
+        ? ((currentPriceInUSDT - parseFloat(portfolioItem.average_price)) / parseFloat(portfolioItem.average_price)) * 100
         : 0;
 
       const { error: updateError } = await supabaseAdmin
         .from('portfolio')
         .update({
           quantity: newQuantity,
-          current_price: currentPrice,
+          current_price: currentPriceInUSDT,
           total_value: newTotalValue,
           profit_loss: profitLoss,
           profit_loss_percent: profitLossPercent,
@@ -123,7 +207,7 @@ export default async function handler(req, res) {
     }
 
     // Create convert history record
-    const { error: convertHistoryError } = await supabaseAdmin
+    const { data: convertHistoryData, error: convertHistoryError } = await supabaseAdmin
       .from('convert_history')
       .insert({
         user_id: user.id,
@@ -132,21 +216,26 @@ export default async function handler(req, res) {
         asset_type: asset_type,
         asset_symbol: asset_symbol,
         quantity: quantity,
-        price: currentPrice,
-        usd_value: actualUsdValue,
+        price: currentPriceInUSDT,
+        usd_value: usdtValue, // Keep field name as usd_value but store USDT value
         created_at: new Date().toISOString(),
-      });
+      })
+      .select();
 
     if (convertHistoryError) {
       console.error('Error creating convert history:', convertHistoryError);
-      // Don't fail the request if history creation fails
+      console.error('Convert history error details:', JSON.stringify(convertHistoryError, null, 2));
+      // Don't fail the request if history creation fails, but log it
+    } else {
+      console.log('Convert history created successfully:', convertHistoryData);
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Converted successfully',
-      usd_value: actualUsdValue,
+      message: `Converted successfully. ${quantity} ${asset_symbol} = ${usdtValue.toFixed(2)} USDT`,
+      usdt_value: usdtValue,
       new_balance: newBalance,
+      convert_history_created: !convertHistoryError, // Indicate if history was created
     });
 
   } catch (error) {

@@ -142,11 +142,13 @@ function PaymentsTab({ adminData, onRefresh }) {
             <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
               Type: <span style={{ color: '#ffffff', fontWeight: 600 }}>{isDeposit ? 'Deposit' : 'Withdrawal'}</span>
             </div>
-            <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-              Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>${parseFloat(item.amount || 0).toFixed(2)}</span>
-            </div>
-            {isDeposit && (
+            {isDeposit ? (
               <>
+                <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                  Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>
+                    {parseFloat(item.amount || 0).toFixed(coin === 'BTC' || coin === 'ETH' ? 8 : 2)} {coin}
+                  </span>
+                </div>
                 <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
                   Coin: <span style={{ color: '#ffffff' }}>{coin}</span>
                 </div>
@@ -154,6 +156,10 @@ function PaymentsTab({ adminData, onRefresh }) {
                   Network: <span style={{ color: '#ffffff' }}>{network}</span>
                 </div>
               </>
+            ) : (
+              <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>{parseFloat(item.amount || 0).toFixed(2)} USDT</span>
+              </div>
             )}
             <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
               Status: <span style={{ color: statusColor, fontWeight: 600 }}>{item.status}</span>
@@ -170,7 +176,17 @@ function PaymentsTab({ adminData, onRefresh }) {
               textAlign: 'right',
               lineHeight: '1',
             }}>
-              ${parseFloat(item.amount || 0).toFixed(2)}
+              {isDeposit ? (
+                <>
+                  {parseFloat(item.amount || 0).toFixed(coin === 'BTC' || coin === 'ETH' ? 8 : 2)}
+                  <span style={{ fontSize: '24px', marginLeft: '4px' }}>{coin}</span>
+                </>
+              ) : (
+                <>
+                  {parseFloat(item.amount || 0).toFixed(2)}
+                  <span style={{ fontSize: '24px', marginLeft: '4px' }}>USDT</span>
+                </>
+              )}
             </div>
             {paymentTab === 'pending' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

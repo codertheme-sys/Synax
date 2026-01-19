@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Header from '../components/Header';
@@ -551,7 +551,7 @@ function AdminPage() {
                         <span>
                               {parseFloat(trade.quantity || 0).toFixed(4)} {trade.asset_symbol || 'N/A'}
                         </span>
-                            <span style={{ fontWeight: 600 }}>${parseFloat(trade.price || 0).toFixed(2)}</span>
+                            <span style={{ fontWeight: 600 }}>{parseFloat(trade.price || 0).toFixed(2)} USDT</span>
                       </div>
                           <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
                             {trade.created_at ? new Date(trade.created_at).toLocaleString() : 'N/A'}
@@ -593,7 +593,7 @@ function AdminPage() {
                       <tr key={user.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{user.email || 'N/A'}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{user.username || user.user_name || 'N/A'}</td>
-                        <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(user.balance || 0).toFixed(2)}</td>
+                        <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(user.balance || 0).toFixed(2)} USDT</td>
                         <td style={{ padding: '12px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -737,10 +737,10 @@ function AdminPage() {
                         </td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{trade.asset_symbol || 'N/A'}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{trade.time_frame}s</td>
-                        <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(trade.trade_amount || 0).toFixed(2)}</td>
-                        <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(trade.initial_price || 0).toFixed(2)}</td>
+                        <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(trade.trade_amount || 0).toFixed(2)} USDT</td>
+                        <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(trade.initial_price || 0).toFixed(2)} USDT</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>
-                          {trade.last_price ? `$${parseFloat(trade.last_price).toFixed(2)}` : '—'}
+                          {trade.last_price ? `${parseFloat(trade.last_price).toFixed(2)} USDT` : '—'}
                         </td>
                         <td style={{ padding: '12px' }}>
                           {trade.win_lost ? (
@@ -1000,6 +1000,78 @@ function AdminPage() {
                   {settings.withdrawalsEnabled ? 'ON' : 'OFF'}
                 </button>
               </div>
+
+              {/* Balance Migration Section */}
+              <div style={{
+                padding: '24px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                borderRadius: '10px',
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                marginTop: '24px',
+              }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
+                    🔄 Balance Migration: USD → USDT
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.6' }}>
+                    Convert all existing USD balances to USDT. This will fetch the current USDT price from CoinGecko and convert all user balances accordingly.
+                    <br />
+                    <strong style={{ color: '#fbbf24' }}>⚠️ Warning: This action cannot be undone. Make sure to backup your data before proceeding.</strong>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Are you sure you want to migrate all USD balances to USDT? This action cannot be undone.')) {
+                      return;
+                    }
+
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session?.access_token) {
+                        toast.error('Please login again');
+                        return;
+                      }
+
+                      toast.loading('Migrating balances...', { id: 'migration' });
+
+                      const response = await fetch('/api/admin/migrate-balance-to-usdt', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${session.access_token}`,
+                        },
+                      });
+
+                      const result = await response.json();
+
+                      if (result.success) {
+                        toast.success(
+                          `Migration completed! ${result.migrated} profiles migrated, ${result.failed} failed. USDT price: $${result.usdt_price.toFixed(4)}`,
+                          { id: 'migration', duration: 10000 }
+                        );
+                      } else {
+                        toast.error(result.error || 'Migration failed', { id: 'migration' });
+                      }
+                    } catch (error) {
+                      console.error('Balance migration error:', error);
+                      toast.error('Failed to migrate balances. Please try again.', { id: 'migration' });
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  }}
+                >
+                  Migrate All Balances to USDT
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1117,7 +1189,7 @@ function AdminPage() {
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Balance (Total)</div>
                       <div style={{ fontSize: '24px', fontWeight: 700, color: '#4ade80' }}>
-                        ${parseFloat(userDetails.balance || 0).toFixed(2)}
+                        {parseFloat(userDetails.balance || 0).toFixed(2)} USDT
                       </div>
                     </div>
                     <div>
@@ -1213,9 +1285,9 @@ function AdminPage() {
                 {/* Balance Section */}
                 <div style={{ ...cardStyle, padding: '20px', background: 'rgba(59, 130, 246, 0.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Balance ($)</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Balance (USDT)</h3>
                     <span style={{ fontSize: '24px', fontWeight: 700, color: '#60a5fa' }}>
-                      ${parseFloat(userDetails.balance || 0).toFixed(2)}
+                      {parseFloat(userDetails.balance || 0).toFixed(2)} USDT
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>

@@ -186,19 +186,19 @@ function HomePage() {
           setKpis([
             { 
               label: 'Portfolio Value', 
-              value: `$${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: `${pnl24hPercent >= 0 ? '+' : ''}${pnl24hPercent.toFixed(2)}%`, 
               positive: pnl24hPercent >= 0 
             },
             { 
               label: '24h P&L', 
-              value: `${pnl24h >= 0 ? '+' : ''}$${Math.abs(pnl24h).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${pnl24h >= 0 ? '+' : ''}${Math.abs(pnl24h).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: `${pnl24hPercent >= 0 ? '+' : ''}${pnl24hPercent.toFixed(2)}%`, 
               positive: pnl24h >= 0 
             },
             { 
               label: 'Cash Balance', 
-              value: `$${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: 'Ready', 
               positive: true 
             },
@@ -434,12 +434,17 @@ function HomePage() {
     fetchDashboardData();
     fetchNews();
     
-    // Removed automatic refresh - user can manually refresh if needed
-    // const refreshInterval = setInterval(() => {
-    //   fetchDashboardData();
-    // }, 30000); // 30 seconds
+    // Periodic price updates (every 60 seconds)
+    const refreshInterval = setInterval(() => {
+      // Update portfolio prices in background
+      fetch('/api/dashboard/update-portfolio-prices', { method: 'POST' }).catch(err => {
+        console.error('Failed to update portfolio prices:', err);
+      });
+      // Refresh dashboard data
+      fetchDashboardData();
+    }, 60000); // 60 seconds
     
-    // return () => clearInterval(refreshInterval);
+    return () => clearInterval(refreshInterval);
   }, [router]);
 
   // Refresh KYC status when page becomes visible (user returns from admin panel)

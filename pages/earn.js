@@ -425,7 +425,7 @@ function EarnPage() {
                       visibility: 'visible',
                     }}>
                       <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '2px' }}>Min</div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>${product.minDeposit}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>{product.minDeposit} USDT</div>
                     </div>
                   )}
 
@@ -467,8 +467,8 @@ function EarnPage() {
                       </div>
 
                       <div style={{ textAlign: 'center', paddingRight: '55px', opacity: 1, visibility: 'visible' }}>
-                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', opacity: 1, visibility: 'visible' }}>Minimum ($)</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', opacity: 1, visibility: 'visible' }}>{product.minDeposit}</div>
+                        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', opacity: 1, visibility: 'visible' }}>Minimum (USDT)</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', opacity: 1, visibility: 'visible' }}>{product.minDeposit} USDT</div>
                       </div>
                     </>
                   )}
@@ -531,7 +531,7 @@ function EarnPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ color: '#9ca3af' }}>Min Deposit</span>
-                  <span style={{ color: '#ffffff' }}>${selectedProduct.minDeposit}</span>
+                  <span style={{ color: '#ffffff' }}>{selectedProduct.minDeposit} USDT</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#9ca3af' }}>Duration</span>
@@ -607,7 +607,7 @@ function EarnPage() {
               >
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                    Amount ($)
+                    Amount (USDT)
                   </label>
                   <input
                     type="number"
@@ -626,14 +626,14 @@ function EarnPage() {
                       fontSize: '15px',
                       outline: 'none',
                     }}
-                    placeholder="Min: $500"
+                    placeholder="Min: 500 USDT"
                   />
                 </div>
                 {amount && parseFloat(amount) >= 500 && (
                   <div style={{ marginBottom: '16px', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '10px' }}>
                     <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '4px' }}>Estimated Daily Earnings</div>
                     <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80' }}>
-                      ${(parseFloat(amount) * parseFloat(selectedProduct.apr.replace('%', '')) / 100 / 365).toFixed(2)} USD
+                      {(parseFloat(amount) * parseFloat(selectedProduct.apr.replace('%', '')) / 100 / 365).toFixed(2)} USDT
                     </div>
                   </div>
                 )}

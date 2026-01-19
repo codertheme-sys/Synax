@@ -1310,7 +1310,7 @@ function TradePage() {
     const minAmount = minAmounts[timeFrame] || 100;
 
     if (amountValue < minAmount) {
-      toast.error(`Minimum trade amount for ${timeFrame} seconds is $${minAmount.toLocaleString('en-US')}`);
+      toast.error(`Minimum trade amount for ${timeFrame} seconds is ${minAmount.toLocaleString('en-US')} USDT`);
       setLoading(false);
       return;
     }
@@ -1318,7 +1318,7 @@ function TradePage() {
     // Check balance
     if (balance < amountValue) {
       toast.error(
-        `Insufficient Balance\nRequired: $${amountValue.toFixed(2)} | Available: $${balance.toFixed(2)}`,
+        `Insufficient Balance\nRequired: ${amountValue.toFixed(2)} USDT | Available: ${balance.toFixed(2)} USDT`,
         {
           duration: 6000,
           style: {
@@ -1409,7 +1409,7 @@ function TradePage() {
       console.log('Response Data:', result);
 
       if (result.success) {
-        toast.success(`Trade placed successfully! ${currentSide === 'buy' ? 'BUY/LONG' : 'SELL/SHORT'} $${amountValue.toFixed(2)}`, {
+        toast.success(`Trade placed successfully! ${currentSide === 'buy' ? 'BUY/LONG' : 'SELL/SHORT'} ${amountValue.toFixed(2)} USDT`, {
           duration: 4000,
           style: {
             background: 'rgba(34, 197, 94, 0.15)',
@@ -1726,7 +1726,7 @@ function TradePage() {
               }}>
                 <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available Funds</div>
                 <div style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 700, color: '#ffffff', marginBottom: '4px', wordBreak: 'break-word' }}>
-                  ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
                 </div>
                 <div style={{ fontSize: '10px', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>●</span>
@@ -1922,7 +1922,7 @@ function TradePage() {
                 </div>
               </div>
 
-              {/* Trade Amount Input - USD only */}
+              {/* Trade Amount Input - USDT */}
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
                   Trade Amount
@@ -1930,13 +1930,13 @@ function TradePage() {
                 <div style={{ position: 'relative' }}>
                   <span style={{
                     position: 'absolute',
-                    left: '16px',
+                    right: '16px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     color: '#9ca3af',
-                    fontSize: '17px',
+                    fontSize: '14px',
                     fontWeight: 600,
-                  }}>$</span>
+                  }}>USDT</span>
                 <input
                     type="text"
                     value={tradeAmount}
@@ -1950,7 +1950,7 @@ function TradePage() {
                     }}
                   style={{
                     width: '100%',
-                      padding: '16px 18px 16px 32px',
+                      padding: '16px 80px 16px 18px',
                       borderRadius: '12px',
                       background: 'rgba(255, 255, 255, 0.06)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -1974,11 +1974,11 @@ function TradePage() {
                 {/* Minimum amount warning */}
                 <div style={{ fontSize: '18px', color: '#9ca3af', marginTop: '8px' }}>
                   Minimum: {
-                    timeFrame === 60 ? '$100' :
-                    timeFrame === 80 ? '$1,000' :
-                    timeFrame === 90 ? '$5,000' :
-                    timeFrame === 100 ? '$10,000' :
-                    timeFrame === 120 ? '$20,000' : '$100'
+                    timeFrame === 60 ? '100 USDT' :
+                    timeFrame === 80 ? '1,000 USDT' :
+                    timeFrame === 90 ? '5,000 USDT' :
+                    timeFrame === 100 ? '10,000 USDT' :
+                    timeFrame === 120 ? '20,000 USDT' : '100 USDT'
                   }
                   </div>
                   </div>
@@ -2095,7 +2095,7 @@ function TradePage() {
                     Time Remaining (seconds)
                   </div>
                   <div style={{ fontSize: '14px', color: '#9ca3af' }}>
-                    {activeTrade.side === 'buy' ? 'LONG' : 'SHORT'} {activeTrade.asset_symbol} • ${parseFloat(activeTrade.trade_amount).toFixed(2)}
+                    {activeTrade.side === 'buy' ? 'LONG' : 'SHORT'} {activeTrade.asset_symbol} • {parseFloat(activeTrade.trade_amount).toFixed(2)} USDT
                   </div>
                 </div>
                 <div style={{
@@ -2136,11 +2136,11 @@ function TradePage() {
                       color: tradeResult === 'win' ? '#22c55e' : '#ef4444', 
                       fontWeight: 700 
                     }}>
-                      {tradeResult === 'win' ? '+$' : '-$'}{Math.abs(activeTrade.profit_amount - parseFloat(activeTrade.trade_amount || 0)).toFixed(2)}
+                      {tradeResult === 'win' ? '+' : '-'}{Math.abs(activeTrade.profit_amount - parseFloat(activeTrade.trade_amount || 0)).toFixed(2)} USDT
                     </div>
                   ) : (
                     <div style={{ fontSize: '16px', color: '#ffffff', fontWeight: 600 }}>
-                      Amount: ${parseFloat(activeTrade.trade_amount).toFixed(2)}
+                      Amount: {parseFloat(activeTrade.trade_amount).toFixed(2)} USDT
                     </div>
                   )}
                 </div>

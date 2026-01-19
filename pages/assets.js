@@ -949,14 +949,15 @@ function AssetsPage() {
               
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Amount ($) *
+                  {depositCoin ? `Amount (${depositCoin}) *` : 'Amount *'}
                 </label>
                 <input
                   type="number"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
-                  step="0.01"
+                  step={depositCoin === 'BTC' || depositCoin === 'ETH' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
+                  min="0"
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -967,7 +968,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder="0.00"
+                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <div>
@@ -1365,11 +1366,11 @@ function AssetsPage() {
                 <div style={{ marginBottom: '8px' }}>
                   <span style={{ fontSize: '14px', color: '#9ca3af' }}>You will receive: </span>
                   <span style={{ fontSize: '18px', fontWeight: 700, color: '#60a5fa' }}>
-                    ${convertUsdValue.toFixed(2)} USDT
+                    {convertUsdValue.toFixed(2)} USDT
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                  {parseFloat(convertAmount).toFixed(8)} {selectedHolding.symbol} × {selectedHolding.price} = ${convertUsdValue.toFixed(2)}
+                  {parseFloat(convertAmount).toFixed(8)} {selectedHolding.symbol} × {selectedHolding.price} = {convertUsdValue.toFixed(2)} USDT
                 </div>
               </div>
             )}
@@ -1415,8 +1416,10 @@ function AssetsPage() {
                     setSelectedHolding(null);
                     setConvertAmount('');
                     setConvertUsdValue(0);
-                    // Refresh holdings
-                    window.location.reload();
+                    // Wait a bit to ensure database write completes, then refresh
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 500);
                   } else {
                     toast.error(result.error || 'Failed to convert');
                   }

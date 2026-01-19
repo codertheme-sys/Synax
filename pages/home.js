@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
@@ -206,19 +206,19 @@ function HomePage() {
           setKpis([
             { 
               label: 'Portfolio Value', 
-              value: `$${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: `${pnl24hPercent >= 0 ? '+' : ''}${pnl24hPercent.toFixed(2)}%`, 
               positive: pnl24hPercent >= 0 
             },
             { 
               label: '24h P&L', 
-              value: `${pnl24h >= 0 ? '+' : ''}$${Math.abs(pnl24h).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${pnl24h >= 0 ? '+' : ''}${Math.abs(pnl24h).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: `${pnl24hPercent >= 0 ? '+' : ''}${pnl24hPercent.toFixed(2)}%`, 
               positive: pnl24h >= 0 
             },
             { 
               label: 'Cash Balance', 
-              value: `$${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
+              value: `${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`, 
               delta: 'Ready', 
               positive: true 
             },
@@ -298,15 +298,15 @@ function HomePage() {
                 // Example: $100 trade with 10% loss = -$10 loss
                 pnlDollarValue = -(tradeAmount * 0.10);
               }
-              pnlDollar = `${pnlDollarValue >= 0 ? '+' : ''}$${Math.abs(pnlDollarValue).toFixed(2)}`;
+              pnlDollar = `${pnlDollarValue >= 0 ? '+' : ''}${Math.abs(pnlDollarValue).toFixed(2)} USDT`;
             }
             return {
               time,
               symbol: o.asset_symbol,
               side: o.side === 'buy' ? 'LONG' : 'SHORT',
-              qty: `$${tradeAmount.toFixed(2)}`,
-              initialPrice: `$${initialPrice.toFixed(2)}`,
-              lastPrice: lastPrice > 0 ? `$${lastPrice.toFixed(2)}` : '—',
+              qty: `${tradeAmount.toFixed(2)} USDT`,
+              initialPrice: `${initialPrice.toFixed(2)} USDT`,
+              lastPrice: lastPrice > 0 ? `${lastPrice.toFixed(2)} USDT` : '—',
               winLost: o.win_lost ? o.win_lost.toUpperCase() : '—',
               pnlDollar: pnlDollar,
               pnlDollarValue: pnlDollarValue, // Store numeric value for color calculation
@@ -398,11 +398,19 @@ function HomePage() {
             
             if (convertError) {
               console.error('Error fetching convert history:', convertError);
+              // If table doesn't exist (404), set empty array instead of showing error
+              if (convertError.code === 'PGRST116' || convertError.message?.includes('404')) {
+                console.warn('Convert history table not found. Please run database-convert-history-table.sql');
+                setConverts([]);
+              } else {
+                setConverts([]);
+              }
             } else {
               setConverts(convertData || []);
             }
           } catch (err) {
             console.error('Error fetching convert history:', err);
+            setConverts([]);
           }
 
           // Fetch trade history (binary trades)
@@ -516,12 +524,17 @@ function HomePage() {
     fetchDashboardData();
     fetchNews();
     
-    // Removed automatic refresh - user can manually refresh if needed
-    // const refreshInterval = setInterval(() => {
-    //   fetchDashboardData();
-    // }, 30000); // 30 seconds
+    // Periodic price updates (every 60 seconds)
+    const refreshInterval = setInterval(() => {
+      // Update portfolio prices in background
+      fetch('/api/dashboard/update-portfolio-prices', { method: 'POST' }).catch(err => {
+        console.error('Failed to update portfolio prices:', err);
+      });
+      // Refresh dashboard data
+      fetchDashboardData();
+    }, 60000); // 60 seconds
     
-    // return () => clearInterval(refreshInterval);
+    return () => clearInterval(refreshInterval);
   }, [router]);
 
   // Refresh KYC status when page becomes visible (user returns from admin panel)
@@ -925,14 +938,14 @@ function HomePage() {
                           fontWeight: 500,
                           wordBreak: 'break-word'
                         }}>
-                          Amount: ${tradeAmount.toFixed(2)}
+                          Amount: {tradeAmount.toFixed(2)} USDT
                         </div>
                         <div style={{ 
                           color: trade.win_lost === 'win' ? '#4ade80' : '#f87171', 
                           fontSize: isMobile ? '11px' : '12px', 
                           fontWeight: 600,
                         }}>
-                          {trade.win_lost === 'win' ? '+' : '-'}${Math.abs(profitAmount - tradeAmount).toFixed(2)}
+                          {trade.win_lost === 'win' ? '+' : '-'}{Math.abs(profitAmount - tradeAmount).toFixed(2)} USDT
                         </div>
                       </div>
                       <div style={{ 
@@ -1005,7 +1018,7 @@ function HomePage() {
                         </span>
                       </div>
                       <div style={{ color: '#d1d5db', fontSize: '12px', fontWeight: 500 }}>
-                        {parseFloat(c.quantity).toFixed(8)} {c.asset_symbol} → ${parseFloat(c.usd_value).toFixed(2)} USDT
+                        {parseFloat(c.quantity).toFixed(8)} {c.asset_symbol} → {parseFloat(c.usd_value).toFixed(2)} USDT
                       </div>
                       <div style={{ color: '#9ca3af', fontSize: '11px', marginTop: '4px' }}>
                         {formattedDate} {formattedTime}
@@ -1398,14 +1411,15 @@ function HomePage() {
               )}
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Amount ($) *
+                  {depositCoin ? `Amount (${depositCoin}) *` : 'Amount *'}
                 </label>
                 <input
                   type="number"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
-                  step="0.01"
+                  step={depositCoin === 'BTC' || depositCoin === 'ETH' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
+                  min="0"
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -1416,7 +1430,7 @@ function HomePage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder="0.00"
+                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <div>
@@ -1858,7 +1872,7 @@ function HomePage() {
 
                     // Show success toast
                     if (result.earnedAmount > 0) {
-                      toast.success(`Subscription cancelled successfully! Earned: $${result.earnedAmount.toFixed(2)}`, {
+                      toast.success(`Subscription cancelled successfully! Earned: ${result.earnedAmount.toFixed(2)} USDT`, {
                         duration: 5000,
                         style: {
                           background: 'rgba(34, 197, 94, 0.15)',
