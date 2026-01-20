@@ -96,12 +96,12 @@ export default async function handler(req, res) {
     
     // Cache yoksa veya geçersizse yeni veri çek
 
-    // Fetch prices from multiple sources (Binance + CoinGecko)
+    // Fetch prices from Binance ONLY (CoinGecko kaldırıldı)
     let allData;
     try {
-      console.log('Fetching prices from multiple sources...');
+      console.log('Fetching prices from Binance...');
       allData = await getAllPricesFromMultipleSources();
-      console.log('Multi-source API result:', {
+      console.log('Binance API result:', {
         pricesCount: Object.keys(allData.prices || {}).length,
         sources: allData.sources
       });
@@ -109,24 +109,55 @@ export default async function handler(req, res) {
       // Validate data structure
       if (!allData || !allData.prices || typeof allData.prices !== 'object') {
         console.error('Invalid data structure from getAllPricesFromMultipleSources:', allData);
-        // Return empty data instead of throwing error
-        return res.status(200).json({
-          success: true,
-          data: [],
-          cached: false,
-          warning: 'Price data unavailable, please try again later'
-        });
+        allData = null; // Fallback'e git
       }
       
-      // Check if prices object is empty
-      if (Object.keys(allData.prices).length === 0) {
-        console.error('Multi-source API returned empty prices object');
-        return res.status(200).json({
-          success: true,
-          data: [],
-          cached: false,
-          warning: 'No price data available. Binance API may be timing out or unavailable.'
-        });
+      // Eğer Binance başarısız olduysa veya boşsa, price_history'den al
+      if (!allData || !allData.prices || Object.keys(allData.prices).length === 0) {
+        console.warn('Binance API failed or returned no data, fetching from price_history...');
+        const { data: cachedPrices, error: cacheError } = await supabaseAdmin
+          .from('price_history')
+          .select('asset_id, asset_symbol, price, price_change_24h, price_change_percent_24h, high_24h, low_24h, volume_24h, last_updated')
+          .eq('asset_type', 'crypto')
+          .order('last_updated', { ascending: false });
+        
+        if (!cacheError && cachedPrices && cachedPrices.length > 0) {
+          // price_history formatını Binance formatına çevir
+          const pricesFromHistory = {};
+          cachedPrices.forEach(price => {
+            const symbol = `${price.asset_symbol}USDT`; // BTC -> BTCUSDT
+            pricesFromHistory[symbol] = {
+              price: price.price,
+              priceChange24h: price.price_change_24h || 0,
+              priceChangePercent24h: price.price_change_percent_24h || 0,
+              high24h: price.high_24h,
+              low24h: price.low_24h,
+              volume24h: price.volume_24h || 0,
+              source: 'price_history_cache'
+            };
+          });
+          
+          console.log(`Loaded ${cachedPrices.length} prices from price_history cache`);
+          allData = {
+            prices: pricesFromHistory,
+            timestamp: Date.now(),
+            sources: {
+              binance: 0,
+              coingecko: 0,
+              gold: 0,
+              price_history: cachedPrices.length
+            }
+          };
+        } else {
+          // Hiçbir kaynak yok, boş döndür
+          console.error('No price data available from Binance or price_history');
+          return res.status(200).json({
+            success: true,
+            data: [],
+            cached: false,
+            warning: 'No price data available. Please try again later.'
+          });
+        }
       }
     } catch (error) {
       console.error('Multi-source API error:', error.message);
