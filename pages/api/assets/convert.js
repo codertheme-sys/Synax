@@ -80,78 +80,77 @@ export default async function handler(req, res) {
           console.warn(`Convert - Invalid cached price for ${coinSymbol} (${parsedPrice}), fetching from Binance`);
         }
       }
-        
-        // If we still don't have a valid price, try Binance API (only source, no CoinGecko)
-        if (!currentPriceInUSDT || currentPriceInUSDT <= 0 || isNaN(currentPriceInUSDT)) {
-          // Try Binance API (high rate limit: 1200/min, reliable)
-          let binanceSuccess = false;
-          try {
-            const binanceSymbol = `${coinSymbol}USDT`; // BTC -> BTCUSDT
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-            
-            const binanceResponse = await fetch(
-              `https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`,
-              {
-                headers: {
-                  'Accept': 'application/json',
-                },
-                signal: controller.signal
-              }
-            );
+      
+      // If we still don't have a valid price, try Binance API (only source, no CoinGecko)
+      if (!currentPriceInUSDT || currentPriceInUSDT <= 0 || isNaN(currentPriceInUSDT)) {
+        // Try Binance API (high rate limit: 1200/min, reliable)
+        let binanceSuccess = false;
+        try {
+          const binanceSymbol = `${coinSymbol}USDT`; // BTC -> BTCUSDT
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
+          const binanceResponse = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`,
+            {
+              headers: {
+                'Accept': 'application/json',
+              },
+              signal: controller.signal
+            }
+          );
 
-            clearTimeout(timeoutId);
+          clearTimeout(timeoutId);
 
-            if (binanceResponse.ok) {
-              const binanceData = await binanceResponse.json();
-              if (binanceData && binanceData.price) {
-                const parsedPrice = parseFloat(binanceData.price);
-                if (!isNaN(parsedPrice) && parsedPrice > 0) {
-                  currentPriceInUSDT = parsedPrice;
-                  binanceSuccess = true;
-                  console.log(`Convert - Fetched ${coinSymbol} price from Binance: ${currentPriceInUSDT} USDT`);
-                  
-                  // Save to price_history for future use
-                  try {
-                    await supabaseAdmin
-                      .from('price_history')
-                      .upsert({
-                        asset_type,
-                        asset_id,
-                        asset_symbol: coinSymbol,
-                        price: currentPriceInUSDT,
-                        price_change_24h: 0, // Binance price endpoint doesn't provide 24h change
-                        price_change_percent_24h: 0,
-                        last_updated: new Date().toISOString()
-                      }, {
-                        onConflict: 'asset_id,asset_type'
-                      });
-                    console.log(`Convert - Saved ${coinSymbol} price to price_history from Binance`);
-                  } catch (saveError) {
-                    console.warn('Convert - Failed to save Binance price to price_history:', saveError);
-                  }
+          if (binanceResponse.ok) {
+            const binanceData = await binanceResponse.json();
+            if (binanceData && binanceData.price) {
+              const parsedPrice = parseFloat(binanceData.price);
+              if (!isNaN(parsedPrice) && parsedPrice > 0) {
+                currentPriceInUSDT = parsedPrice;
+                binanceSuccess = true;
+                console.log(`Convert - Fetched ${coinSymbol} price from Binance: ${currentPriceInUSDT} USDT`);
+                
+                // Save to price_history for future use
+                try {
+                  await supabaseAdmin
+                    .from('price_history')
+                    .upsert({
+                      asset_type,
+                      asset_id,
+                      asset_symbol: coinSymbol,
+                      price: currentPriceInUSDT,
+                      price_change_24h: 0, // Binance price endpoint doesn't provide 24h change
+                      price_change_percent_24h: 0,
+                      last_updated: new Date().toISOString()
+                    }, {
+                      onConflict: 'asset_id,asset_type'
+                    });
+                  console.log(`Convert - Saved ${coinSymbol} price to price_history from Binance`);
+                } catch (saveError) {
+                  console.warn('Convert - Failed to save Binance price to price_history:', saveError);
                 }
               }
-            } else if (binanceResponse.status === 451) {
-              // Geographic restriction - Binance not available in this region
-              console.warn(`Convert - Binance API 451 (geographic restriction) for ${coinSymbol}, will use price_history`);
-            } else if (binanceResponse.status === 400) {
-              // Symbol not found on Binance
-              console.warn(`Convert - ${coinSymbol} not found on Binance (400 error)`);
-            } else {
-              console.warn(`Convert - Binance API error: ${binanceResponse.status} for ${coinSymbol}`);
             }
-          } catch (binanceError) {
-            if (binanceError.name === 'AbortError') {
-              console.warn('Convert - Binance API timeout');
-            } else {
-              console.warn('Convert - Binance API error:', binanceError.message);
-            }
+          } else if (binanceResponse.status === 451) {
+            // Geographic restriction - Binance not available in this region
+            console.warn(`Convert - Binance API 451 (geographic restriction) for ${coinSymbol}, will use price_history`);
+          } else if (binanceResponse.status === 400) {
+            // Symbol not found on Binance
+            console.warn(`Convert - ${coinSymbol} not found on Binance (400 error)`);
+          } else {
+            console.warn(`Convert - Binance API error: ${binanceResponse.status} for ${coinSymbol}`);
           }
-          
-          // If Binance failed, we'll rely on price_history (which should be updated regularly via cron job)
-          // No CoinGecko fallback - Binance is the only source
+        } catch (binanceError) {
+          if (binanceError.name === 'AbortError') {
+            console.warn('Convert - Binance API timeout');
+          } else {
+            console.warn('Convert - Binance API error:', binanceError.message);
+          }
         }
+        
+        // If Binance failed, we'll rely on price_history (which should be updated regularly via cron job)
+        // No CoinGecko fallback - Binance is the only source
       }
     } catch (priceError) {
       console.error('Convert - Price fetch error:', priceError);
