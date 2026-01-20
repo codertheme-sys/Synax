@@ -13,20 +13,29 @@ export default async function handler(req, res) {
   // Check if this is a cron job call (external cron service)
   // External cron services can send Authorization header or x-cron-secret header
   const cronSecret = process.env.CRON_SECRET || process.env.CRON_API_KEY;
+  const providedSecret = req.query.secret || 
+                         req.headers['authorization']?.replace('Bearer ', '') ||
+                         req.headers['x-cron-secret'];
+  
   const isCronJob = req.headers['x-vercel-cron'] === '1' || 
-                    req.headers['authorization'] === `Bearer ${cronSecret}` ||
-                    req.headers['x-cron-secret'] === cronSecret ||
-                    req.query.secret === cronSecret;
+                    (cronSecret && providedSecret === cronSecret);
   
   // If it's a cron job, force update price_history (ignore cache)
   // If it's a regular request, use cache if available
   
-  // Security: If cron secret is set, require it for cron jobs
-  if (cronSecret && (req.headers['x-vercel-cron'] !== '1') && 
-      req.headers['authorization'] !== `Bearer ${cronSecret}` &&
-      req.headers['x-cron-secret'] !== cronSecret &&
-      req.query.secret !== cronSecret) {
-    // Not a cron job, continue normally
+  // Log for debugging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Cron job check:', {
+      isCronJob,
+      hasCronSecret: !!cronSecret,
+      providedSecret: providedSecret ? '***' : 'none',
+      headers: {
+        'x-vercel-cron': req.headers['x-vercel-cron'],
+        'authorization': req.headers['authorization'] ? '***' : 'none',
+        'x-cron-secret': req.headers['x-cron-secret'] ? '***' : 'none'
+      },
+      querySecret: req.query.secret ? '***' : 'none'
+    });
   }
 
   try {

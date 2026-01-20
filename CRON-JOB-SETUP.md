@@ -15,12 +15,39 @@ Vercel Dashboard > Settings > Environment Variables:
 2. Ücretsiz hesap oluşturun
 3. Email doğrulaması yapın
 
-### Adım 3: Yeni Cron Job Oluştur
+### Adım 3: CRON_SECRET Değerini Oluştur
+**ÖNEMLİ**: Önce gerçek secret değerini oluşturun!
+
+Terminal'de (PowerShell veya CMD):
+```powershell
+# PowerShell ile random string oluştur
+-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+```
+
+Veya online tool kullanın:
+- [Random.org](https://www.random.org/strings/) - 32 karakter random string oluşturun
+- Veya manuel olarak: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6` gibi bir değer
+
+**Örnek secret değeri**: `Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!`
+
+### Adım 4: Vercel'de CRON_SECRET Ekle
+1. Vercel Dashboard > Project > **Settings** > **Environment Variables**
+2. **Add New** butonuna tıklayın
+3. Ayarlar:
+   - **Name**: `CRON_SECRET`
+   - **Value**: Yukarıda oluşturduğunuz secret değerini yapıştırın (örn: `Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!`)
+   - **Environment**: Production ✅ (işaretli)
+4. **Save** butonuna tıklayın
+5. **Redeploy** yapın (değişikliklerin aktif olması için)
+
+### Adım 5: Yeni Cron Job Oluştur
 1. Dashboard'da **"Create cronjob"** butonuna tıklayın
 2. Ayarlar:
    - **Title**: `Synax Price History Update`
-   - **Address (URL)**: `https://www.synax.vip/api/prices/crypto?secret=YOUR_CRON_SECRET`
-     - `YOUR_CRON_SECRET` yerine Vercel'de oluşturduğunuz `CRON_SECRET` değerini yazın
+   - **Address (URL)**: `https://www.synax.vip/api/prices/crypto?secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!`
+     - ⚠️ **ÖNEMLİ**: `Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` yerine Vercel'de oluşturduğunuz **GERÇEK** `CRON_SECRET` değerini yazın!
+     - ❌ YANLIŞ: `secret=openssl rand -hex 32` (bu bir komut, değer değil!)
+     - ✅ DOĞRU: `secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` (gerçek secret değeri)
    - **Schedule**: Her 2 dakika
      - **Minute**: `*/2` (her 2 dakikada bir)
      - **Hour**: `*` (her saat)
