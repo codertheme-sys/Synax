@@ -1072,6 +1072,88 @@ function AdminPage() {
                   Migrate All Balances to USDT
                 </button>
               </div>
+
+              {/* USDT Portfolio to Balance Migration Section */}
+              <div style={{
+                padding: '24px',
+                background: 'rgba(34, 197, 94, 0.1)',
+                borderRadius: '10px',
+                border: '2px solid rgba(34, 197, 94, 0.3)',
+                marginTop: '24px',
+              }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
+                    💰 USDT Portfolio → Balance Migration
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.6' }}>
+                    Move all USDT from portfolio to cash balance. USDT should only be in balance, not in portfolio.
+                    <br />
+                    <strong style={{ color: '#fbbf24' }}>⚠️ Warning: This will delete USDT items from portfolio and add them to user balances.</strong>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Are you sure you want to migrate USDT from portfolio to balance? This will move all USDT items to user balances and remove them from portfolio.')) {
+                      return;
+                    }
+
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) {
+                        toast.error('Please login');
+                        return;
+                      }
+
+                      toast.loading('Migrating USDT from portfolio to balance...', { id: 'usdt-migration' });
+
+                      const response = await fetch('/api/admin/migrate-usdt-to-balance', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${session.access_token}`,
+                        },
+                      });
+
+                      const result = await response.json();
+
+                      if (result.success) {
+                        toast.success(
+                          `USDT migration completed! ${result.migrated} users migrated, ${result.failed} failed. Total USDT migrated: ${result.total_usdt_migrated?.toFixed(2) || 0} USDT`,
+                          { id: 'usdt-migration', duration: 10000 }
+                        );
+                        // Refresh admin data
+                        fetchAdminData();
+                      } else {
+                        toast.error(result.error || 'Migration failed', { id: 'usdt-migration' });
+                      }
+                    } catch (error) {
+                      console.error('USDT migration error:', error);
+                      toast.error('Failed to migrate USDT. Please try again.', { id: 'usdt-migration' });
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  Migrate USDT from Portfolio to Balance
+                </button>
+              </div>
             </div>
           </div>
         )}
