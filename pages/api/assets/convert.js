@@ -116,9 +116,16 @@ export default async function handler(req, res) {
       }
     } catch (priceError) {
       console.error('Convert - Price fetch error:', priceError);
+      console.error('Convert - Price fetch error details:', {
+        asset_symbol,
+        asset_id,
+        asset_type,
+        error: priceError.message,
+        stack: priceError.stack
+      });
       // Fallback: Use price_history table
       try {
-        const { data: priceData } = await supabaseAdmin
+        const { data: priceData, error: priceHistoryError } = await supabaseAdmin
           .from('price_history')
           .select('price')
           .eq('asset_id', asset_id)
@@ -127,17 +134,31 @@ export default async function handler(req, res) {
           .limit(1)
           .single();
         
+        if (priceHistoryError) {
+          console.error('Convert - Price history query error:', priceHistoryError);
+        }
+        
         if (priceData?.price) {
           currentPriceInUSDT = parseFloat(priceData.price);
           console.log(`Convert - Using fallback price for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
         } else {
+          console.error(`Convert - No price found in price_history for ${asset_symbol} (${asset_id}, ${asset_type})`);
           return res.status(500).json({ 
+            success: false,
             error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
           });
         }
       } catch (fallbackError) {
         console.error('Convert - Fallback price fetch failed:', fallbackError);
+        console.error('Convert - Fallback error details:', {
+          asset_symbol,
+          asset_id,
+          asset_type,
+          error: fallbackError.message,
+          stack: fallbackError.stack
+        });
         return res.status(500).json({ 
+          success: false,
           error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
         });
       }
@@ -170,6 +191,7 @@ export default async function handler(req, res) {
 
     // Update portfolio - reduce quantity
     const newQuantity = currentQuantity - quantity;
+    let finalPortfolioId = portfolio_id; // Keep portfolio_id for history, set to null if deleted
     
     if (newQuantity <= 0) {
       // Remove portfolio item if quantity is 0 or less
@@ -179,8 +201,11 @@ export default async function handler(req, res) {
         .eq('id', portfolio_id);
 
       if (deleteError) {
+        console.error('Convert - Portfolio delete error:', deleteError);
         return res.status(500).json({ error: 'Failed to update portfolio' });
       }
+      // Portfolio deleted, set portfolio_id to null for history
+      finalPortfolioId = null;
     } else {
       // Update portfolio item
       const newTotalValue = newQuantity * currentPriceInUSDT;
@@ -213,7 +238,7 @@ export default async function handler(req, res) {
         .from('convert_history')
         .insert({
           user_id: user.id,
-          portfolio_id: portfolio_id,
+          portfolio_id: finalPortfolioId, // Use finalPortfolioId (null if portfolio was deleted)
           asset_id: asset_id,
           asset_type: asset_type,
           asset_symbol: asset_symbol,
@@ -253,9 +278,12 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Convert error:', error);
+    console.error('Convert error stack:', error.stack);
+    console.error('Convert request body:', JSON.stringify(req.body, null, 2));
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to convert',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }
