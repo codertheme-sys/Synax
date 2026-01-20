@@ -69,163 +69,208 @@ export default async function handler(req, res) {
         });
       }
 
-      // Get current price from CoinGecko API
+      // Get current price from CoinGecko API (skip for USDT as it's always 1:1)
       let currentPrice = 0;
-      try {
-        // CoinGecko ID mapping
-        const coinGeckoIds = {
-          'BTC': 'bitcoin',
-          'ETH': 'ethereum',
-          'USDT': 'tether'
-        };
-        
-        const coinGeckoId = coinGeckoIds[coin];
-        if (!coinGeckoId) {
-          throw new Error(`Unsupported coin: ${coin}`);
-        }
-
-        // Fetch price from CoinGecko (use USD first, then convert if needed)
-        // Note: CoinGecko may not always have USDT pair, so we use USD and assume 1:1 for USDT
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const priceResponse = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usd,usdt&include_24hr_change=true`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            },
-            signal: controller.signal
-          }
-        );
-        
-        clearTimeout(timeoutId);
-
-        if (!priceResponse.ok) {
-          const errorText = await priceResponse.text();
-          console.error(`CoinGecko API error ${priceResponse.status}:`, errorText);
-          throw new Error(`CoinGecko API error: ${priceResponse.status}`);
-        }
-
-        const priceData = await priceResponse.json();
-        const coinData = priceData[coinGeckoId];
-        
-        if (!coinData) {
-          throw new Error(`Price data not found for ${coin} (${coinGeckoId})`);
-        }
-
-        // Prefer USDT price, fallback to USD price (assuming 1:1 for USDT)
-        if (coinData.usdt !== undefined) {
-          currentPrice = parseFloat(coinData.usdt);
-        } else if (coinData.usd !== undefined) {
-          // Use USD price as USDT is pegged to USD
-          currentPrice = parseFloat(coinData.usd);
-        } else {
-          throw new Error(`No price data (usd or usdt) found for ${coin}`);
-        }
-
-        console.log(`Deposit approve - Fetched ${coin} price from CoinGecko: ${currentPrice} USDT`);
-      } catch (priceError) {
-        console.error('Deposit approve - Price fetch error:', priceError);
-        // Fallback: Use price_history table if available
+      
+      if (coin === 'USDT') {
+        // USDT is always 1:1 with USD, no need to fetch price
+        currentPrice = 1;
+        console.log(`Deposit approve - USDT price set to 1 (1:1 with USD)`);
+      } else {
         try {
-          const { data: priceHistory } = await supabaseAdmin
-            .from('price_history')
-            .select('price')
-            .eq('asset_id', coin)
-            .eq('asset_type', 'crypto')
-            .order('last_updated', { ascending: false })
-            .limit(1)
-            .single();
+          // CoinGecko ID mapping
+          const coinGeckoIds = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum'
+          };
           
-          if (priceHistory?.price) {
-            currentPrice = parseFloat(priceHistory.price);
-            console.log(`Deposit approve - Using cached price for ${coin}: $${currentPrice}`);
-          } else {
-            throw new Error('No price data available');
+          const coinGeckoId = coinGeckoIds[coin];
+          if (!coinGeckoId) {
+            throw new Error(`Unsupported coin: ${coin}`);
           }
-        } catch (fallbackError) {
-          console.error('Deposit approve - Fallback price fetch failed:', fallbackError);
-          return res.status(500).json({
-            success: false,
-            error: `Failed to fetch price for ${coin}. Please try again.`
-          });
+
+          // Fetch price from CoinGecko (use USD first, then convert if needed)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          const priceResponse = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usd,usdt&include_24hr_change=true`,
+            {
+              headers: {
+                'Accept': 'application/json',
+              },
+              signal: controller.signal
+            }
+          );
+          
+          clearTimeout(timeoutId);
+
+          if (!priceResponse.ok) {
+            const errorText = await priceResponse.text();
+            console.error(`CoinGecko API error ${priceResponse.status}:`, errorText);
+            throw new Error(`CoinGecko API error: ${priceResponse.status}`);
+          }
+
+          const priceData = await priceResponse.json();
+          const coinData = priceData[coinGeckoId];
+          
+          if (!coinData) {
+            throw new Error(`Price data not found for ${coin} (${coinGeckoId})`);
+          }
+
+          // Prefer USDT price, fallback to USD price
+          if (coinData.usdt !== undefined) {
+            currentPrice = parseFloat(coinData.usdt);
+          } else if (coinData.usd !== undefined) {
+            currentPrice = parseFloat(coinData.usd);
+          } else {
+            throw new Error(`No price data (usd or usdt) found for ${coin}`);
+          }
+
+          console.log(`Deposit approve - Fetched ${coin} price from CoinGecko: ${currentPrice} USDT`);
+        } catch (priceError) {
+          console.error('Deposit approve - Price fetch error:', priceError);
+          // Fallback: Use price_history table if available
+          try {
+            const { data: priceHistory } = await supabaseAdmin
+              .from('price_history')
+              .select('price')
+              .eq('asset_id', coin)
+              .eq('asset_type', 'crypto')
+              .order('last_updated', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (priceHistory?.price) {
+              currentPrice = parseFloat(priceHistory.price);
+              console.log(`Deposit approve - Using cached price for ${coin}: $${currentPrice}`);
+            } else {
+              throw new Error('No price data available');
+            }
+          } catch (fallbackError) {
+            console.error('Deposit approve - Fallback price fetch failed:', fallbackError);
+            return res.status(500).json({
+              success: false,
+              error: `Failed to fetch price for ${coin}. Please try again.`
+            });
+          }
         }
       }
 
-      // Calculate total value in USDT
-      const totalValue = cryptoAmount * currentPrice;
+      // USDT deposits go directly to balance, not to portfolio
+      if (coin === 'USDT') {
+        // Get current balance
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('balance')
+          .eq('id', deposit.user_id)
+          .single();
 
-      // Check if portfolio item already exists for this coin
-      const { data: existingPortfolio } = await supabaseAdmin
-        .from('portfolio')
-        .select('*')
-        .eq('user_id', deposit.user_id)
-        .eq('asset_id', coin)
-        .eq('asset_type', 'crypto')
-        .single();
-
-      if (existingPortfolio) {
-        // Update existing portfolio item
-        const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
-        const existingAvgPrice = parseFloat(existingPortfolio.average_price || 0);
-        const existingTotalValue = parseFloat(existingPortfolio.total_value || 0);
-        
-        // Calculate new average price (weighted average)
-        const newQuantity = existingQuantity + cryptoAmount;
-        const newTotalCost = (existingQuantity * existingAvgPrice) + (cryptoAmount * currentPrice);
-        const newAvgPrice = newQuantity > 0 ? newTotalCost / newQuantity : currentPrice;
-        const newTotalValue = newQuantity * currentPrice;
-        const profitLoss = newTotalValue - newTotalCost;
-        const profitLossPercent = newAvgPrice > 0 ? ((currentPrice - newAvgPrice) / newAvgPrice) * 100 : 0;
-
-        await supabaseAdmin
-          .from('portfolio')
-          .update({
-            quantity: newQuantity,
-            average_price: newAvgPrice,
-            current_price: currentPrice,
-            total_value: newTotalValue,
-            profit_loss: profitLoss,
-            profit_loss_percent: profitLossPercent,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingPortfolio.id);
-
-        console.log(`Deposit approve - Updated existing portfolio for ${coin}:`, {
-          quantity: newQuantity,
-          avgPrice: newAvgPrice,
-          currentPrice,
-          totalValue: newTotalValue
-        });
-      } else {
-        // Create new portfolio item
-        const { error: portfolioError } = await supabaseAdmin
-          .from('portfolio')
-          .insert({
-            user_id: deposit.user_id,
-            asset_type: 'crypto',
-            asset_id: coin,
-            asset_symbol: coin,
-            asset_name: coin === 'BTC' ? 'Bitcoin' : coin === 'ETH' ? 'Ethereum' : 'Tether',
-            quantity: cryptoAmount,
-            average_price: currentPrice,
-            current_price: currentPrice,
-            total_value: totalValue,
-            profit_loss: 0,
-            profit_loss_percent: 0,
+        if (!profile) {
+          return res.status(404).json({
+            success: false,
+            error: 'User profile not found'
           });
-
-        if (portfolioError) {
-          console.error('Deposit approve - Portfolio insert error:', portfolioError);
-          throw portfolioError;
         }
 
-        console.log(`Deposit approve - Created new portfolio item for ${coin}:`, {
-          quantity: cryptoAmount,
-          price: currentPrice,
-          totalValue
+        // Add USDT amount directly to balance (USDT is already USDT, no conversion needed)
+        const currentBalance = parseFloat(profile.balance || 0);
+        const newBalance = currentBalance + cryptoAmount;
+
+        const { error: balanceError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            balance: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', deposit.user_id);
+
+        if (balanceError) {
+          console.error('Deposit approve - Balance update error:', balanceError);
+          throw balanceError;
+        }
+
+        console.log(`Deposit approve - USDT added directly to balance:`, {
+          amount: cryptoAmount,
+          oldBalance: currentBalance,
+          newBalance
         });
+      } else {
+        // For BTC and ETH, add to portfolio
+        // Calculate total value in USDT
+        const totalValue = cryptoAmount * currentPrice;
+
+        // Check if portfolio item already exists for this coin
+        const { data: existingPortfolio } = await supabaseAdmin
+          .from('portfolio')
+          .select('*')
+          .eq('user_id', deposit.user_id)
+          .eq('asset_id', coin)
+          .eq('asset_type', 'crypto')
+          .single();
+
+        if (existingPortfolio) {
+          // Update existing portfolio item
+          const existingQuantity = parseFloat(existingPortfolio.quantity || 0);
+          const existingAvgPrice = parseFloat(existingPortfolio.average_price || 0);
+          const existingTotalValue = parseFloat(existingPortfolio.total_value || 0);
+          
+          // Calculate new average price (weighted average)
+          const newQuantity = existingQuantity + cryptoAmount;
+          const newTotalCost = (existingQuantity * existingAvgPrice) + (cryptoAmount * currentPrice);
+          const newAvgPrice = newQuantity > 0 ? newTotalCost / newQuantity : currentPrice;
+          const newTotalValue = newQuantity * currentPrice;
+          const profitLoss = newTotalValue - newTotalCost;
+          const profitLossPercent = newAvgPrice > 0 ? ((currentPrice - newAvgPrice) / newAvgPrice) * 100 : 0;
+
+          await supabaseAdmin
+            .from('portfolio')
+            .update({
+              quantity: newQuantity,
+              average_price: newAvgPrice,
+              current_price: currentPrice,
+              total_value: newTotalValue,
+              profit_loss: profitLoss,
+              profit_loss_percent: profitLossPercent,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingPortfolio.id);
+
+          console.log(`Deposit approve - Updated existing portfolio for ${coin}:`, {
+            quantity: newQuantity,
+            avgPrice: newAvgPrice,
+            currentPrice,
+            totalValue: newTotalValue
+          });
+        } else {
+          // Create new portfolio item
+          const { error: portfolioError } = await supabaseAdmin
+            .from('portfolio')
+            .insert({
+              user_id: deposit.user_id,
+              asset_type: 'crypto',
+              asset_id: coin,
+              asset_symbol: coin,
+              asset_name: coin === 'BTC' ? 'Bitcoin' : coin === 'ETH' ? 'Ethereum' : 'Tether',
+              quantity: cryptoAmount,
+              average_price: currentPrice,
+              current_price: currentPrice,
+              total_value: totalValue,
+              profit_loss: 0,
+              profit_loss_percent: 0,
+            });
+
+          if (portfolioError) {
+            console.error('Deposit approve - Portfolio insert error:', portfolioError);
+            throw portfolioError;
+          }
+
+          console.log(`Deposit approve - Created new portfolio item for ${coin}:`, {
+            quantity: cryptoAmount,
+            price: currentPrice,
+            totalValue
+          });
+        }
       }
 
       // Deposit'i onayla
@@ -256,7 +301,9 @@ export default async function handler(req, res) {
 
       return res.status(200).json({
         success: true,
-        message: `Deposit approved successfully. ${cryptoAmount} ${coin} added to portfolio.`,
+        message: coin === 'USDT' 
+          ? `Deposit approved successfully. ${cryptoAmount} ${coin} added to balance.`
+          : `Deposit approved successfully. ${cryptoAmount} ${coin} added to portfolio.`,
         deposit: updatedDeposit
       });
     } else if (action === 'reject') {

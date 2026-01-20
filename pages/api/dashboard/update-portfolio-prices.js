@@ -57,8 +57,12 @@ export default async function handler(req, res) {
         try {
           if (portfolio.asset_type === 'crypto') {
             const cryptoRes = await fetch(`${baseUrl}/api/prices/crypto`);
+            if (!cryptoRes.ok) {
+              console.error(`Error fetching crypto prices: ${cryptoRes.status} ${cryptoRes.statusText}`);
+              return; // Skip this portfolio item
+            }
             const cryptoData = await cryptoRes.json();
-            if (cryptoData.success && cryptoData.data) {
+            if (cryptoData && cryptoData.success && cryptoData.data) {
               const asset = cryptoData.data.find(c => 
                 c.id === portfolio.asset_id || c.symbol?.toUpperCase() === portfolio.asset_symbol?.toUpperCase()
               );
@@ -86,8 +90,12 @@ export default async function handler(req, res) {
             }
           } else if (portfolio.asset_type === 'gold') {
             const goldRes = await fetch(`${baseUrl}/api/prices/gold`);
+            if (!goldRes.ok) {
+              console.error(`Error fetching gold price: ${goldRes.status} ${goldRes.statusText}`);
+              return; // Skip this portfolio item
+            }
             const goldData = await goldRes.json();
-            if (goldData.success && goldData.data) {
+            if (goldData && goldData.success && goldData.data) {
               const currentPrice = parseFloat(goldData.data.current_price || 0);
               const quantity = parseFloat(portfolio.quantity || 0);
               const averagePrice = parseFloat(portfolio.average_price || 0);
