@@ -190,89 +190,89 @@ export default async function handler(req, res) {
             const maxRetries = 2;
             
             for (let attempt = 0; attempt <= maxRetries && !coinGeckoSuccess; attempt++) {
-            try {
-              if (attempt > 0) {
-                console.log(`Convert - CoinGecko retry attempt ${attempt + 1}/${maxRetries + 1} for ${coinSymbol}`);
-                // Wait before retry (exponential backoff)
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-              }
-              
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-              
-              const priceResponse = await fetch(
-                `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usdt&include_24hr_change=true`,
-                {
-                  headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'Synax-Platform/1.0'
-                  },
-                  signal: controller.signal
-                }
-              );
-
-              clearTimeout(timeoutId);
-
-              if (!priceResponse.ok) {
-                const errorText = await priceResponse.text().catch(() => 'Unknown error');
-                throw new Error(`CoinGecko API error: ${priceResponse.status} - ${errorText.substring(0, 100)}`);
-              }
-
-              const priceData = await priceResponse.json();
-              const coinData = priceData[coinGeckoId];
-              
-              if (!coinData || !coinData.usdt) {
-                throw new Error(`Price data not found for ${coinSymbol} in CoinGecko response`);
-              }
-
-              const parsedPrice = parseFloat(coinData.usdt);
-              if (isNaN(parsedPrice) || parsedPrice <= 0) {
-                throw new Error(`Invalid price value from CoinGecko: ${coinData.usdt}`);
-              }
-
-              currentPriceInUSDT = parsedPrice;
-              coinGeckoSuccess = true;
-              console.log(`Convert - Fetched ${coinSymbol} price from CoinGecko: ${currentPriceInUSDT} USDT (attempt ${attempt + 1})`);
-              
-              // Save to price_history for future use
               try {
-                await supabaseAdmin
-                  .from('price_history')
-                  .upsert({
-                    asset_type,
-                    asset_id,
-                    asset_symbol: coinSymbol,
-                    price: currentPriceInUSDT,
-                    price_change_24h: coinData.usdt_24h_change || 0,
-                    price_change_percent_24h: coinData.usdt_24h_change || 0,
-                    last_updated: new Date().toISOString()
-                  }, {
-                    onConflict: 'asset_id,asset_type'
-                  });
-                console.log(`Convert - Saved ${coinSymbol} price to price_history`);
-              } catch (saveError) {
-                console.warn('Convert - Failed to save price to price_history:', saveError);
-                // Don't fail the convert operation if saving to price_history fails
-              }
-            } catch (coinGeckoError) {
-              if (coinGeckoError.name === 'AbortError') {
-                console.error(`Convert - CoinGecko API timeout (attempt ${attempt + 1})`);
-              } else {
-                console.error(`Convert - CoinGecko API error (attempt ${attempt + 1}):`, coinGeckoError.message);
-              }
-              
-              // If rate limit (429), don't retry - use price_history instead
-              if (coinGeckoError.message?.includes('429') || coinGeckoError.message?.includes('Rate Limit')) {
-                console.warn(`Convert - CoinGecko rate limit hit, skipping retries and using price_history`);
-                break; // Exit retry loop, will try price_history in fallback
-              }
-              
-              // If this is the last attempt, throw the error
-              if (attempt === maxRetries) {
-                throw coinGeckoError;
+                if (attempt > 0) {
+                  console.log(`Convert - CoinGecko retry attempt ${attempt + 1}/${maxRetries + 1} for ${coinSymbol}`);
+                  // Wait before retry (exponential backoff)
+                  await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                
+                const priceResponse = await fetch(
+                  `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usdt&include_24hr_change=true`,
+                  {
+                    headers: {
+                      'Accept': 'application/json',
+                      'User-Agent': 'Synax-Platform/1.0'
+                    },
+                    signal: controller.signal
+                  }
+                );
+
+                clearTimeout(timeoutId);
+
+                if (!priceResponse.ok) {
+                  const errorText = await priceResponse.text().catch(() => 'Unknown error');
+                  throw new Error(`CoinGecko API error: ${priceResponse.status} - ${errorText.substring(0, 100)}`);
+                }
+
+                const priceData = await priceResponse.json();
+                const coinData = priceData[coinGeckoId];
+                
+                if (!coinData || !coinData.usdt) {
+                  throw new Error(`Price data not found for ${coinSymbol} in CoinGecko response`);
+                }
+
+                const parsedPrice = parseFloat(coinData.usdt);
+                if (isNaN(parsedPrice) || parsedPrice <= 0) {
+                  throw new Error(`Invalid price value from CoinGecko: ${coinData.usdt}`);
+                }
+
+                currentPriceInUSDT = parsedPrice;
+                coinGeckoSuccess = true;
+                console.log(`Convert - Fetched ${coinSymbol} price from CoinGecko: ${currentPriceInUSDT} USDT (attempt ${attempt + 1})`);
+                
+                // Save to price_history for future use
+                try {
+                  await supabaseAdmin
+                    .from('price_history')
+                    .upsert({
+                      asset_type,
+                      asset_id,
+                      asset_symbol: coinSymbol,
+                      price: currentPriceInUSDT,
+                      price_change_24h: coinData.usdt_24h_change || 0,
+                      price_change_percent_24h: coinData.usdt_24h_change || 0,
+                      last_updated: new Date().toISOString()
+                    }, {
+                      onConflict: 'asset_id,asset_type'
+                    });
+                  console.log(`Convert - Saved ${coinSymbol} price to price_history`);
+                } catch (saveError) {
+                  console.warn('Convert - Failed to save price to price_history:', saveError);
+                  // Don't fail the convert operation if saving to price_history fails
+                }
+              } catch (coinGeckoError) {
+                if (coinGeckoError.name === 'AbortError') {
+                  console.error(`Convert - CoinGecko API timeout (attempt ${attempt + 1})`);
+                } else {
+                  console.error(`Convert - CoinGecko API error (attempt ${attempt + 1}):`, coinGeckoError.message);
+                }
+                
+                // If rate limit (429), don't retry - use price_history instead
+                if (coinGeckoError.message?.includes('429') || coinGeckoError.message?.includes('Rate Limit')) {
+                  console.warn(`Convert - CoinGecko rate limit hit, skipping retries and using price_history`);
+                  break; // Exit retry loop, will try price_history in fallback
+                }
+                
+                // If this is the last attempt, throw the error
+                if (attempt === maxRetries) {
+                  throw coinGeckoError;
+                }
               }
             }
-          }
           
           if (!coinGeckoSuccess) {
             throw new Error(`Failed to fetch price from CoinGecko after ${maxRetries + 1} attempts`);
