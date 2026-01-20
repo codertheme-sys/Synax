@@ -245,9 +245,13 @@ export default async function handler(req, res) {
             console.log(`Convert - Using final fallback price from price_history for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
           } else {
             console.error(`Convert - No price found anywhere for ${asset_symbol} (${asset_id}, ${asset_type})`);
+            // Check if the original error was rate limit
+            const wasRateLimit = priceError.message?.includes('429') || priceError.message?.includes('Rate Limit');
             return res.status(500).json({ 
               success: false,
-              error: `Unable to fetch current price for ${asset_symbol}. Please try again in a few moments.` 
+              error: wasRateLimit 
+                ? `CoinGecko API rate limit exceeded. Please try again in a few minutes. Prices will be updated automatically soon.`
+                : `Unable to fetch current price for ${asset_symbol}. Please try again in a few moments.` 
             });
           }
         } catch (fallbackError) {
