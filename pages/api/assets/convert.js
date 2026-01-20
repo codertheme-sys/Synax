@@ -273,9 +273,10 @@ export default async function handler(req, res) {
                 }
               }
             }
-          
-          if (!coinGeckoSuccess) {
-            throw new Error(`Failed to fetch price from CoinGecko after ${maxRetries + 1} attempts`);
+            
+            if (!coinGeckoSuccess) {
+              throw new Error(`Failed to fetch price from CoinGecko after ${maxRetries + 1} attempts`);
+            }
           }
         }
       }
