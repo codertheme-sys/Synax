@@ -175,6 +175,15 @@ export default async function handler(req, res) {
     // Calculate USDT value
     const usdtValue = quantity * currentPriceInUSDT;
 
+    // Validate calculated values
+    if (isNaN(usdtValue) || usdtValue <= 0) {
+      console.error('Convert - Invalid USDT value calculated:', { quantity, currentPriceInUSDT, usdtValue });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Invalid conversion calculation. Please try again.' 
+      });
+    }
+
     // Update user balance (add USDT)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -183,19 +192,47 @@ export default async function handler(req, res) {
       .single();
 
     if (profileError || !profile) {
-      return res.status(404).json({ error: 'User profile not found' });
+      console.error('Convert - Profile error:', profileError);
+      return res.status(404).json({ 
+        success: false,
+        error: 'User profile not found' 
+      });
     }
 
-    const newBalance = parseFloat(profile.balance || 0) + usdtValue;
+    const currentBalance = parseFloat(profile.balance || 0);
+    const newBalance = currentBalance + usdtValue;
+
+    if (isNaN(newBalance)) {
+      console.error('Convert - Invalid balance calculation:', { currentBalance, usdtValue, newBalance });
+      return res.status(500).json({ 
+        success: false,
+        error: 'Invalid balance calculation. Please try again.' 
+      });
+    }
 
     const { error: balanceUpdateError } = await supabaseAdmin
       .from('profiles')
-      .update({ balance: newBalance })
+      .update({ 
+        balance: newBalance,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', user.id);
 
     if (balanceUpdateError) {
-      return res.status(500).json({ error: 'Failed to update balance' });
+      console.error('Convert - Balance update error:', balanceUpdateError);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to update balance',
+        details: process.env.NODE_ENV === 'development' ? balanceUpdateError.message : undefined
+      });
     }
+
+    console.log('Convert - Balance updated:', {
+      user_id: user.id,
+      oldBalance: currentBalance,
+      usdtValue,
+      newBalance
+    });
 
     // Update portfolio - reduce quantity
     const newQuantity = currentQuantity - quantity;
