@@ -188,8 +188,8 @@ export default async function handler(req, res) {
             // Fallback: Fetch USDT price from CoinGecko with retry mechanism
             let coinGeckoSuccess = false;
             const maxRetries = 2;
-          
-          for (let attempt = 0; attempt <= maxRetries && !coinGeckoSuccess; attempt++) {
+            
+            for (let attempt = 0; attempt <= maxRetries && !coinGeckoSuccess; attempt++) {
             try {
               if (attempt > 0) {
                 console.log(`Convert - CoinGecko retry attempt ${attempt + 1}/${maxRetries + 1} for ${coinSymbol}`);
