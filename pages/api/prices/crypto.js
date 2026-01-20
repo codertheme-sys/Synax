@@ -10,6 +10,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Allow cron jobs to update prices (Vercel Cron sends Authorization header)
+  // Also allow regular GET requests from frontend
+  const isCronJob = req.headers['authorization'] === `Bearer ${process.env.CRON_SECRET}` || 
+                    req.headers['x-vercel-cron'] === '1';
+  
+  // If it's a cron job, we'll update price_history
+  // If it's a regular request, we'll return cached data
+
   try {
     const { ids, vs_currency = 'usd' } = req.query;
     const supabaseAdmin = createServerClient();
