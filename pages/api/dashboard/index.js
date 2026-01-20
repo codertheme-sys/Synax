@@ -79,17 +79,22 @@ export default async function handler(req, res) {
 
         await Promise.all(updatePromises);
 
-        // Now fetch updated portfolio
+        // Now fetch updated portfolio (exclude USDT - USDT should only be in balance, not portfolio)
         const { data: portfolioData, error: portfolioError } = await supabaseAdmin
           .from('portfolio')
           .select('*')
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .neq('asset_symbol', 'USDT')
+          .neq('asset_id', 'USDT');
 
         if (portfolioError) {
           console.error('Portfolio error:', portfolioError);
           portfolio = [];
         } else {
-          portfolio = portfolioData || [];
+          // Double filter to ensure no USDT items
+          portfolio = (portfolioData || []).filter(p => 
+            p.asset_symbol?.toUpperCase() !== 'USDT' && p.asset_id?.toUpperCase() !== 'USDT'
+          );
         }
       }
     } catch (err) {
@@ -146,8 +151,12 @@ export default async function handler(req, res) {
       watchlist = [];
     }
 
-    // 5. Open Positions (portfolio'dan pozitif quantity olanlar)
-    const openPositions = (portfolio || []).filter(p => parseFloat(p.quantity) > 0);
+    // 5. Open Positions (portfolio'dan pozitif quantity olanlar, USDT hariç)
+    const openPositions = (portfolio || []).filter(p => 
+      parseFloat(p.quantity) > 0 && 
+      p.asset_symbol?.toUpperCase() !== 'USDT' && 
+      p.asset_id?.toUpperCase() !== 'USDT'
+    );
 
     // 6. Earn Products Value - Get active subscriptions
     let earnProductsValue = 0;
@@ -314,7 +323,11 @@ export default async function handler(req, res) {
           ytdPnL,
         },
         portfolio: portfolio.filter(p => parseFloat(p.quantity || 0) > 0), // Only return items with quantity > 0
-        holdings: portfolio.filter(p => parseFloat(p.quantity || 0) > 0), // Same as portfolio for compatibility
+        holdings: portfolio.filter(p => 
+          parseFloat(p.quantity || 0) > 0 && 
+          p.asset_symbol?.toUpperCase() !== 'USDT' && 
+          p.asset_id?.toUpperCase() !== 'USDT'
+        ), // Exclude USDT - USDT should only be in balance, not portfolio
         recentOrders,
         watchlist: watchlistWithPrices,
         openPositions,
