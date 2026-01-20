@@ -98,29 +98,80 @@ export default async function handler(req, res) {
           throw new Error(`Unsupported coin: ${coinSymbol}`);
         }
       } else {
-        // Fetch USDT price from CoinGecko
-        const priceResponse = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usdt&include_24hr_change=true`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            }
-          }
-        );
-
-        if (!priceResponse.ok) {
-          throw new Error(`CoinGecko API error: ${priceResponse.status}`);
-        }
-
-        const priceData = await priceResponse.json();
-        const coinData = priceData[coinGeckoId];
+        // First, try to get price from price_history (faster and more reliable)
+        const { data: cachedPriceData, error: cachedPriceError } = await supabaseAdmin
+          .from('price_history')
+          .select('price')
+          .eq('asset_id', asset_id)
+          .eq('asset_type', asset_type)
+          .order('last_updated', { ascending: false })
+          .limit(1)
+          .single();
         
-        if (!coinData || !coinData.usdt) {
-          throw new Error(`Price data not found for ${coinSymbol}`);
-        }
+        if (cachedPriceData?.price && !cachedPriceError) {
+          currentPriceInUSDT = parseFloat(cachedPriceData.price);
+          console.log(`Convert - Using cached price from price_history for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
+        } else {
+          // Fallback: Fetch USDT price from CoinGecko
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const priceResponse = await fetch(
+              `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usdt&include_24hr_change=true`,
+              {
+                headers: {
+                  'Accept': 'application/json',
+                },
+                signal: controller.signal
+              }
+            );
 
-        currentPriceInUSDT = parseFloat(coinData.usdt);
-        console.log(`Convert - Fetched ${coinSymbol} price from CoinGecko: ${currentPriceInUSDT} USDT`);
+            clearTimeout(timeoutId);
+
+            if (!priceResponse.ok) {
+              throw new Error(`CoinGecko API error: ${priceResponse.status}`);
+            }
+
+            const priceData = await priceResponse.json();
+            const coinData = priceData[coinGeckoId];
+            
+            if (!coinData || !coinData.usdt) {
+              throw new Error(`Price data not found for ${coinSymbol}`);
+            }
+
+            currentPriceInUSDT = parseFloat(coinData.usdt);
+            console.log(`Convert - Fetched ${coinSymbol} price from CoinGecko: ${currentPriceInUSDT} USDT`);
+            
+            // Save to price_history for future use
+            try {
+              await supabaseAdmin
+                .from('price_history')
+                .upsert({
+                  asset_type,
+                  asset_id,
+                  asset_symbol: coinSymbol,
+                  price: currentPriceInUSDT,
+                  price_change_24h: coinData.usdt_24h_change || 0,
+                  price_change_percent_24h: coinData.usdt_24h_change || 0,
+                  last_updated: new Date().toISOString()
+                }, {
+                  onConflict: 'asset_id,asset_type'
+                });
+              console.log(`Convert - Saved ${coinSymbol} price to price_history`);
+            } catch (saveError) {
+              console.warn('Convert - Failed to save price to price_history:', saveError);
+              // Don't fail the convert operation if saving to price_history fails
+            }
+          } catch (coinGeckoError) {
+            if (coinGeckoError.name === 'AbortError') {
+              console.error('Convert - CoinGecko API timeout');
+            } else {
+              console.error('Convert - CoinGecko API error:', coinGeckoError);
+            }
+            throw coinGeckoError; // Re-throw to trigger fallback
+          }
+        }
       }
     } catch (priceError) {
       console.error('Convert - Price fetch error:', priceError);
@@ -131,44 +182,47 @@ export default async function handler(req, res) {
         error: priceError.message,
         stack: priceError.stack
       });
-      // Fallback: Use price_history table
-      try {
-        const { data: priceData, error: priceHistoryError } = await supabaseAdmin
-          .from('price_history')
-          .select('price')
-          .eq('asset_id', asset_id)
-          .eq('asset_type', asset_type)
-          .order('last_updated', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (priceHistoryError) {
-          console.error('Convert - Price history query error:', priceHistoryError);
-        }
-        
-        if (priceData?.price) {
-          currentPriceInUSDT = parseFloat(priceData.price);
-          console.log(`Convert - Using fallback price for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
-        } else {
-          console.error(`Convert - No price found in price_history for ${asset_symbol} (${asset_id}, ${asset_type})`);
+      
+      // Final fallback: Try price_history one more time (in case it was updated)
+      if (currentPriceInUSDT === 0) {
+        try {
+          const { data: priceData, error: priceHistoryError } = await supabaseAdmin
+            .from('price_history')
+            .select('price')
+            .eq('asset_id', asset_id)
+            .eq('asset_type', asset_type)
+            .order('last_updated', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (priceHistoryError) {
+            console.error('Convert - Price history query error:', priceHistoryError);
+          }
+          
+          if (priceData?.price) {
+            currentPriceInUSDT = parseFloat(priceData.price);
+            console.log(`Convert - Using final fallback price from price_history for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
+          } else {
+            console.error(`Convert - No price found anywhere for ${asset_symbol} (${asset_id}, ${asset_type})`);
+            return res.status(500).json({ 
+              success: false,
+              error: `Unable to fetch current price for ${asset_symbol}. Please try again in a few moments.` 
+            });
+          }
+        } catch (fallbackError) {
+          console.error('Convert - Final fallback price fetch failed:', fallbackError);
+          console.error('Convert - Fallback error details:', {
+            asset_symbol,
+            asset_id,
+            asset_type,
+            error: fallbackError.message,
+            stack: fallbackError.stack
+          });
           return res.status(500).json({ 
             success: false,
-            error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
+            error: `Unable to fetch current price for ${asset_symbol}. Please try again in a few moments.` 
           });
         }
-      } catch (fallbackError) {
-        console.error('Convert - Fallback price fetch failed:', fallbackError);
-        console.error('Convert - Fallback error details:', {
-          asset_symbol,
-          asset_id,
-          asset_type,
-          error: fallbackError.message,
-          stack: fallbackError.stack
-        });
-        return res.status(500).json({ 
-          success: false,
-          error: `Failed to fetch USDT price for ${asset_symbol}. Please try again.` 
-        });
       }
     }
 
