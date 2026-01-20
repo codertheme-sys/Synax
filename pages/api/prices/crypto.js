@@ -282,9 +282,9 @@ export default async function handler(req, res) {
               
               // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
               if (error && !error.message?.includes('fetch failed') && !error.message?.includes('ERR_INTERNET_DISCONNECTED')) {
-                console.error(`Cache error for ${assetIdForPriceHistory}:`, error.message);
+                console.error(`[Price History] Error saving ${assetIdForPriceHistory}:`, error.message);
               } else if (!error) {
-                console.log(`Price saved to price_history: ${assetIdForPriceHistory} = ${priceData.current_price}`);
+                console.log(`[Price History] Saved: ${assetIdForPriceHistory} = ${priceData.current_price} USDT`);
               }
             } catch (cacheError) {
               // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
