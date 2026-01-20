@@ -61,26 +61,25 @@ export default async function handler(req, res) {
       // Get coin symbol (asset_symbol might be BTC, ETH, etc.)
       const coinSymbol = asset_symbol?.toUpperCase() || asset_id?.toUpperCase();
       
-      {
-        // First, try to get price from price_history (faster and more reliable)
-        const { data: cachedPriceData, error: cachedPriceError } = await supabaseAdmin
-          .from('price_history')
-          .select('price')
-          .eq('asset_id', asset_id)
-          .eq('asset_type', asset_type)
-          .order('last_updated', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (cachedPriceData?.price && !cachedPriceError) {
-          const parsedPrice = parseFloat(cachedPriceData.price);
-          if (!isNaN(parsedPrice) && parsedPrice > 0) {
-            currentPriceInUSDT = parsedPrice;
-            console.log(`Convert - Using cached price from price_history for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
-          } else {
-            console.warn(`Convert - Invalid cached price for ${coinSymbol} (${parsedPrice}), fetching from CoinGecko`);
-          }
+      // First, try to get price from price_history (faster and more reliable)
+      const { data: cachedPriceData, error: cachedPriceError } = await supabaseAdmin
+        .from('price_history')
+        .select('price')
+        .eq('asset_id', asset_id)
+        .eq('asset_type', asset_type)
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (cachedPriceData?.price && !cachedPriceError) {
+        const parsedPrice = parseFloat(cachedPriceData.price);
+        if (!isNaN(parsedPrice) && parsedPrice > 0) {
+          currentPriceInUSDT = parsedPrice;
+          console.log(`Convert - Using cached price from price_history for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
+        } else {
+          console.warn(`Convert - Invalid cached price for ${coinSymbol} (${parsedPrice}), fetching from Binance`);
         }
+      }
         
         // If we still don't have a valid price, try Binance API (only source, no CoinGecko)
         if (!currentPriceInUSDT || currentPriceInUSDT <= 0 || isNaN(currentPriceInUSDT)) {
