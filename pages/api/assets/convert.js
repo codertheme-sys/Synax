@@ -196,6 +196,12 @@ export default async function handler(req, res) {
                 console.error(`Convert - CoinGecko API error (attempt ${attempt + 1}):`, coinGeckoError.message);
               }
               
+              // If rate limit (429), don't retry - use price_history instead
+              if (coinGeckoError.message?.includes('429') || coinGeckoError.message?.includes('Rate Limit')) {
+                console.warn(`Convert - CoinGecko rate limit hit, skipping retries and using price_history`);
+                break; // Exit retry loop, will try price_history in fallback
+              }
+              
               // If this is the last attempt, throw the error
               if (attempt === maxRetries) {
                 throw coinGeckoError;
