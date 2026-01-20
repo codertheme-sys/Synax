@@ -30,11 +30,12 @@ export default async function handler(req, res) {
       .eq('is_active', true);
 
     // Cache kontrolü - sadece belirli coin'ler için (ids varsa)
-    // Tüm coin'ler için cache kullanmıyoruz çünkü her seferinde güncel veri çekmek daha iyi
+    // Cron job'dan çağrıldığında cache'i atla ve her zaman güncelle
     let cachedData = null;
     let isCacheValid = false;
     
-    if (ids) {
+    // Cron job ise cache'i atla
+    if (!isCronJob && !force_update && ids) {
       // Belirli coin'ler isteniyorsa cache kontrolü yap
       const cacheKey = ids;
       const { data: cached } = await supabaseAdmin
@@ -52,8 +53,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // Cache geçerliyse ve belirli coin isteniyorsa cache'den dön
-    if (isCacheValid && cachedData && ids) {
+    // Cache geçerliyse ve belirli coin isteniyorsa cache'den dön (cron job değilse)
+    if (!isCronJob && isCacheValid && cachedData && ids) {
       return res.status(200).json({
         success: true,
         data: [{
