@@ -322,7 +322,11 @@ export default async function handler(req, res) {
           mtdPnL,
           ytdPnL,
         },
-        portfolio: portfolio.filter(p => parseFloat(p.quantity || 0) > 0), // Only return items with quantity > 0
+        portfolio: portfolio.filter(p => 
+          parseFloat(p.quantity || 0) > 0 && 
+          p.asset_symbol?.toUpperCase() !== 'USDT' && 
+          p.asset_id?.toUpperCase() !== 'USDT'
+        ), // Exclude USDT - USDT should only be in balance, not portfolio
         holdings: portfolio.filter(p => 
           parseFloat(p.quantity || 0) > 0 && 
           p.asset_symbol?.toUpperCase() !== 'USDT' && 
