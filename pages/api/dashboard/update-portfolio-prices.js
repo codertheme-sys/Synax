@@ -39,6 +39,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to fetch price history' });
     }
 
+    // Get base URL for server-side API calls (once for all portfolios)
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_BASE_URL 
+      ? process.env.NEXT_PUBLIC_BASE_URL 
+      : (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
+
     // Update each portfolio item with current price
     const updatePromises = allPortfolios.map(async (portfolio) => {
       const priceData = priceHistory?.find(
@@ -49,7 +56,7 @@ export default async function handler(req, res) {
         // If no price data, try to fetch from API
         try {
           if (portfolio.asset_type === 'crypto') {
-            const cryptoRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prices/crypto`);
+            const cryptoRes = await fetch(`${baseUrl}/api/prices/crypto`);
             const cryptoData = await cryptoRes.json();
             if (cryptoData.success && cryptoData.data) {
               const asset = cryptoData.data.find(c => 
@@ -78,7 +85,7 @@ export default async function handler(req, res) {
               }
             }
           } else if (portfolio.asset_type === 'gold') {
-            const goldRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prices/gold`);
+            const goldRes = await fetch(`${baseUrl}/api/prices/gold`);
             const goldData = await goldRes.json();
             if (goldData.success && goldData.data) {
               const currentPrice = parseFloat(goldData.data.current_price || 0);

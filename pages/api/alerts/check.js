@@ -37,13 +37,20 @@ export default async function handler(req, res) {
     let triggeredCount = 0;
 
     // Check each alert
+    // Get base URL for server-side API calls (once for all alerts)
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_BASE_URL 
+      ? process.env.NEXT_PUBLIC_BASE_URL 
+      : (req.headers.host ? `https://${req.headers.host}` : 'http://localhost:3000');
+    
     for (const alert of alerts) {
       try {
         // Fetch current price
         let currentPrice = 0;
         
         if (alert.asset_type === 'crypto') {
-          const priceRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prices/crypto`);
+          const priceRes = await fetch(`${baseUrl}/api/prices/crypto`);
           const priceData = await priceRes.json();
           if (priceData.success && priceData.data) {
             const asset = priceData.data.find(a => 
@@ -55,7 +62,7 @@ export default async function handler(req, res) {
             }
           }
         } else if (alert.asset_type === 'gold') {
-          const priceRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/prices/gold`);
+          const priceRes = await fetch(`${baseUrl}/api/prices/gold`);
           const priceData = await priceRes.json();
           if (priceData.success && priceData.data) {
             currentPrice = parseFloat(priceData.data.current_price || 0);
