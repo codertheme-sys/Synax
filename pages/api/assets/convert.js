@@ -187,9 +187,10 @@ export default async function handler(req, res) {
           if (!binanceSuccess) {
             // Fallback: Fetch USDT price from CoinGecko with retry mechanism
             let coinGeckoSuccess = false;
+            let rateLimitHit = false;
             const maxRetries = 2;
             
-            for (let attempt = 0; attempt <= maxRetries && !coinGeckoSuccess; attempt++) {
+            for (let attempt = 0; attempt <= maxRetries && !coinGeckoSuccess && !rateLimitHit; attempt++) {
               try {
                 if (attempt > 0) {
                   console.log(`Convert - CoinGecko retry attempt ${attempt + 1}/${maxRetries + 1} for ${coinSymbol}`);
@@ -264,17 +265,19 @@ export default async function handler(req, res) {
                 // If rate limit (429), don't retry - use price_history instead
                 if (coinGeckoError.message?.includes('429') || coinGeckoError.message?.includes('Rate Limit')) {
                   console.warn(`Convert - CoinGecko rate limit hit, skipping retries and using price_history`);
+                  rateLimitHit = true;
                   break; // Exit retry loop, will try price_history in fallback
                 }
                 
-                // If this is the last attempt, throw the error
-                if (attempt === maxRetries) {
+                // If this is the last attempt and not rate limit, throw the error
+                if (attempt === maxRetries && !rateLimitHit) {
                   throw coinGeckoError;
                 }
               }
             }
             
-            if (!coinGeckoSuccess) {
+            // Only throw error if we didn't hit rate limit (rate limit means we'll try price_history)
+            if (!coinGeckoSuccess && !rateLimitHit) {
               throw new Error(`Failed to fetch price from CoinGecko after ${maxRetries + 1} attempts`);
             }
           }
