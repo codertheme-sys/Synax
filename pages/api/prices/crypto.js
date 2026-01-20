@@ -254,7 +254,6 @@ export default async function handler(req, res) {
 
           // Cache'e kaydet (async, hata vermesin - await kullanmadan)
           // Not: await kullanmıyoruz çünkü bu blocking olmamalı
-          // Sadece kritik hataları logla, fetch failed gibi network hatalarını sessizce ignore et
           // ÖNEMLİ: asset_id olarak symbol kullanıyoruz (BTC, ETH) çünkü convert API ve portfolio tablosu symbol kullanıyor
           (async () => {
             try {
@@ -262,7 +261,7 @@ export default async function handler(req, res) {
               // Bu sayede convert API ve diğer API'ler price_history'den fiyat bulabilir
               const assetIdForPriceHistory = priceData.symbol.toUpperCase(); // BTC, ETH, etc.
               
-              const { error } = await supabaseAdmin
+              const { data, error } = await supabaseAdmin
                 .from('price_history')
                 .upsert({
                   asset_type: 'crypto',
@@ -280,17 +279,23 @@ export default async function handler(req, res) {
                   onConflict: 'asset_id,asset_type'
                 });
               
-              // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
-              if (error && !error.message?.includes('fetch failed') && !error.message?.includes('ERR_INTERNET_DISCONNECTED')) {
-                console.error(`[Price History] Error saving ${assetIdForPriceHistory}:`, error.message);
-              } else if (!error) {
-                console.log(`[Price History] Saved: ${assetIdForPriceHistory} = ${priceData.current_price} USDT`);
+              // HER ZAMAN logla - hem başarı hem hata
+              if (error) {
+                console.error(`[Price History] ❌ Error saving ${assetIdForPriceHistory}:`, {
+                  message: error.message,
+                  code: error.code,
+                  details: error.details,
+                  hint: error.hint
+                });
+              } else {
+                console.log(`[Price History] ✅ Saved: ${assetIdForPriceHistory} = ${priceData.current_price} USDT`);
               }
             } catch (cacheError) {
-              // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
-              if (cacheError.message && !cacheError.message.includes('fetch failed') && !cacheError.message.includes('ERR_INTERNET_DISCONNECTED')) {
-                console.error(`Cache error for ${priceData.symbol}:`, cacheError.message);
-              }
+              // HER HATAYI logla
+              console.error(`[Price History] ❌ Exception saving ${priceData.symbol}:`, {
+                message: cacheError.message,
+                stack: cacheError.stack
+              });
             }
           })();
 
