@@ -30,6 +30,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Quantity must be greater than 0' });
     }
 
+    // USDT cannot be converted to USDT (it's already USDT)
+    if (asset_symbol?.toUpperCase() === 'USDT' || asset_id?.toUpperCase() === 'USDT') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'USDT cannot be converted. USDT is already in USDT format. Use withdraw instead.' 
+      });
+    }
+
     // Get current portfolio item
     const { data: portfolioItem, error: portfolioError } = await supabaseAdmin
       .from('portfolio')

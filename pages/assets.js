@@ -388,35 +388,38 @@ function AssetsPage() {
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '13px', fontWeight: 800, color: '#4ade80', textShadow: '0 0 10px rgba(34, 197, 94, 0.5)' }}>{h.pnl}</td>
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{h.alloc}</td>
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px' }}>
-                        <button
-                          onClick={() => {
-                            setSelectedHolding(h);
-                            setConvertAmount('');
-                            setConvertUsdValue(0);
-                            setShowConvertModal(true);
-                          }}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            background: 'rgba(59, 130, 246, 0.2)',
-                            border: '1px solid rgba(59, 130, 246, 0.5)',
-                            color: '#60a5fa',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)';
-                            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.7)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-                          }}
-                        >
-                          Convert
-                        </button>
+                        {/* Don't show convert button for USDT - USDT is already USDT */}
+                        {h.symbol?.toUpperCase() !== 'USDT' && (
+                          <button
+                            onClick={() => {
+                              setSelectedHolding(h);
+                              setConvertAmount('');
+                              setConvertUsdValue(0);
+                              setShowConvertModal(true);
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: 'rgba(59, 130, 246, 0.2)',
+                              border: '1px solid rgba(59, 130, 246, 0.5)',
+                              color: '#60a5fa',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)';
+                              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.7)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                            }}
+                          >
+                            Convert
+                          </button>
+                        )}
                       </td>
                     </tr>
                     ))
