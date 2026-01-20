@@ -10,13 +10,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check if this is a Vercel Cron job call
-  // Vercel Cron sends 'x-vercel-cron' header with value '1'
+  // Check if this is a cron job call (external cron service)
+  // External cron services can send Authorization header or x-cron-secret header
+  const cronSecret = process.env.CRON_SECRET || process.env.CRON_API_KEY;
   const isCronJob = req.headers['x-vercel-cron'] === '1' || 
-                    req.headers['authorization'] === `Bearer ${process.env.CRON_SECRET}`;
+                    req.headers['authorization'] === `Bearer ${cronSecret}` ||
+                    req.headers['x-cron-secret'] === cronSecret ||
+                    req.query.secret === cronSecret;
   
   // If it's a cron job, force update price_history (ignore cache)
   // If it's a regular request, use cache if available
+  
+  // Security: If cron secret is set, require it for cron jobs
+  if (cronSecret && (req.headers['x-vercel-cron'] !== '1') && 
+      req.headers['authorization'] !== `Bearer ${cronSecret}` &&
+      req.headers['x-cron-secret'] !== cronSecret &&
+      req.query.secret !== cronSecret) {
+    // Not a cron job, continue normally
+  }
 
   try {
     const { ids, vs_currency = 'usd', force_update } = req.query;
