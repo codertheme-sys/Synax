@@ -109,9 +109,17 @@ export default async function handler(req, res) {
           .single();
         
         if (cachedPriceData?.price && !cachedPriceError) {
-          currentPriceInUSDT = parseFloat(cachedPriceData.price);
-          console.log(`Convert - Using cached price from price_history for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
-        } else {
+          const parsedPrice = parseFloat(cachedPriceData.price);
+          if (!isNaN(parsedPrice) && parsedPrice > 0) {
+            currentPriceInUSDT = parsedPrice;
+            console.log(`Convert - Using cached price from price_history for ${coinSymbol}: ${currentPriceInUSDT} USDT`);
+          } else {
+            console.warn(`Convert - Invalid cached price for ${coinSymbol} (${parsedPrice}), fetching from CoinGecko`);
+          }
+        }
+        
+        // If we still don't have a valid price, fetch from CoinGecko
+        if (!currentPriceInUSDT || currentPriceInUSDT <= 0 || isNaN(currentPriceInUSDT)) {
           // Fallback: Fetch USDT price from CoinGecko
           try {
             const controller = new AbortController();
@@ -225,6 +233,23 @@ export default async function handler(req, res) {
         }
       }
     }
+
+    // Validate that we have a valid price before proceeding
+    if (!currentPriceInUSDT || currentPriceInUSDT <= 0 || isNaN(currentPriceInUSDT)) {
+      console.error('Convert - Invalid price after all attempts:', {
+        asset_symbol,
+        asset_id,
+        asset_type,
+        currentPriceInUSDT,
+        quantity
+      });
+      return res.status(500).json({ 
+        success: false,
+        error: `Unable to fetch current price for ${asset_symbol}. Please try again in a few moments.` 
+      });
+    }
+
+    console.log(`Convert - Final price for ${asset_symbol}: ${currentPriceInUSDT} USDT`);
 
     // Calculate USDT value
     const usdtValue = quantity * currentPriceInUSDT;
