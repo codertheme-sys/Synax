@@ -235,13 +235,18 @@ export default async function handler(req, res) {
           // Cache'e kaydet (async, hata vermesin - await kullanmadan)
           // Not: await kullanmıyoruz çünkü bu blocking olmamalı
           // Sadece kritik hataları logla, fetch failed gibi network hatalarını sessizce ignore et
+          // ÖNEMLİ: asset_id olarak symbol kullanıyoruz (BTC, ETH) çünkü convert API ve portfolio tablosu symbol kullanıyor
           (async () => {
             try {
+              // asset_id olarak symbol kullan (BTC, ETH) - coin.id değil (bitcoin, ethereum)
+              // Bu sayede convert API ve diğer API'ler price_history'den fiyat bulabilir
+              const assetIdForPriceHistory = priceData.symbol.toUpperCase(); // BTC, ETH, etc.
+              
               const { error } = await supabaseAdmin
                 .from('price_history')
                 .upsert({
                   asset_type: 'crypto',
-                  asset_id: coin.id,
+                  asset_id: assetIdForPriceHistory, // Symbol kullan (BTC, ETH) - coin.id değil
                   asset_symbol: priceData.symbol,
                   price: priceData.current_price,
                   price_change_24h: priceData.price_change_24h,
@@ -257,12 +262,14 @@ export default async function handler(req, res) {
               
               // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
               if (error && !error.message?.includes('fetch failed') && !error.message?.includes('ERR_INTERNET_DISCONNECTED')) {
-                console.error(`Cache error for ${coin.id}:`, error.message);
+                console.error(`Cache error for ${assetIdForPriceHistory}:`, error.message);
+              } else if (!error) {
+                console.log(`Price saved to price_history: ${assetIdForPriceHistory} = ${priceData.current_price}`);
               }
             } catch (cacheError) {
               // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
               if (cacheError.message && !cacheError.message.includes('fetch failed') && !cacheError.message.includes('ERR_INTERNET_DISCONNECTED')) {
-                console.error(`Cache error for ${coin.id}:`, cacheError.message);
+                console.error(`Cache error for ${priceData.symbol}:`, cacheError.message);
               }
             }
           })();
