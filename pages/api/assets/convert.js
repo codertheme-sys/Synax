@@ -206,28 +206,41 @@ export default async function handler(req, res) {
       }
     }
 
-    // Create convert history record
-    const { data: convertHistoryData, error: convertHistoryError } = await supabaseAdmin
-      .from('convert_history')
-      .insert({
-        user_id: user.id,
-        portfolio_id: portfolio_id,
-        asset_id: asset_id,
-        asset_type: asset_type,
-        asset_symbol: asset_symbol,
-        quantity: quantity,
-        price: currentPriceInUSDT,
-        usd_value: usdtValue, // Keep field name as usd_value but store USDT value
-        created_at: new Date().toISOString(),
-      })
-      .select();
+    // Create convert history record (optional - don't fail if table doesn't exist)
+    let convertHistoryCreated = false;
+    try {
+      const { data: convertHistoryData, error: convertHistoryError } = await supabaseAdmin
+        .from('convert_history')
+        .insert({
+          user_id: user.id,
+          portfolio_id: portfolio_id,
+          asset_id: asset_id,
+          asset_type: asset_type,
+          asset_symbol: asset_symbol,
+          quantity: quantity,
+          price: currentPriceInUSDT,
+          usd_value: usdtValue, // Keep field name as usd_value but store USDT value
+          created_at: new Date().toISOString(),
+        })
+        .select();
 
-    if (convertHistoryError) {
-      console.error('Error creating convert history:', convertHistoryError);
-      console.error('Convert history error details:', JSON.stringify(convertHistoryError, null, 2));
-      // Don't fail the request if history creation fails, but log it
-    } else {
-      console.log('Convert history created successfully:', convertHistoryData);
+      if (convertHistoryError) {
+        // Check if table doesn't exist (PGRST116) or permission error
+        if (convertHistoryError.code === 'PGRST116' || convertHistoryError.message?.includes('relation') || convertHistoryError.message?.includes('does not exist')) {
+          console.warn('Convert history table not found. Please run database-convert-history-table.sql in Supabase.');
+        } else {
+          console.error('Error creating convert history:', convertHistoryError);
+          console.error('Convert history error details:', JSON.stringify(convertHistoryError, null, 2));
+        }
+        convertHistoryCreated = false;
+      } else {
+        console.log('Convert history created successfully:', convertHistoryData);
+        convertHistoryCreated = true;
+      }
+    } catch (historyError) {
+      // Catch any unexpected errors in history creation
+      console.error('Unexpected error creating convert history:', historyError);
+      convertHistoryCreated = false;
     }
 
     return res.status(200).json({
@@ -235,7 +248,7 @@ export default async function handler(req, res) {
       message: `Converted successfully. ${quantity} ${asset_symbol} = ${usdtValue.toFixed(2)} USDT`,
       usdt_value: usdtValue,
       new_balance: newBalance,
-      convert_history_created: !convertHistoryError, // Indicate if history was created
+      convert_history_created: convertHistoryCreated, // Indicate if history was created
     });
 
   } catch (error) {
