@@ -366,6 +366,16 @@ export default async function handler(req, res) {
         // Check if table doesn't exist (PGRST116) or permission error
         if (convertHistoryError.code === 'PGRST116' || convertHistoryError.message?.includes('relation') || convertHistoryError.message?.includes('does not exist')) {
           console.warn('Convert history table not found. Please run database-convert-history-table.sql in Supabase.');
+        } else if (convertHistoryError.code === '42501' || convertHistoryError.message?.includes('permission') || convertHistoryError.message?.includes('policy')) {
+          // RLS policy violation - this shouldn't happen with service role key, but log it
+          console.error('Convert history RLS error (unexpected with service role):', convertHistoryError);
+          console.error('Convert history RLS error details:', {
+            code: convertHistoryError.code,
+            message: convertHistoryError.message,
+            details: convertHistoryError.details,
+            hint: convertHistoryError.hint,
+            user_id: user.id
+          });
         } else {
           console.error('Error creating convert history:', convertHistoryError);
           console.error('Convert history error details:', JSON.stringify(convertHistoryError, null, 2));
@@ -378,6 +388,11 @@ export default async function handler(req, res) {
     } catch (historyError) {
       // Catch any unexpected errors in history creation
       console.error('Unexpected error creating convert history:', historyError);
+      console.error('Convert history exception details:', {
+        message: historyError.message,
+        stack: historyError.stack,
+        user_id: user.id
+      });
       convertHistoryCreated = false;
     }
 
