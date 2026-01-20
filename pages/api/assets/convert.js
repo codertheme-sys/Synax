@@ -297,14 +297,28 @@ export default async function handler(req, res) {
       const { error: deleteError } = await supabaseAdmin
         .from('portfolio')
         .delete()
-        .eq('id', portfolio_id);
+        .eq('id', portfolio_id)
+        .eq('user_id', user.id); // Ensure we're deleting the correct user's portfolio
 
       if (deleteError) {
         console.error('Convert - Portfolio delete error:', deleteError);
-        return res.status(500).json({ error: 'Failed to update portfolio' });
+        console.error('Convert - Delete error details:', {
+          portfolio_id,
+          user_id: user.id,
+          error: deleteError.message,
+          code: deleteError.code,
+          details: deleteError.details,
+          hint: deleteError.hint
+        });
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to update portfolio',
+          details: process.env.NODE_ENV === 'development' ? deleteError.message : undefined
+        });
       }
       // Portfolio deleted, set portfolio_id to null for history
       finalPortfolioId = null;
+      console.log('Convert - Portfolio item deleted:', { portfolio_id, user_id: user.id });
     } else {
       // Update portfolio item
       const newTotalValue = newQuantity * currentPriceInUSDT;
