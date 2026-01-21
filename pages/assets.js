@@ -62,7 +62,7 @@ function AssetsPage() {
       'Ethereum (ERC20)': {
         address: '0x6fb2603489e0fc38bb90bef6618b44d28b301a1b',
         network: 'ERC-20',
-        qrCode: '/images/eth-qr.png?v=2', // Cache busting - updated QR code
+        qrCode: '/images/eth-qr-new.png', // New QR code file name to bypass cache
       },
     },
     'BTC': {
