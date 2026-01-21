@@ -60,7 +60,7 @@ function AssetsPage() {
     },
     'ETH': {
       'Ethereum (ERC20)': {
-        address: '0x76047D91d6610fd2134E5B11a7590993D118cFc2',
+        address: '0x6fb2603489e0fc38bb90bef6618b44d28b301a1b',
         network: 'ERC-20',
         qrCode: '/images/eth-qr.png',
       },
