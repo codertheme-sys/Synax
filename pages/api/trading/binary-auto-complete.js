@@ -134,36 +134,42 @@ export default async function handler(req, res) {
       
       let currentPrice = null;
       let correctAssetId = trade.asset_id;
+      const normalizedAssetId = (trade.asset_id || '').toUpperCase();
+      const normalizedSymbol = (trade.asset_symbol || trade.asset_id || '').toUpperCase();
       
-      // First try to get price by asset_id
+      // First try to get price by asset_id (use latest row)
       const { data: priceData, error: priceError } = await supabaseAdmin
         .from('price_history')
         .select('price, asset_id')
-        .eq('asset_id', trade.asset_id)
+        .eq('asset_id', normalizedAssetId)
         .eq('asset_type', trade.asset_type)
-        .single();
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (priceError || !priceData || !priceData.price) {
-        console.log(`[binary-auto-complete] Price not found by asset_id for ${trade.asset_symbol}, trying by symbol...`);
-        // Try alternative lookup by symbol if asset_id doesn't match
+        console.log(`[binary-auto-complete] Price not found by asset_id for ${normalizedAssetId}, trying by symbol...`);
+        // Try alternative lookup by symbol if asset_id doesn't match (latest row)
         const { data: priceDataBySymbol, error: symbolError } = await supabaseAdmin
           .from('price_history')
           .select('price, asset_id')
-          .eq('asset_symbol', trade.asset_symbol.toUpperCase())
+          .eq('asset_symbol', normalizedSymbol)
           .eq('asset_type', trade.asset_type)
-          .single();
+          .order('last_updated', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
         if (symbolError) {
-          console.error(`[binary-auto-complete] Price lookup by symbol also failed for ${trade.asset_symbol}:`, symbolError);
+          console.error(`[binary-auto-complete] Price lookup by symbol also failed for ${normalizedSymbol}:`, symbolError);
         } else if (priceDataBySymbol && priceDataBySymbol.price) {
-          console.log(`[binary-auto-complete] Found price by symbol for ${trade.asset_symbol}: ${priceDataBySymbol.price}, asset_id=${priceDataBySymbol.asset_id}`);
+          console.log(`[binary-auto-complete] Found price by symbol for ${normalizedSymbol}: ${priceDataBySymbol.price}, asset_id=${priceDataBySymbol.asset_id}`);
           currentPrice = parseFloat(priceDataBySymbol.price);
-          correctAssetId = priceDataBySymbol.asset_id || trade.asset_id;
+          correctAssetId = priceDataBySymbol.asset_id || normalizedAssetId;
         }
       } else {
         currentPrice = parseFloat(priceData.price);
-        correctAssetId = priceData.asset_id || trade.asset_id;
-        console.log(`[binary-auto-complete] Found price by asset_id for ${trade.asset_symbol}: ${currentPrice}`);
+        correctAssetId = priceData.asset_id || normalizedAssetId;
+        console.log(`[binary-auto-complete] Found price by asset_id for ${normalizedAssetId}: ${currentPrice}`);
       }
 
       if (currentPrice && currentPrice > 0) {
