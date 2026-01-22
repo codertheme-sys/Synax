@@ -363,6 +363,8 @@ function AdminPage() {
                 borderRight: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {tab}
