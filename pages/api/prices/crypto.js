@@ -283,50 +283,58 @@ export default async function handler(req, res) {
             price_source: override?.is_active ? 'manual' : 'auto'
           };
 
-          // Cache'e kaydet (async, hata vermesin - await kullanmadan)
-          // Not: await kullanmıyoruz çünkü bu blocking olmamalı
-          // ÖNEMLİ: asset_id olarak symbol kullanıyoruz (BTC, ETH) çünkü convert API ve portfolio tablosu symbol kullanıyor
+          // OPTIMIZATION: Sadece değişen fiyatları yaz (disk IO azaltmak için)
+          // Önce mevcut fiyatı kontrol et, değişmişse yaz
           (async () => {
             try {
-              // asset_id olarak symbol kullan (BTC, ETH) - coin.id değil (bitcoin, ethereum)
-              // Bu sayede convert API ve diğer API'ler price_history'den fiyat bulabilir
-              const assetIdForPriceHistory = priceData.symbol.toUpperCase(); // BTC, ETH, etc.
+              const assetIdForPriceHistory = priceData.symbol.toUpperCase();
               
-              const { data, error } = await supabaseAdmin
+              // Önce mevcut fiyatı kontrol et
+              const { data: existingPrice } = await supabaseAdmin
                 .from('price_history')
-                .upsert({
-                  asset_type: 'crypto',
-                  asset_id: assetIdForPriceHistory, // Symbol kullan (BTC, ETH) - coin.id değil
-                  asset_symbol: priceData.symbol,
-                  price: priceData.current_price,
-                  price_change_24h: priceData.price_change_24h,
-                  price_change_percent_24h: priceData.price_change_percentage_24h,
-                  market_cap: priceData.market_cap,
-                  volume_24h: priceData.volume_24h,
-                  high_24h: priceData.high_24h,
-                  low_24h: priceData.low_24h,
-                  last_updated: priceData.last_updated
-                }, {
-                  onConflict: 'asset_id,asset_type'
-                });
+                .select('price, last_updated')
+                .eq('asset_id', assetIdForPriceHistory)
+                .eq('asset_type', 'crypto')
+                .maybeSingle();
               
-              // HER ZAMAN logla - hem başarı hem hata
-              if (error) {
-                console.error(`[Price History] ❌ Error saving ${assetIdForPriceHistory}:`, {
-                  message: error.message,
-                  code: error.code,
-                  details: error.details,
-                  hint: error.hint
-                });
-              } else {
-                console.log(`[Price History] ✅ Saved: ${assetIdForPriceHistory} = ${priceData.current_price} USDT`);
+              // Fiyat değişmemişse ve son 5 dakika içinde güncellenmişse yazma (disk IO tasarrufu)
+              const currentPrice = parseFloat(priceData.current_price || 0);
+              const existingPriceValue = existingPrice ? parseFloat(existingPrice.price || 0) : 0;
+              const priceChanged = Math.abs(currentPrice - existingPriceValue) > 0.01; // %0.01'den fazla değişmişse
+              
+              const lastUpdated = existingPrice?.last_updated ? new Date(existingPrice.last_updated) : null;
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+              const recentlyUpdated = lastUpdated && lastUpdated > fiveMinutesAgo;
+              
+              // Sadece fiyat değişmişse veya 5 dakikadan eskiyse yaz
+              if (priceChanged || !recentlyUpdated || !existingPrice) {
+                const { data, error } = await supabaseAdmin
+                  .from('price_history')
+                  .upsert({
+                    asset_type: 'crypto',
+                    asset_id: assetIdForPriceHistory,
+                    asset_symbol: priceData.symbol,
+                    price: currentPrice,
+                    price_change_24h: priceData.price_change_24h,
+                    price_change_percent_24h: priceData.price_change_percentage_24h,
+                    market_cap: priceData.market_cap,
+                    volume_24h: priceData.volume_24h,
+                    high_24h: priceData.high_24h,
+                    low_24h: priceData.low_24h,
+                    last_updated: priceData.last_updated
+                  }, {
+                    onConflict: 'asset_id,asset_type'
+                  });
+                
+                if (error) {
+                  console.error(`[Price History] ❌ Error saving ${assetIdForPriceHistory}:`, error.message);
+                } else if (priceChanged) {
+                  console.log(`[Price History] ✅ Updated: ${assetIdForPriceHistory} = ${currentPrice} USDT (was ${existingPriceValue})`);
+                }
               }
+              // Fiyat değişmemişse sessizce skip et (disk IO tasarrufu)
             } catch (cacheError) {
-              // HER HATAYI logla
-              console.error(`[Price History] ❌ Exception saving ${priceData.symbol}:`, {
-                message: cacheError.message,
-                stack: cacheError.stack
-              });
+              console.error(`[Price History] ❌ Exception saving ${priceData.symbol}:`, cacheError.message);
             }
           })();
 

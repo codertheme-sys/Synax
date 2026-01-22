@@ -48,8 +48,8 @@ Veya online tool kullanın:
      - ⚠️ **ÖNEMLİ**: `Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` yerine Vercel'de oluşturduğunuz **GERÇEK** `CRON_SECRET` değerini yazın!
      - ❌ YANLIŞ: `secret=openssl rand -hex 32` (bu bir komut, değer değil!)
      - ✅ DOĞRU: `secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` (gerçek secret değeri)
-   - **Schedule**: Her 2 dakika
-     - **Minute**: `*/2` (her 2 dakikada bir)
+   - **Schedule**: Her 10 dakika (disk IO azaltmak için)
+     - **Minute**: `*/10` (her 10 dakikada bir)
      - **Hour**: `*` (her saat)
      - **Day**: `*` (her gün)
      - **Month**: `*` (her ay)
