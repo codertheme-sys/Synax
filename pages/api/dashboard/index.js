@@ -30,29 +30,50 @@ export default async function handler(req, res) {
     let pnl24h = 0;
     let cashBalance = 0;
 
-    // 2. Portfolio verileri - First update prices, then fetch
+    // 2. Portfolio verileri - Optimized: Fetch all prices once, then update portfolio
     let portfolio = [];
     try {
-      // Update portfolio prices from price_history before fetching
+      // First, fetch all portfolio items
       const { data: initialPortfolio, error: initialError } = await supabaseAdmin
         .from('portfolio')
         .select('*')
         .eq('user_id', userId);
 
       if (initialPortfolio && initialPortfolio.length > 0) {
-        // Update each portfolio item with current prices
+        // OPTIMIZATION: Fetch all needed prices in ONE query instead of N queries
+        const uniqueAssets = [...new Set(initialPortfolio.map(p => `${p.asset_id}_${p.asset_type}`))];
+        const assetFilters = uniqueAssets.map(asset => {
+          const [asset_id, asset_type] = asset.split('_');
+          return { asset_id, asset_type };
+        });
+
+        // Build a single query to get all prices at once
+        const priceMap = new Map();
+        if (assetFilters.length > 0) {
+          // Use IN clause for better performance (if supported) or fetch all and filter
+          const { data: allPrices, error: pricesError } = await supabaseAdmin
+            .from('price_history')
+            .select('asset_id, asset_type, price')
+            .in('asset_type', [...new Set(assetFilters.map(a => a.asset_type))]);
+
+          if (!pricesError && allPrices) {
+            // Create a map for O(1) lookup
+            allPrices.forEach(price => {
+              const key = `${price.asset_id}_${price.asset_type}`;
+              if (!priceMap.has(key)) {
+                priceMap.set(key, parseFloat(price.price || 0));
+              }
+            });
+          }
+        }
+
+        // Update each portfolio item using the price map (no additional queries)
         const updatePromises = initialPortfolio.map(async (p) => {
           try {
-            // Get current price from price_history
-            const { data: priceData } = await supabaseAdmin
-              .from('price_history')
-              .select('price')
-              .eq('asset_id', p.asset_id)
-              .eq('asset_type', p.asset_type)
-              .single();
+            const key = `${p.asset_id}_${p.asset_type}`;
+            const currentPrice = priceMap.get(key) || 0;
 
-            if (priceData && priceData.price) {
-              const currentPrice = parseFloat(priceData.price);
+            if (currentPrice > 0) {
               const quantity = parseFloat(p.quantity || 0);
               const averagePrice = parseFloat(p.average_price || 0);
               const totalValue = quantity * currentPrice;
