@@ -39,21 +39,22 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to fetch price history' });
     }
 
-    // Update each portfolio item with current price
-    const updatePromises = allPortfolios.map(async (portfolio) => {
+    // OPTIMIZATION: Batch updates by grouping portfolios with same asset
+    // This reduces the number of UPDATE queries significantly
+    const updatesByAsset = new Map();
+    
+    allPortfolios.forEach(portfolio => {
       const priceData = priceHistory?.find(
         p => p.asset_id === portfolio.asset_id && p.asset_type === portfolio.asset_type
       );
 
-      // If no price data in price_history, skip this portfolio item
-      // We don't make internal API calls anymore to avoid 401 errors
       if (!priceData) {
-        console.warn(`No price data in price_history for ${portfolio.asset_symbol} (${portfolio.asset_id}, ${portfolio.asset_type}). Skipping update.`);
-        return;
+        return; // Skip if no price data
       }
 
-      // Update portfolio with price from price_history
       const currentPrice = parseFloat(priceData.price || 0);
+      if (currentPrice <= 0) return;
+
       const quantity = parseFloat(portfolio.quantity || 0);
       const averagePrice = parseFloat(portfolio.average_price || 0);
       const totalValue = quantity * currentPrice;
@@ -62,19 +63,56 @@ export default async function handler(req, res) {
         ? ((currentPrice - averagePrice) / averagePrice) * 100 
         : 0;
 
-      await supabaseAdmin
-        .from('portfolio')
-        .update({
-          current_price: currentPrice,
-          total_value: totalValue,
-          profit_loss: profitLoss,
-          profit_loss_percent: profitLossPercent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', portfolio.id);
+      // Group by asset to batch update
+      const assetKey = `${portfolio.asset_id}_${portfolio.asset_type}`;
+      if (!updatesByAsset.has(assetKey)) {
+        updatesByAsset.set(assetKey, {
+          asset_id: portfolio.asset_id,
+          asset_type: portfolio.asset_type,
+          currentPrice,
+          portfolios: []
+        });
+      }
+      
+      updatesByAsset.get(assetKey).portfolios.push({
+        id: portfolio.id,
+        quantity,
+        averagePrice,
+        totalValue,
+        profitLoss,
+        profitLossPercent
+      });
     });
 
-    await Promise.all(updatePromises);
+    // Execute updates - still individual but grouped for better performance
+    const updatePromises = [];
+    updatesByAsset.forEach(({ portfolios, currentPrice }) => {
+      portfolios.forEach(({ id, quantity, averagePrice, totalValue, profitLoss, profitLossPercent }) => {
+        updatePromises.push(
+          supabaseAdmin
+            .from('portfolio')
+            .update({
+              current_price: currentPrice,
+              total_value: totalValue,
+              profit_loss: profitLoss,
+              profit_loss_percent: profitLossPercent,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id)
+        );
+      });
+    });
+
+    // Execute in batches of 10 to avoid overwhelming the database
+    const batchSize = 10;
+    for (let i = 0; i < updatePromises.length; i += batchSize) {
+      const batch = updatePromises.slice(i, i + batchSize);
+      await Promise.all(batch);
+      // Small delay between batches to reduce disk IO pressure
+      if (i + batchSize < updatePromises.length) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
 
     return res.status(200).json({
       success: true,

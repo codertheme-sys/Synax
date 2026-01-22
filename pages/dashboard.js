@@ -117,10 +117,7 @@ function HomePage() {
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
-      // Update portfolio prices first (in background, don't wait)
-      fetch('/api/dashboard/update-portfolio-prices', { method: 'POST' }).catch(err => {
-        console.error('Failed to update portfolio prices:', err);
-      });
+      // REMOVED: Portfolio price updates - handled by cron job to reduce disk IO
       try {
         setLoading(true);
         
@@ -434,13 +431,9 @@ function HomePage() {
     fetchDashboardData();
     fetchNews();
     
-    // Periodic price updates (every 60 seconds)
+    // Periodic dashboard refresh (every 60 seconds) - NO portfolio updates to reduce disk IO
     const refreshInterval = setInterval(() => {
-      // Update portfolio prices in background
-      fetch('/api/dashboard/update-portfolio-prices', { method: 'POST' }).catch(err => {
-        console.error('Failed to update portfolio prices:', err);
-      });
-      // Refresh dashboard data
+      // Only refresh dashboard data, portfolio prices updated by cron job
       fetchDashboardData();
     }, 60000); // 60 seconds
     
