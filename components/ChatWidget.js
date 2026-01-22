@@ -330,10 +330,10 @@ const ChatWidget = ({ user }) => {
           }}
           style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            width: '60px',
-            height: '60px',
+            bottom: window.innerWidth <= 768 ? '16px' : '24px',
+            right: window.innerWidth <= 768 ? '16px' : '24px',
+            width: window.innerWidth <= 768 ? '56px' : '60px',
+            height: window.innerWidth <= 768 ? '56px' : '60px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             border: 'none',
@@ -356,7 +356,7 @@ const ChatWidget = ({ user }) => {
           }}
           aria-label="Open chat"
         >
-          <FiMessageCircle size={28} />
+          <FiMessageCircle size={window.innerWidth <= 768 ? 24 : 28} />
         </button>
       )}
 
@@ -366,11 +366,15 @@ const ChatWidget = ({ user }) => {
           ref={chatContainerRef}
           style={{
             position: 'fixed',
-            bottom: isMinimized ? '24px' : '24px',
-            right: '24px',
-            width: isMinimized ? '320px' : '380px',
-            height: isMinimized ? '60px' : '600px',
-            maxHeight: '90vh',
+            bottom: isMinimized ? '16px' : '16px',
+            right: window.innerWidth <= 768 ? '16px' : '24px',
+            left: window.innerWidth <= 768 ? '16px' : 'auto',
+            width: window.innerWidth <= 768 
+              ? (isMinimized ? 'calc(100% - 32px)' : 'calc(100% - 32px)')
+              : (isMinimized ? '320px' : '380px'),
+            maxWidth: window.innerWidth <= 768 ? '400px' : '380px',
+            height: isMinimized ? '60px' : (window.innerWidth <= 768 ? '500px' : '600px'),
+            maxHeight: window.innerWidth <= 768 ? '70vh' : '90vh',
             background: 'rgba(15, 17, 36, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '16px',
