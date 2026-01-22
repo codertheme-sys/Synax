@@ -89,12 +89,29 @@ function AssetsPage() {
         }
         setUser(session.user);
 
-        // Fetch dashboard data
-        const response = await fetch('/api/dashboard', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
+        // Fetch dashboard data with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        let response;
+        try {
+          response = await fetch('/api/dashboard', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            console.error('Dashboard API timeout (15s)');
+            toast.error('Request timeout. Please try again.');
+            setLoading(false);
+            return;
+          }
+          throw fetchError;
+        }
 
         if (response.ok) {
           const result = await response.json();
