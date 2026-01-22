@@ -339,17 +339,14 @@ function AdminPage() {
           </Link>
         </div>
 
-        <div className="flex gap-4 mb-8 border-b border-white/10">
-          <div style={{ 
-            display: 'flex', 
-            gap: '8px', 
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollbarWidth: 'thin',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: '4px',
-          }}>
-            {['overview', 'users', 'trades', 'payments', 'messages', 'settings'].map((tab) => (
+        <div className="flex gap-4 mb-8 border-b border-white/10" style={{ 
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'thin',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: '4px',
+        }}>
+          {['overview', 'users', 'trades', 'payments', 'messages', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
