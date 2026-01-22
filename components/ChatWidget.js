@@ -13,11 +13,22 @@ const ChatWidget = ({ user }) => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingChannelRef = useRef(null);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -330,10 +341,10 @@ const ChatWidget = ({ user }) => {
           }}
           style={{
             position: 'fixed',
-            bottom: window.innerWidth <= 768 ? '16px' : '24px',
-            right: window.innerWidth <= 768 ? '16px' : '24px',
-            width: window.innerWidth <= 768 ? '56px' : '60px',
-            height: window.innerWidth <= 768 ? '56px' : '60px',
+            bottom: isMobile ? '16px' : '24px',
+            right: isMobile ? '16px' : '24px',
+            width: isMobile ? '56px' : '60px',
+            height: isMobile ? '56px' : '60px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             border: 'none',
@@ -356,7 +367,7 @@ const ChatWidget = ({ user }) => {
           }}
           aria-label="Open chat"
         >
-          <FiMessageCircle size={window.innerWidth <= 768 ? 24 : 28} />
+          <FiMessageCircle size={isMobile ? 24 : 28} />
         </button>
       )}
 
@@ -367,14 +378,14 @@ const ChatWidget = ({ user }) => {
           style={{
             position: 'fixed',
             bottom: isMinimized ? '16px' : '16px',
-            right: window.innerWidth <= 768 ? '16px' : '24px',
-            left: window.innerWidth <= 768 ? '16px' : 'auto',
-            width: window.innerWidth <= 768 
+            right: isMobile ? '16px' : '24px',
+            left: isMobile ? '16px' : 'auto',
+            width: isMobile 
               ? (isMinimized ? 'calc(100% - 32px)' : 'calc(100% - 32px)')
               : (isMinimized ? '320px' : '380px'),
-            maxWidth: window.innerWidth <= 768 ? '400px' : '380px',
-            height: isMinimized ? '60px' : (window.innerWidth <= 768 ? '500px' : '600px'),
-            maxHeight: window.innerWidth <= 768 ? '70vh' : '90vh',
+            maxWidth: isMobile ? '400px' : '380px',
+            height: isMinimized ? '60px' : (isMobile ? '500px' : '600px'),
+            maxHeight: isMobile ? '70vh' : '90vh',
             background: 'rgba(15, 17, 36, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '16px',
