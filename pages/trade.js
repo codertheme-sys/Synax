@@ -393,7 +393,7 @@ function AlertsManager({ userId, selectedAsset }) {
     };
 
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 10000); // Refresh every 10 seconds
+    const interval = setInterval(fetchAlerts, 60000); // Refresh every 60 seconds (reduced from 10s to prevent disk IO)
     return () => clearInterval(interval);
   }, [userId]);
 

@@ -691,9 +691,10 @@ function MyApp({ Component, pageProps }) {
       Notification.requestPermission();
     }
 
-    // Check immediately and then every 3 seconds
+    // Check immediately and then every 60 seconds (reduced from 3s to prevent disk IO exhaustion)
+    // Alert checking moved to less frequent interval to reduce database load
     checkAndTriggerAlerts();
-    const interval = setInterval(checkAndTriggerAlerts, 3000);
+    const interval = setInterval(checkAndTriggerAlerts, 60000); // 60 seconds instead of 3
 
     // Check when tab becomes visible (user switches back)
     const handleVisibilityChange = () => {
