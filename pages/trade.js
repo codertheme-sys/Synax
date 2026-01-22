@@ -145,7 +145,7 @@ function OrderBook({ symbol }) {
     };
 
     fetchOrderBook();
-    const interval = setInterval(fetchOrderBook, 2000); // Update every 2 seconds
+    const interval = setInterval(fetchOrderBook, 10000); // Update every 10 seconds (reduced from 2s to prevent disk IO)
     return () => clearInterval(interval);
   }, [symbol]);
 
@@ -725,7 +725,7 @@ function OpenOrdersList({ userId }) {
     };
 
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchOrders, 30000); // Refresh every 30 seconds (reduced from 5s to prevent disk IO)
     return () => clearInterval(interval);
   }, [userId]);
 
@@ -1178,7 +1178,7 @@ function TradePage() {
     fetchBalance();
     
     // Refresh balance every 5 seconds to catch deposit approvals
-    const balanceInterval = setInterval(fetchBalance, 5000);
+    const balanceInterval = setInterval(fetchBalance, 30000); // Reduced from 5s to 30s to prevent disk IO
     
     return () => clearInterval(balanceInterval);
   }, []);
