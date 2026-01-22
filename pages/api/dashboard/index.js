@@ -30,93 +30,25 @@ export default async function handler(req, res) {
     let pnl24h = 0;
     let cashBalance = 0;
 
-    // 2. Portfolio verileri - Optimized: Fetch all prices once, then update portfolio
+    // 2. Portfolio verileri - READ ONLY (no updates to reduce disk IO)
+    // Updates are handled by separate cron job /api/dashboard/update-portfolio-prices
     let portfolio = [];
     try {
-      // First, fetch all portfolio items
-      const { data: initialPortfolio, error: initialError } = await supabaseAdmin
+      const { data: portfolioData, error: portfolioError } = await supabaseAdmin
         .from('portfolio')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .neq('asset_symbol', 'USDT')
+        .neq('asset_id', 'USDT');
 
-      if (initialPortfolio && initialPortfolio.length > 0) {
-        // OPTIMIZATION: Fetch all needed prices in ONE query instead of N queries
-        const uniqueAssets = [...new Set(initialPortfolio.map(p => `${p.asset_id}_${p.asset_type}`))];
-        const assetFilters = uniqueAssets.map(asset => {
-          const [asset_id, asset_type] = asset.split('_');
-          return { asset_id, asset_type };
-        });
-
-        // Build a single query to get all prices at once
-        const priceMap = new Map();
-        if (assetFilters.length > 0) {
-          // Use IN clause for better performance (if supported) or fetch all and filter
-          const { data: allPrices, error: pricesError } = await supabaseAdmin
-            .from('price_history')
-            .select('asset_id, asset_type, price')
-            .in('asset_type', [...new Set(assetFilters.map(a => a.asset_type))]);
-
-          if (!pricesError && allPrices) {
-            // Create a map for O(1) lookup
-            allPrices.forEach(price => {
-              const key = `${price.asset_id}_${price.asset_type}`;
-              if (!priceMap.has(key)) {
-                priceMap.set(key, parseFloat(price.price || 0));
-              }
-            });
-          }
-        }
-
-        // Update each portfolio item using the price map (no additional queries)
-        const updatePromises = initialPortfolio.map(async (p) => {
-          try {
-            const key = `${p.asset_id}_${p.asset_type}`;
-            const currentPrice = priceMap.get(key) || 0;
-
-            if (currentPrice > 0) {
-              const quantity = parseFloat(p.quantity || 0);
-              const averagePrice = parseFloat(p.average_price || 0);
-              const totalValue = quantity * currentPrice;
-              const profitLoss = totalValue - (quantity * averagePrice);
-              const profitLossPercent = averagePrice > 0 
-                ? ((currentPrice - averagePrice) / averagePrice) * 100 
-                : 0;
-
-              await supabaseAdmin
-                .from('portfolio')
-                .update({
-                  current_price: currentPrice,
-                  total_value: totalValue,
-                  profit_loss: profitLoss,
-                  profit_loss_percent: profitLossPercent,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', p.id);
-            }
-          } catch (err) {
-            // Silently continue if price update fails
-          }
-        });
-
-        await Promise.all(updatePromises);
-
-        // Now fetch updated portfolio (exclude USDT - USDT should only be in balance, not portfolio)
-        const { data: portfolioData, error: portfolioError } = await supabaseAdmin
-          .from('portfolio')
-          .select('*')
-          .eq('user_id', userId)
-          .neq('asset_symbol', 'USDT')
-          .neq('asset_id', 'USDT');
-
-        if (portfolioError) {
-          console.error('Portfolio error:', portfolioError);
-          portfolio = [];
-        } else {
-          // Double filter to ensure no USDT items
-          portfolio = (portfolioData || []).filter(p => 
-            p.asset_symbol?.toUpperCase() !== 'USDT' && p.asset_id?.toUpperCase() !== 'USDT'
-          );
-        }
+      if (portfolioError) {
+        console.error('Portfolio error:', portfolioError);
+        portfolio = [];
+      } else {
+        // Filter out USDT items
+        portfolio = (portfolioData || []).filter(p => 
+          p.asset_symbol?.toUpperCase() !== 'USDT' && p.asset_id?.toUpperCase() !== 'USDT'
+        );
       }
     } catch (err) {
       console.error('Portfolio fetch error:', err);
@@ -131,44 +63,30 @@ export default async function handler(req, res) {
       .filter(p => parseFloat(p.quantity || 0) > 0)
       .reduce((sum, p) => sum + parseFloat(p.profit_loss || 0), 0);
 
-    // 3. Recent Orders (son 10 işlem)
+    // 3-4. Fetch Recent Orders and Watchlist in parallel to reduce queries
     let recentOrders = [];
-    try {
-      const { data: ordersData, error: ordersError } = await supabaseAdmin
-        .from('trading_history')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (ordersError) {
-        console.error('Orders error:', ordersError);
-        recentOrders = [];
-      } else {
-        recentOrders = ordersData || [];
-      }
-    } catch (err) {
-      console.error('Orders fetch error:', err);
-      recentOrders = [];
-    }
-
-    // 4. Watchlist
     let watchlist = [];
     try {
-      const { data: watchlistData, error: watchlistError } = await supabaseAdmin
-        .from('watchlist')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const [ordersResult, watchlistResult] = await Promise.all([
+        supabaseAdmin
+          .from('trading_history')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabaseAdmin
+          .from('watchlist')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50) // Limit watchlist size
+      ]);
 
-      if (watchlistError) {
-        console.error('Watchlist error:', watchlistError);
-        watchlist = [];
-      } else {
-        watchlist = watchlistData || [];
-      }
+      recentOrders = ordersResult.data || [];
+      watchlist = watchlistResult.data || [];
     } catch (err) {
-      console.error('Watchlist fetch error:', err);
+      console.error('Error fetching orders/watchlist:', err);
+      recentOrders = [];
       watchlist = [];
     }
 
@@ -213,25 +131,42 @@ export default async function handler(req, res) {
     // Calculate Portfolio Value = Assets + Earn Products + Cash Balance
     portfolioValue = assetsValue + earnProductsValue + cashBalance;
 
-    // 7. Watchlist with prices
+    // 7. Watchlist with prices - OPTIMIZED: Only fetch if watchlist exists
     let watchlistWithPrices = [];
     if (watchlist && watchlist.length > 0) {
       try {
-        const assetIds = watchlist.map(w => w.asset_id);
-        const { data: priceHistory } = await supabaseAdmin
-          .from('price_history')
-          .select('*')
-          .in('asset_id', assetIds);
+        const assetIds = watchlist.map(w => w.asset_id).filter(Boolean);
+        if (assetIds.length > 0) {
+          const { data: priceHistory } = await supabaseAdmin
+            .from('price_history')
+            .select('asset_id, asset_type, price, price_change_24h, price_change_percent_24h')
+            .in('asset_id', assetIds)
+            .limit(100); // Limit to prevent large queries
 
-        watchlistWithPrices = watchlist.map(w => {
-          const price = priceHistory?.find(p => p.asset_id === w.asset_id);
-          return {
+          const priceMap = new Map();
+          if (priceHistory) {
+            priceHistory.forEach(p => {
+              priceMap.set(p.asset_id, p);
+            });
+          }
+
+          watchlistWithPrices = watchlist.map(w => {
+            const price = priceMap.get(w.asset_id);
+            return {
+              ...w,
+              current_price: price ? parseFloat(price.price || 0) : 0,
+              price_change_24h: price ? parseFloat(price.price_change_24h || 0) : 0,
+              price_change_percent_24h: price ? parseFloat(price.price_change_percent_24h || 0) : 0,
+            };
+          });
+        } else {
+          watchlistWithPrices = watchlist.map(w => ({
             ...w,
-            current_price: price ? parseFloat(price.price) : 0,
-            price_change_24h: price ? parseFloat(price.price_change_24h || 0) : 0,
-            price_change_percent_24h: price ? parseFloat(price.price_change_percent_24h || 0) : 0,
-          };
-        });
+            current_price: 0,
+            price_change_24h: 0,
+            price_change_percent_24h: 0,
+          }));
+        }
       } catch (err) {
         console.error('Price history fetch error:', err);
         watchlistWithPrices = watchlist.map(w => ({
@@ -259,26 +194,27 @@ export default async function handler(req, res) {
       console.error('Error fetching alerts:', err);
     }
 
-    // 9. Recent Deposits & Withdrawals
+    // 9. Recent Deposits & Withdrawals - Fetch in parallel
     let recentDeposits = [];
     let recentWithdrawals = [];
     try {
-      const { data: depositsData } = await supabaseAdmin
-        .from('deposits')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const [depositsResult, withdrawalsResult] = await Promise.all([
+        supabaseAdmin
+          .from('deposits')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabaseAdmin
+          .from('withdrawals')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
 
-      const { data: withdrawalsData } = await supabaseAdmin
-        .from('withdrawals')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      recentDeposits = depositsData || [];
-      recentWithdrawals = withdrawalsData || [];
+      recentDeposits = depositsResult.data || [];
+      recentWithdrawals = withdrawalsResult.data || [];
     } catch (err) {
       console.error('Error fetching deposits/withdrawals:', err);
     }
