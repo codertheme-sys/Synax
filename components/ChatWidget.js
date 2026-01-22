@@ -383,9 +383,9 @@ const ChatWidget = ({ user }) => {
             width: isMobile 
               ? (isMinimized ? 'calc(100% - 32px)' : 'calc(100% - 32px)')
               : (isMinimized ? '320px' : '380px'),
-            maxWidth: isMobile ? '400px' : '380px',
-            height: isMinimized ? '60px' : (isMobile ? '500px' : '600px'),
-            maxHeight: isMobile ? '70vh' : '90vh',
+            maxWidth: isMobile ? '350px' : '380px',
+            height: isMinimized ? '60px' : (isMobile ? '420px' : '600px'),
+            maxHeight: isMobile ? '60vh' : '90vh',
             background: 'rgba(15, 17, 36, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '16px',
@@ -413,7 +413,7 @@ const ChatWidget = ({ user }) => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <FiMessageCircle size={20} color="#ffffff" />
-              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '16px' }}>
+              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: isMobile ? '13px' : '16px' }}>
                 Support Chat
               </span>
             </div>
@@ -465,10 +465,10 @@ const ChatWidget = ({ user }) => {
                 style={{
                   flex: 1,
                   overflowY: 'auto',
-                  padding: '20px',
+                  padding: isMobile ? '12px' : '20px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '16px',
+                  gap: isMobile ? '12px' : '16px',
                 }}
               >
                 {loading ? (
@@ -498,13 +498,13 @@ const ChatWidget = ({ user }) => {
                       <div
                         style={{
                           maxWidth: '75%',
-                          padding: '12px 16px',
+                          padding: isMobile ? '10px 14px' : '12px 16px',
                           borderRadius: '12px',
                           background: message.is_admin
                             ? 'rgba(59, 130, 246, 0.2)'
                             : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                           color: '#ffffff',
-                          fontSize: '14px',
+                          fontSize: isMobile ? '11px' : '14px',
                           lineHeight: '1.5',
                           wordWrap: 'break-word',
                         }}
@@ -685,7 +685,7 @@ const ChatWidget = ({ user }) => {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
                     style={{
-                      padding: '12px 16px',
+                      padding: isMobile ? '10px 14px' : '12px 16px',
                       borderRadius: '12px',
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -738,12 +738,12 @@ const ChatWidget = ({ user }) => {
                     disabled={sending || uploadingFile}
                     style={{
                       flex: 1,
-                      padding: '12px 16px',
+                      padding: isMobile ? '10px 14px' : '12px 16px',
                       borderRadius: '12px',
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       color: '#ffffff',
-                      fontSize: '14px',
+                      fontSize: isMobile ? '11px' : '14px',
                       outline: 'none',
                       transition: 'all 0.2s',
                     }}
@@ -760,7 +760,7 @@ const ChatWidget = ({ user }) => {
                     type="submit"
                     disabled={sending || uploadingFile || (!newMessage.trim() && !selectedFile)}
                     style={{
-                      padding: '12px 16px',
+                      padding: isMobile ? '10px 14px' : '12px 16px',
                       borderRadius: '12px',
                       background: (sending || uploadingFile || (!newMessage.trim() && !selectedFile))
                         ? 'rgba(59, 130, 246, 0.5)'
@@ -775,9 +775,9 @@ const ChatWidget = ({ user }) => {
                     }}
                   >
                     {uploadingFile ? (
-                      <span style={{ fontSize: '12px' }}>Uploading...</span>
+                      <span style={{ fontSize: isMobile ? '10px' : '12px' }}>Uploading...</span>
                     ) : (
-                      <FiSend size={18} />
+                      <FiSend size={isMobile ? 16 : 18} />
                     )}
                   </button>
                 </div>

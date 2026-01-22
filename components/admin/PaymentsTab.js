@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import ReceiptViewer from './ReceiptViewer';
@@ -14,6 +14,16 @@ const cardStyle = {
 function PaymentsTab({ adminData, onRefresh }) {
   const [paymentTab, setPaymentTab] = useState('pending');
   const [processingIds, setProcessingIds] = useState(new Set());
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const deposits = adminData.deposits || {
     pending: adminData.pendingDeposits || [],
@@ -170,7 +180,7 @@ function PaymentsTab({ adminData, onRefresh }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
             <div style={{
-              fontSize: '48px',
+              fontSize: isMobile ? '32px' : '48px',
               fontWeight: 700,
               color: isDeposit ? '#22c55e' : '#ef4444',
               textAlign: 'right',
@@ -179,28 +189,28 @@ function PaymentsTab({ adminData, onRefresh }) {
               {isDeposit ? (
                 <>
                   {parseFloat(item.amount || 0).toFixed(coin === 'BTC' || coin === 'ETH' ? 8 : 2)}
-                  <span style={{ fontSize: '24px', marginLeft: '4px' }}>{coin}</span>
+                  <span style={{ fontSize: isMobile ? '16px' : '24px', marginLeft: '4px' }}>{coin}</span>
                 </>
               ) : (
                 <>
                   {parseFloat(item.amount || 0).toFixed(2)}
-                  <span style={{ fontSize: '24px', marginLeft: '4px' }}>USDT</span>
+                  <span style={{ fontSize: isMobile ? '16px' : '24px', marginLeft: '4px' }}>USDT</span>
                 </>
               )}
             </div>
             {paymentTab === 'pending' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '6px' : '8px' }}>
                 <button
                   onClick={() => handleApprove(item.id, type)}
                   disabled={isProcessing || item.status !== 'pending'}
                   style={{
-                    padding: '10px 20px',
+                    padding: isMobile ? '8px 16px' : '10px 20px',
                     borderRadius: '8px',
                     background: isProcessing || item.status !== 'pending' 
                       ? 'rgba(16, 185, 129, 0.3)' 
                       : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#ffffff',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '12px' : '14px',
                     fontWeight: 600,
                     cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
                     border: 'none',
@@ -214,13 +224,13 @@ function PaymentsTab({ adminData, onRefresh }) {
                   onClick={() => handleReject(item.id, type)}
                   disabled={isProcessing || item.status !== 'pending'}
                   style={{
-                    padding: '10px 20px',
+                    padding: isMobile ? '8px 16px' : '10px 20px',
                     borderRadius: '8px',
                     background: isProcessing || item.status !== 'pending'
                       ? 'rgba(239, 68, 68, 0.3)'
                       : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                     color: '#ffffff',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '12px' : '14px',
                     fontWeight: 600,
                     cursor: isProcessing || item.status !== 'pending' ? 'not-allowed' : 'pointer',
                     border: 'none',

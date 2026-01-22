@@ -1581,7 +1581,7 @@ function TradePage() {
       <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white pb-16">
         <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16">
-        <div className={`text-center mb-8 sm:mb-12 ${isMobile ? 'px-0' : ''}`}>
+        <div className={`mb-8 sm:mb-12 ${isMobile ? 'px-0 text-left' : 'text-center'}`}>
           <h1 style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: 800, color: '#ffffff', lineHeight: '1.1', marginBottom: '12px', letterSpacing: '-0.02em' }}>
             Trade
           </h1>
@@ -1590,7 +1590,7 @@ function TradePage() {
             color: '#d1d5db', 
             lineHeight: '1.6', 
             maxWidth: isMobile ? '100%' : '600px', 
-            margin: '0 auto', 
+            margin: isMobile ? '0' : '0 auto', 
             padding: isMobile ? '0' : '0' 
           }}>
             Execute trades with real-time market data and instant execution.
