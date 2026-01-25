@@ -167,9 +167,26 @@ function PaymentsTab({ adminData, onRefresh }) {
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-                Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>{parseFloat(item.amount || 0).toFixed(2)} USDT</span>
-              </div>
+              <>
+                <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                  Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>{parseFloat(item.amount || 0).toFixed(2)} USDT</span>
+                </div>
+                {item.crypto_address && (
+                  <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                    Wallet Address: <span style={{ color: '#ffffff', wordBreak: 'break-all' }}>{item.crypto_address}</span>
+                  </div>
+                )}
+                {item.crypto_network && (
+                  <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                    Network: <span style={{ color: '#ffffff' }}>{item.crypto_network}</span>
+                  </div>
+                )}
+                {item.bank_account && (
+                  <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
+                    Bank Account: <span style={{ color: '#ffffff', wordBreak: 'break-all' }}>{item.bank_account}</span>
+                  </div>
+                )}
+              </>
             )}
             <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
               Status: <span style={{ color: statusColor, fontWeight: 600 }}>{item.status}</span>
