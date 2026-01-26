@@ -206,6 +206,13 @@ function AdminPage() {
         new Date(b.created_at) - new Date(a.created_at)
       );
 
+      // Debug: Log KYC documents
+      console.log('🔍 [Admin User Details] KYC Documents:', {
+        count: result.data?.kyc_documents?.length || 0,
+        documents: result.data?.kyc_documents || [],
+        profile_kyc_url: result.data?.profile?.kyc_document_url
+      });
+
       setUserDetails({
         ...result.data?.profile,
         trades: allTrades,
@@ -1321,24 +1328,38 @@ function AdminPage() {
                   </div>
                   
                   {(() => {
+                    // Debug: Log current state
+                    console.log('🔍 [KYC Display] userDetails.kyc_documents:', userDetails.kyc_documents);
+                    console.log('🔍 [KYC Display] userDetails.kyc_document_url:', userDetails.kyc_document_url);
+                    
                     // Find the most recent KYC document (any type, prioritize id_card)
                     let kycDoc = null;
                     if (userDetails.kyc_documents && userDetails.kyc_documents.length > 0) {
+                      console.log('🔍 [KYC Display] Found', userDetails.kyc_documents.length, 'KYC documents');
+                      
                       // First try to find id_card
-                      kycDoc = userDetails.kyc_documents
-                        .filter(d => d.document_type === 'id_card' && d.document_url && d.document_url !== 'pending_upload')
-                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                      const idCards = userDetails.kyc_documents
+                        .filter(d => d.document_type === 'id_card' && d.document_url && d.document_url !== 'pending_upload');
+                      console.log('🔍 [KYC Display] ID cards found:', idCards.length);
+                      
+                      kycDoc = idCards.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
                       
                       // If no id_card, get any document with URL
                       if (!kycDoc) {
-                        kycDoc = userDetails.kyc_documents
-                          .filter(d => d.document_url && d.document_url !== 'pending_upload')
-                          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                        const allDocs = userDetails.kyc_documents
+                          .filter(d => d.document_url && d.document_url !== 'pending_upload');
+                        console.log('🔍 [KYC Display] All valid documents:', allDocs.length);
+                        kycDoc = allDocs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
                       }
+                      
+                      console.log('🔍 [KYC Display] Selected document:', kycDoc);
+                    } else {
+                      console.log('🔍 [KYC Display] No KYC documents array or empty');
                     }
                     
                     // Fallback to profile kyc_document_url
                     const documentUrl = kycDoc?.document_url || userDetails.kyc_document_url;
+                    console.log('🔍 [KYC Display] Final document URL:', documentUrl);
                     
                     // If URL is from Supabase storage, ensure it's accessible
                     let finalDocumentUrl = documentUrl;
@@ -1352,45 +1373,71 @@ function AdminPage() {
                                       finalDocumentUrl.startsWith('data:image') ||
                                       finalDocumentUrl.includes('image');
                       
+                      console.log('🔍 [KYC Display] Is image:', isImage, 'URL:', finalDocumentUrl);
+                      
                       return (
                         <div style={{ padding: '20px', background: 'rgba(15, 17, 36, 0.5)', borderRadius: '12px' }}>
                           {isImage ? (
-                            <img 
-                              src={finalDocumentUrl} 
-                              alt="KYC Document" 
-                              style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '600px', 
+                            <>
+                              <img 
+                                src={finalDocumentUrl} 
+                                alt="KYC Document" 
+                                style={{ 
+                                  maxWidth: '100%', 
+                                  maxHeight: '600px', 
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  objectFit: 'contain',
+                                  display: 'block',
+                                  margin: '0 auto',
+                                }}
+                                onError={(e) => {
+                                  console.error('❌ [KYC Display] Image load error:', finalDocumentUrl);
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) {
+                                    e.target.nextSibling.style.display = 'inline-block';
+                                  }
+                                }}
+                                onLoad={() => {
+                                  console.log('✅ [KYC Display] Image loaded successfully:', finalDocumentUrl);
+                                }}
+                              />
+                              <a 
+                                href={finalDocumentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '12px 24px',
+                                  borderRadius: '8px',
+                                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                  color: '#ffffff',
+                                  textDecoration: 'none',
+                                  fontWeight: 600,
+                                  marginTop: '12px',
+                                }}
+                              >
+                                Open in New Tab
+                              </a>
+                            </>
+                          ) : (
+                            <a 
+                              href={finalDocumentUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-block',
+                                padding: '12px 24px',
                                 borderRadius: '8px',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                objectFit: 'contain',
-                                display: 'block',
-                                margin: '0 auto',
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                color: '#ffffff',
+                                textDecoration: 'none',
+                                fontWeight: 600,
                               }}
-                              onError={(e) => {
-                                console.error('KYC image load error:', finalDocumentUrl);
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'inline-block';
-                              }}
-                            />
-                          ) : null}
-                          <a 
-                            href={finalDocumentUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{
-                              display: isImage ? 'none' : 'inline-block',
-                              padding: '12px 24px',
-                              borderRadius: '8px',
-                              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                              color: '#ffffff',
-                              textDecoration: 'none',
-                              fontWeight: 600,
-                              marginTop: isImage ? '12px' : '0',
-                            }}
-                          >
-                            {isImage ? 'Open in New Tab' : 'View KYC Document'}
-                          </a>
+                            >
+                              View KYC Document
+                            </a>
+                          )}
                           {kycDoc && (
                             <div style={{ marginTop: '12px', fontSize: '12px', color: '#9ca3af' }}>
                               Type: {kycDoc.document_type?.replace(/_/g, ' ') || 'N/A'} | 
@@ -1401,9 +1448,14 @@ function AdminPage() {
                         </div>
                       );
                     } else {
+                      console.log('❌ [KYC Display] No valid document URL found');
                       return (
                         <div style={{ padding: '40px', background: 'rgba(15, 17, 36, 0.5)', borderRadius: '12px', textAlign: 'center', color: '#9ca3af' }}>
-                          No KYC document uploaded
+                          <div style={{ marginBottom: '12px' }}>No KYC document uploaded</div>
+                          <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                            Debug: kyc_documents={userDetails.kyc_documents?.length || 0}, 
+                            kyc_document_url={userDetails.kyc_document_url ? 'exists' : 'null'}
+                          </div>
                         </div>
                       );
                     }
