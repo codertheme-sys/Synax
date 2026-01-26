@@ -61,6 +61,11 @@ export default async function handler(req, res) {
       profile_kyc_url: userProfile?.kyc_document_url
     });
 
+    // If there's an error fetching KYC documents, log it but don't fail the request
+    if (kycDocumentsError) {
+      console.error('❌ [API User Details] KYC Documents Error:', kycDocumentsError);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -73,6 +78,17 @@ export default async function handler(req, res) {
         trading_history: tradingHistory || [],
         binary_trades: binaryTrades || [],
         kyc_documents: kycDocuments || [],
+        // Include debug info in response for troubleshooting
+        _debug: {
+          kyc_documents_error: kycDocumentsError ? {
+            message: kycDocumentsError.message,
+            code: kycDocumentsError.code,
+            details: kycDocumentsError.details,
+            hint: kycDocumentsError.hint
+          } : null,
+          kyc_documents_count: kycDocuments?.length || 0,
+          profile_kyc_url: userProfile?.kyc_document_url || null
+        }
       },
     });
   } catch (error) {

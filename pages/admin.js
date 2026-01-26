@@ -210,8 +210,14 @@ function AdminPage() {
       console.log('🔍 [Admin User Details] KYC Documents:', {
         count: result.data?.kyc_documents?.length || 0,
         documents: result.data?.kyc_documents || [],
-        profile_kyc_url: result.data?.profile?.kyc_document_url
+        profile_kyc_url: result.data?.profile?.kyc_document_url,
+        debug_info: result.data?._debug
       });
+
+      // If there's a KYC documents error, log it
+      if (result.data?._debug?.kyc_documents_error) {
+        console.error('❌ [Admin User Details] KYC Documents API Error:', result.data._debug.kyc_documents_error);
+      }
 
       setUserDetails({
         ...result.data?.profile,
