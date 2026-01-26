@@ -33,14 +33,14 @@ export default async function handler(req, res) {
     }
 
     const [
-      { data: userProfile },
-      { data: portfolio },
-      { data: deposits },
-      { data: withdrawals },
-      { data: subscriptions },
-      { data: tradingHistory },
-      { data: binaryTrades },
-      { data: kycDocuments },
+      { data: userProfile, error: profileError },
+      { data: portfolio, error: portfolioError },
+      { data: deposits, error: depositsError },
+      { data: withdrawals, error: withdrawalsError },
+      { data: subscriptions, error: subscriptionsError },
+      { data: tradingHistory, error: tradingHistoryError },
+      { data: binaryTrades, error: binaryTradesError },
+      { data: kycDocuments, error: kycDocumentsError },
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*').eq('id', user_id).single(),
       supabaseAdmin.from('portfolio').select('*').eq('user_id', user_id),
@@ -51,6 +51,15 @@ export default async function handler(req, res) {
       supabaseAdmin.from('binary_trades').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
       supabaseAdmin.from('kyc_documents').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
     ]);
+
+    // Debug: Log KYC documents query result
+    console.log('🔍 [API User Details] KYC Documents Query:', {
+      user_id,
+      count: kycDocuments?.length || 0,
+      documents: kycDocuments || [],
+      error: kycDocumentsError,
+      profile_kyc_url: userProfile?.kyc_document_url
+    });
 
     return res.status(200).json({
       success: true,
