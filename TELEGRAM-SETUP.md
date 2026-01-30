@@ -25,14 +25,17 @@ Platform, Deposit, Withdraw ve Trade işlemlerinde otomatik Telegram bildirimler
 
 Bildirimlerin gönderileceği chat ID'yi bulmak için:
 
-#### Yöntem 1: Bot ile Konuşma
+#### Yöntem 1: Bot ile Konuşma (Kişisel Chat ID için)
 1. Oluşturduğunuz botu Telegram'da bulun ve başlatın
 2. Bot'a herhangi bir mesaj gönderin (örn: `/start`)
 3. Tarayıcıda şu URL'yi açın:
    ```
-   https://api.telegram.org/bot<BOT_TOKEN>/getUpdates
+   https://api.telegram.org/botYOUR_BOT_TOKEN_HERE/getUpdates
    ```
-   `<BOT_TOKEN>` yerine BotFather'dan aldığınız token'ı yazın
+   **ÖNEMLİ:** `YOUR_BOT_TOKEN_HERE` yerine BotFather'dan aldığınız token'ı **tam olarak** yazın (örn: `8349094828:AAHtcEIGQeMwjX5b9RNI3u_Ps2iL0d0M5fM`)
+   - Token'da `<` ve `>` işaretleri olmamalı
+   - Token'da boşluk olmamalı
+   - Örnek doğru URL: `https://api.telegram.org/bot8349094828:AAHtcEIGQeMwjX5b9RNI3u_Ps2iL0d0M5fM/getUpdates`
 4. JSON response'da `"chat":{"id":123456789}` şeklinde bir satır bulun
 5. Bu sayı sizin **Chat ID**'nizdir
 
@@ -42,16 +45,43 @@ Bildirimlerin gönderileceği chat ID'yi bulmak için:
 
 #### Yöntem 3: Grup Chat ID (Önerilen)
 Bildirimlerin bir gruba gönderilmesi için:
+
+**Adım 1: Botu Gruba Ekleyin**
 1. Telegram'da bir grup oluşturun veya mevcut bir grubu kullanın
-2. Botu gruba ekleyin (Add Members > Bot'unuzu seçin)
-3. Grup içinde bot'a herhangi bir mesaj gönderin (örn: `/start` veya `test`)
-4. Tarayıcıda şu URL'yi açın:
+2. Grup ayarlarına gidin (Grup adına tıklayın)
+3. "Add Members" veya "Üye Ekle" butonuna tıklayın
+4. Bot'unuzu arayın ve ekleyin
+5. Bot'un gruba eklendiğinden emin olun
+
+**Adım 2: Bot'a Mesaj Gönderin**
+1. Grup içinde bot'a herhangi bir mesaj gönderin (örn: `/start` veya `test`)
+2. Bot'un mesajı aldığından emin olun
+
+**Adım 3: Chat ID'yi Bulun**
+1. Tarayıcıda şu URL'yi açın (token'ı değiştirin):
    ```
-   https://api.telegram.org/bot<BOT_TOKEN>/getUpdates
+   https://api.telegram.org/botYOUR_BOT_TOKEN_HERE/getUpdates
    ```
-5. JSON response'da `"chat":{"id":-123456789,"title":"Group Name"}` şeklinde bir satır bulun
+   **ÖNEMLİ:** 
+   - `YOUR_BOT_TOKEN_HERE` yerine BotFather'dan aldığınız token'ı yazın
+   - Token'da `<` ve `>` işaretleri olmamalı
+   - Örnek: `https://api.telegram.org/bot8349094828:AAHtcEIGQeMwjX5b9RNI3u_Ps2iL0d0M5fM/getUpdates`
+
+2. Eğer 404 hatası alıyorsanız:
+   - Bot token'ın doğru olduğundan emin olun
+   - Token'da boşluk veya özel karakter olmadığından emin olun
+   - BotFather'dan token'ı tekrar kopyalayın
+
+3. JSON response'da `"chat":{"id":-123456789,"title":"Group Name"}` şeklinde bir satır bulun
    - **Not:** Grup chat ID'leri genellikle negatif sayılardır (örn: `-1001234567890`)
-6. Bu sayı sizin **Grup Chat ID**'nizdir
+   - `"title"` alanında grup adınız görünecektir
+
+4. Bu sayı sizin **Grup Chat ID**'nizdir
+
+**Alternatif Yöntem: @RawDataBot Kullanma**
+1. [@RawDataBot](https://t.me/RawDataBot) botunu gruba ekleyin
+2. Grup içinde `/start` komutu gönderin
+3. Bot size grup bilgilerini verecektir, içinde chat ID bulunur
 
 ### 3. Environment Variables Ekleme
 
@@ -160,9 +190,16 @@ Kurulumu test etmek için:
 
 ### Chat ID Bulamıyorum
 
-- [@userinfobot](https://t.me/userinfobot) ile konuşun (kişisel chat ID için)
-- Veya `getUpdates` API'sini kullanın (yukarıdaki Yöntem 1)
-- Grup chat ID için: Botu gruba ekleyin ve `getUpdates` API'sini kullanın
+**404 Not Found Hatası Alıyorsanız:**
+1. Bot token'ın doğru olduğundan emin olun
+2. URL'de `<BOT_TOKEN>` veya `<...>` gibi placeholder'lar olmamalı
+3. Token'ı BotFather'dan tekrar kopyalayın ve URL'ye yapıştırın
+4. Token formatı: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz` (iki nokta üst üste ile ayrılmış)
+
+**Alternatif Yöntemler:**
+- **Kişisel Chat ID için:** [@userinfobot](https://t.me/userinfobot) ile konuşun
+- **Grup Chat ID için:** [@RawDataBot](https://t.me/RawDataBot) botunu gruba ekleyin ve `/start` gönderin
+- Veya `getUpdates` API'sini kullanın (yukarıdaki Yöntem 1 veya 3)
 
 ### Grup Bildirimleri Çalışmıyor
 
