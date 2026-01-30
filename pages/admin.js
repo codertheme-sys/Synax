@@ -229,6 +229,7 @@ function AdminPage() {
         earn_subscriptions: result.data?.earn_subscriptions || [],
         binary_trades: result.data?.binary_trades || [],
         kyc_documents: result.data?.kyc_documents || [],
+        convert_history: result.data?.convert_history || [],
       });
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -716,7 +717,7 @@ function AdminPage() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>Loading trades...</div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" style={{ maxHeight: '600px', overflowY: 'auto' }}>
                 <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
@@ -1559,9 +1560,17 @@ function AdminPage() {
                             const coinNetwork = deposit.transaction_id?.split(':') || [];
                             const coin = coinNetwork[0] || deposit.payment_provider || 'N/A';
                             const network = coinNetwork[1] || 'N/A';
+                            // Format amount based on coin type - show full precision for crypto, 2 decimals for USD
+                            const amountValue = parseFloat(deposit.amount || 0);
+                            const isCrypto = coin && coin !== 'USD' && coin !== 'USDT' && coin !== 'N/A';
+                            const formattedAmount = isCrypto 
+                              ? amountValue.toFixed(8).replace(/\.?0+$/, '') // Remove trailing zeros for crypto
+                              : amountValue.toFixed(2);
                             return (
                               <tr key={deposit.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                <td style={{ padding: '12px', color: '#4ade80', fontWeight: 600 }}>${parseFloat(deposit.amount || 0).toFixed(2)}</td>
+                                <td style={{ padding: '12px', color: '#4ade80', fontWeight: 600 }}>
+                                  {isCrypto ? formattedAmount : `$${formattedAmount}`}
+                                </td>
                                 <td style={{ padding: '12px', color: '#ffffff' }}>{coin}</td>
                                 <td style={{ padding: '12px', color: '#ffffff' }}>{network}</td>
                                 <td style={{ padding: '12px' }}>
@@ -1638,6 +1647,41 @@ function AdminPage() {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No withdrawals found</div>
+                  )}
+                </div>
+
+                {/* Convert History Section */}
+                <div style={{ ...cardStyle, padding: '24px', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>Convert History ({userDetails.convert_history?.length || 0})</h3>
+                  {userDetails.convert_history && userDetails.convert_history.length > 0 ? (
+                    <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table className="min-w-full" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Asset</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Quantity</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Price</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>USDT Value</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase' }}>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userDetails.convert_history.map((convert) => (
+                            <tr key={convert.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                              <td style={{ padding: '12px', color: '#ffffff' }}>{convert.asset_symbol || 'N/A'}</td>
+                              <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(convert.quantity || 0).toFixed(8).replace(/\.?0+$/, '')}</td>
+                              <td style={{ padding: '12px', color: '#ffffff' }}>${parseFloat(convert.price || 0).toFixed(2)}</td>
+                              <td style={{ padding: '12px', color: '#4ade80', fontWeight: 600 }}>${parseFloat(convert.usd_value || 0).toFixed(2)}</td>
+                              <td style={{ padding: '12px', color: '#9ca3af', fontSize: '12px' }}>
+                                {convert.created_at ? new Date(convert.created_at).toLocaleDateString() : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af' }}>No convert history found</div>
                   )}
                 </div>
 

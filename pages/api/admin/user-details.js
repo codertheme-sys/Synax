@@ -41,6 +41,7 @@ export default async function handler(req, res) {
       { data: tradingHistory, error: tradingHistoryError },
       { data: binaryTrades, error: binaryTradesError },
       { data: kycDocuments, error: kycDocumentsError },
+      { data: convertHistory, error: convertHistoryError },
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*').eq('id', user_id).single(),
       supabaseAdmin.from('portfolio').select('*').eq('user_id', user_id),
@@ -50,6 +51,7 @@ export default async function handler(req, res) {
       supabaseAdmin.from('trading_history').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
       supabaseAdmin.from('binary_trades').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
       supabaseAdmin.from('kyc_documents').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
+      supabaseAdmin.from('convert_history').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
     ]);
 
     // Debug: Log KYC documents query result
@@ -78,6 +80,7 @@ export default async function handler(req, res) {
         trading_history: tradingHistory || [],
         binary_trades: binaryTrades || [],
         kyc_documents: kycDocuments || [],
+        convert_history: convertHistory || [],
         // Include debug info in response for troubleshooting
         _debug: {
           kyc_documents_error: kycDocumentsError ? {
