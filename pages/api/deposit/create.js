@@ -1,5 +1,6 @@
 // pages/api/deposit/create.js - Deposit Request API
 import { createServerClient } from '../../../lib/supabase';
+import { sendTelegramNotification, formatDepositNotification } from '../../../lib/telegram-notification';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -97,6 +98,22 @@ export default async function handler(req, res) {
       receipt_url: deposit.receipt_url,
       allFields: Object.keys(deposit)
     });
+
+    // Send Telegram notification for pending deposit
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', user.id)
+        .single();
+      
+      const user = userProfile || { email: 'N/A', username: 'N/A' };
+      const message = formatDepositNotification(deposit, user, coin, parseFloat(amount), 0);
+      await sendTelegramNotification(message);
+    } catch (telegramError) {
+      // Don't fail the request if Telegram notification fails
+      console.error('Deposit create - Telegram notification error:', telegramError);
+    }
 
     return res.status(200).json({
       success: true,

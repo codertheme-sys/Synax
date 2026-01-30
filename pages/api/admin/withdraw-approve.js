@@ -1,6 +1,5 @@
 // pages/api/admin/withdraw-approve.js - Withdraw Onay/Red
 import { createServerClient } from '../../../lib/supabase';
-import { sendTelegramNotification, formatWithdrawalNotification } from '../../../lib/telegram-notification';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -81,32 +80,14 @@ export default async function handler(req, res) {
         .eq('id', withdrawal.user_id);
 
       // Withdrawal'ı onayla (processed_at and processed_by columns don't exist in schema)
-      const { data: updatedWithdrawal } = await supabaseAdmin
+      await supabaseAdmin
         .from('withdrawals')
         .update({
           status: 'completed',
           admin_notes: notes || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', withdrawal_id)
-        .select()
-        .single();
-
-      // Send Telegram notification
-      try {
-        const { data: userProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', withdrawal.user_id)
-          .single();
-        
-        const user = userProfile || { email: 'N/A', username: 'N/A' };
-        const message = formatWithdrawalNotification(updatedWithdrawal || withdrawal, user, parseFloat(withdrawal.amount));
-        await sendTelegramNotification(message);
-      } catch (telegramError) {
-        // Don't fail the request if Telegram notification fails
-        console.error('Withdraw approve - Telegram notification error:', telegramError);
-      }
+        .eq('id', withdrawal_id);
 
       return res.status(200).json({
         success: true,
@@ -114,31 +95,14 @@ export default async function handler(req, res) {
       });
     } else if (action === 'reject') {
       // Withdrawal'ı reddet (processed_at and processed_by columns don't exist in schema)
-      const { data: rejectedWithdrawal } = await supabaseAdmin
+      await supabaseAdmin
         .from('withdrawals')
         .update({
           status: 'rejected',
           admin_notes: notes || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', withdrawal_id)
-        .select()
-        .single();
-
-      // Send Telegram notification for rejection
-      try {
-        const { data: userProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('email, username, full_name')
-          .eq('id', withdrawal.user_id)
-          .single();
-        
-        const user = userProfile || { email: 'N/A', username: 'N/A' };
-        const message = formatWithdrawalNotification(rejectedWithdrawal || withdrawal, user, parseFloat(withdrawal.amount));
-        await sendTelegramNotification(message);
-      } catch (telegramError) {
-        console.error('Withdraw reject - Telegram notification error:', telegramError);
-      }
+        .eq('id', withdrawal_id);
 
       return res.status(200).json({
         success: true,

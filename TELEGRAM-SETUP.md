@@ -6,10 +6,8 @@ Platform, Deposit, Withdraw ve Trade işlemlerinde otomatik Telegram bildirimler
 
 ## Özellikler
 
-- ✅ Deposit onaylandığında bildirim
-- ✅ Deposit reddedildiğinde bildirim
-- ✅ Withdraw onaylandığında bildirim
-- ✅ Withdraw reddedildiğinde bildirim
+- ✅ Deposit request oluşturulduğunda bildirim (pending status)
+- ✅ Withdrawal request oluşturulduğunda bildirim (pending status)
 - ✅ Trade tamamlandığında bildirim (Win/Lost)
 
 ## Kurulum Adımları
@@ -42,11 +40,18 @@ Bildirimlerin gönderileceği chat ID'yi bulmak için:
 1. Telegram'da [@userinfobot](https://t.me/userinfobot) ile konuşun
 2. Bot size Chat ID'nizi verecektir
 
-#### Yöntem 3: Grup Chat ID (Opsiyonel)
-Eğer bildirimleri bir gruba göndermek istiyorsanız:
-1. Botu gruba ekleyin
-2. Bot'a `/start` komutu gönderin
-3. Yöntem 1'deki URL'yi kullanarak grup chat ID'sini bulun
+#### Yöntem 3: Grup Chat ID (Önerilen)
+Bildirimlerin bir gruba gönderilmesi için:
+1. Telegram'da bir grup oluşturun veya mevcut bir grubu kullanın
+2. Botu gruba ekleyin (Add Members > Bot'unuzu seçin)
+3. Grup içinde bot'a herhangi bir mesaj gönderin (örn: `/start` veya `test`)
+4. Tarayıcıda şu URL'yi açın:
+   ```
+   https://api.telegram.org/bot<BOT_TOKEN>/getUpdates
+   ```
+5. JSON response'da `"chat":{"id":-123456789,"title":"Group Name"}` şeklinde bir satır bulun
+   - **Not:** Grup chat ID'leri genellikle negatif sayılardır (örn: `-1001234567890`)
+6. Bu sayı sizin **Grup Chat ID**'nizdir
 
 ### 3. Environment Variables Ekleme
 
@@ -60,6 +65,8 @@ TELEGRAM_CHAT_ID=123456789
 **Önemli:**
 - `TELEGRAM_BOT_TOKEN`: BotFather'dan aldığınız bot token
 - `TELEGRAM_CHAT_ID`: Bildirimlerin gönderileceği chat ID (kişisel veya grup)
+  - **Grup Chat ID:** Negatif sayı olabilir (örn: `-1001234567890`)
+  - **Kişisel Chat ID:** Pozitif sayıdır (örn: `123456789`)
 
 ### 4. Vercel'de Environment Variables Ekleme
 
@@ -76,52 +83,52 @@ TELEGRAM_CHAT_ID=123456789
 
 Kurulumu test etmek için:
 
-1. Platform'da bir deposit işlemi yapın ve onaylayın
-2. Telegram'da bildirimi kontrol edin
+1. Platform'da bir deposit request oluşturun (pending olarak admin/payment sayfasına düşecek)
+2. Telegram grubunuzda bildirimi kontrol edin
 3. Eğer bildirim gelmiyorsa:
    - Vercel loglarını kontrol edin
    - Environment variables'ların doğru eklendiğinden emin olun
    - Bot token ve chat ID'nin doğru olduğundan emin olun
+   - Botun gruba eklendiğinden ve mesaj gönderme yetkisi olduğundan emin olun
 
 ## Bildirim Formatları
 
-### Deposit Bildirimi
+### Deposit Notification
 ```
-💰 Yeni Deposit İşlemi
+💰 New Deposit Request
 
-👤 Kullanıcı: user@example.com
+👤 User: user@example.com
 🪙 Coin: BTC
-💵 Miktar: 0.5 BTC
-💲 USDT Değeri: 25000.00 USDT
-📊 Durum: ✅ Onaylandı
-🕐 Tarih: 20.01.2026, 14:30:00
+💵 Amount: 0.5 BTC
+📊 Status: ⏳ Pending
+🕐 Date: 1/20/2026, 2:30:00 PM
 ```
 
-### Withdrawal Bildirimi
+### Withdrawal Notification
 ```
-💸 Yeni Withdrawal İşlemi
+💸 New Withdrawal Request
 
-👤 Kullanıcı: user@example.com
-💵 Miktar: 1000 USDT
-📍 Cüzdan: 0x1234567890abcdef...
-🌐 Ağ: Ethereum (ERC20)
-📊 Durum: ✅ Onaylandı
-🕐 Tarih: 20.01.2026, 15:45:00
+👤 User: user@example.com
+💵 Amount: 1000 USDT
+📍 Wallet: 0x1234567890abcdef...
+🌐 Network: Ethereum (ERC20)
+📊 Status: ⏳ Pending
+🕐 Date: 1/20/2026, 3:45:00 PM
 ```
 
-### Trade Bildirimi
+### Trade Notification
 ```
-🎉 Trade Sonuçlandı
+🎉 Trade Completed
 
-👤 Kullanıcı: user@example.com
+👤 User: user@example.com
 🪙 Asset: BTC
-📊 Sonuç: ✅ KAZANDI
-💰 Trade Miktarı: 100.00 USDT
+📊 Result: ✅ WIN
+💰 Trade Amount: 100.00 USDT
 💵 Profit/Loss: +10.00 USDT
-📈 Başlangıç Fiyatı: 50000.00 USDT
-📉 Bitiş Fiyatı: 50500.00 USDT
+📈 Initial Price: 50000.00 USDT
+📉 Final Price: 50500.00 USDT
 ⏱️ Time Frame: 60s
-🕐 Tarih: 20.01.2026, 16:00:00
+🕐 Date: 1/20/2026, 4:00:00 PM
 ```
 
 ## Sorun Giderme
@@ -153,8 +160,16 @@ Kurulumu test etmek için:
 
 ### Chat ID Bulamıyorum
 
-- [@userinfobot](https://t.me/userinfobot) ile konuşun
+- [@userinfobot](https://t.me/userinfobot) ile konuşun (kişisel chat ID için)
 - Veya `getUpdates` API'sini kullanın (yukarıdaki Yöntem 1)
+- Grup chat ID için: Botu gruba ekleyin ve `getUpdates` API'sini kullanın
+
+### Grup Bildirimleri Çalışmıyor
+
+- Botun gruba eklendiğinden emin olun
+- Botun grup içinde mesaj gönderme yetkisi olduğundan emin olun
+- Grup chat ID'nin negatif bir sayı olduğundan emin olun (örn: `-1001234567890`)
+- Grup ayarlarında bot'un "Send Messages" yetkisi olduğundan emin olun
 
 ## Güvenlik Notları
 

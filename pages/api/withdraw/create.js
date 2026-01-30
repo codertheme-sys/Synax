@@ -1,5 +1,6 @@
 // pages/api/withdraw/create.js - Create Withdrawal Request
 import { createServerClient } from '../../../lib/supabase';
+import { sendTelegramNotification, formatWithdrawalNotification } from '../../../lib/telegram-notification';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -106,6 +107,22 @@ export default async function handler(req, res) {
     if (withdrawalError) {
       console.error('Withdrawal creation error:', withdrawalError);
       return res.status(500).json({ error: 'Failed to create withdrawal request' });
+    }
+
+    // Send Telegram notification for pending withdrawal
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', user.id)
+        .single();
+      
+      const user = userProfile || { email: 'N/A', username: 'N/A' };
+      const message = formatWithdrawalNotification(withdrawal, user, parseFloat(amount));
+      await sendTelegramNotification(message);
+    } catch (telegramError) {
+      // Don't fail the request if Telegram notification fails
+      console.error('Withdraw create - Telegram notification error:', telegramError);
     }
 
     // Freeze balance (in pending status)
