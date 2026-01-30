@@ -1,5 +1,6 @@
 // pages/api/trading/binary-auto-complete.js - Auto-complete expired trades
 import { createServerClient } from '../../../lib/supabase';
+import { sendTelegramNotification, formatTradeNotification } from '../../../lib/telegram-notification';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -341,13 +342,29 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to update trade' });
     }
 
+    // Send Telegram notification
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email, username, full_name')
+        .eq('id', trade.user_id)
+        .single();
+      
+      const user = userProfile || { email: 'N/A', username: 'N/A' };
+      const message = formatTradeNotification(trade, user, winLost, profitAmount, initialPrice, lastPrice);
+      await sendTelegramNotification(message);
+    } catch (telegramError) {
+      // Don't fail the request if Telegram notification fails
+      console.error('Binary trade complete - Telegram notification error:', telegramError);
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Trade completed successfully',
       win_lost: winLost,
       profit_amount: profitAmount,
       last_price: lastPrice,
-      note: 'Profit added to portfolio as crypto asset, not to cash balance'
+      note: 'Profit added to balance and portfolio'
     });
 
   } catch (error) {

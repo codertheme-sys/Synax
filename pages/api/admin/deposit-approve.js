@@ -1,5 +1,6 @@
 // pages/api/admin/deposit-approve.js - Deposit Onay/Red
 import { createServerClient } from '../../../lib/supabase';
+import { sendTelegramNotification, formatDepositNotification } from '../../../lib/telegram-notification';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -306,6 +307,22 @@ export default async function handler(req, res) {
         totalValue
       });
 
+      // Send Telegram notification
+      try {
+        const { data: userProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('email, username, full_name')
+          .eq('id', deposit.user_id)
+          .single();
+        
+        const user = userProfile || { email: 'N/A', username: 'N/A' };
+        const message = formatDepositNotification(updatedDeposit, user, coin, cryptoAmount, totalValue);
+        await sendTelegramNotification(message);
+      } catch (telegramError) {
+        // Don't fail the request if Telegram notification fails
+        console.error('Deposit approve - Telegram notification error:', telegramError);
+      }
+
       return res.status(200).json({
         success: true,
         message: coin === 'USDT' 
@@ -315,14 +332,32 @@ export default async function handler(req, res) {
       });
     } else if (action === 'reject') {
       // Deposit'i reddet (processed_at and processed_by columns don't exist in schema)
-      await supabaseAdmin
+      const { data: rejectedDeposit } = await supabaseAdmin
         .from('deposits')
         .update({
           status: 'rejected',
           admin_notes: notes || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', deposit_id);
+        .eq('id', deposit_id)
+        .select()
+        .single();
+
+      // Send Telegram notification for rejection
+      try {
+        const coin = deposit.payment_provider?.toUpperCase() || 'N/A';
+        const { data: userProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('email, username, full_name')
+          .eq('id', deposit.user_id)
+          .single();
+        
+        const user = userProfile || { email: 'N/A', username: 'N/A' };
+        const message = formatDepositNotification(rejectedDeposit || deposit, user, coin, parseFloat(deposit.amount), 0);
+        await sendTelegramNotification(message);
+      } catch (telegramError) {
+        console.error('Deposit reject - Telegram notification error:', telegramError);
+      }
 
       return res.status(200).json({
         success: true,
