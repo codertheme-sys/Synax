@@ -157,8 +157,14 @@ export default async function handler(req, res) {
         }
       }
 
+      // Calculate total value in USDT (for logging purposes)
+      let totalValue = 0;
+      
       // USDT deposits go directly to balance, not to portfolio
       if (coin === 'USDT') {
+        // For USDT, totalValue equals the amount (1:1 ratio)
+        totalValue = cryptoAmount;
+        
         // Get current balance
         const { data: profile } = await supabaseAdmin
           .from('profiles')
@@ -193,12 +199,13 @@ export default async function handler(req, res) {
         console.log(`Deposit approve - USDT added directly to balance:`, {
           amount: cryptoAmount,
           oldBalance: currentBalance,
-          newBalance
+          newBalance,
+          totalValue
         });
       } else {
         // For BTC and ETH, add to portfolio
         // Calculate total value in USDT
-        const totalValue = cryptoAmount * currentPrice;
+        totalValue = cryptoAmount * currentPrice;
 
         // Check if portfolio item already exists for this coin
         const { data: existingPortfolio } = await supabaseAdmin
