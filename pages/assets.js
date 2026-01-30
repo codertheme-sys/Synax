@@ -552,7 +552,15 @@ function AssetsPage() {
                             {coin}
                           </td>
                           <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '10px', fontSize: '12px', color: '#d1d5db', fontWeight: 500 }}>
-                            ${parseFloat(payment.amount || 0).toFixed(8)}
+                            {(() => {
+                              const amountValue = parseFloat(payment.amount || 0);
+                              // Format based on coin type - show full precision for crypto, 2 decimals for USD/USDT
+                              const isCrypto = coin && coin !== 'USD' && coin !== 'USDT' && coin !== 'N/A' && coin !== 'Crypto';
+                              const formattedAmount = isCrypto 
+                                ? amountValue.toFixed(8).replace(/\.?0+$/, '') // Remove trailing zeros for crypto
+                                : amountValue.toFixed(2);
+                              return formattedAmount;
+                            })()}
                           </td>
                           <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '10px', fontSize: '12px' }}>
                             <span
