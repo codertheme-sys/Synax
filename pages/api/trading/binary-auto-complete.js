@@ -125,32 +125,11 @@ export default async function handler(req, res) {
     // Calculate profit/loss difference for display
     const profitLossDifference = profitAmount - tradeAmount;
 
-    // Update user balance: Add profitAmount back to balance
-    // Trade amount was already deducted when trade was created, so we add the full profitAmount
-    // (which includes trade_amount + profit for win, or trade_amount - loss for lost)
-    const { data: currentProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('balance')
-      .eq('id', trade.user_id)
-      .single();
+    // NOTE: Trade amount was already deducted from balance when trade was created
+    // Now we add the profitAmount as coin to portfolio, NOT to cash balance
+    // This way, trade result goes directly to holdings as the asset, not as cash
 
-    if (currentProfile) {
-      const currentBalance = parseFloat(currentProfile.balance || 0);
-      const newBalance = currentBalance + profitAmount;
-      
-      const { error: balanceUpdateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ balance: newBalance })
-        .eq('id', trade.user_id);
-
-      if (balanceUpdateError) {
-        console.error('[binary-auto-complete] Error updating balance:', balanceUpdateError);
-      } else {
-        console.log(`[binary-auto-complete] Updated balance: ${currentBalance} -> ${newBalance} (profitAmount=${profitAmount})`);
-      }
-    }
-
-    // Add profitAmount as coin to portfolio (optional - for tracking purposes)
+    // Add profitAmount as coin to portfolio
     // Get current price for the asset
     try {
       console.log(`[binary-auto-complete] Processing portfolio update for ${trade.asset_symbol}: asset_id=${trade.asset_id}, asset_type=${trade.asset_type}, profitAmount=${profitAmount}`);
