@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { FiTrendingUp, FiTrendingDown, FiStar, FiRefreshCw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import Header from '../components/Header';
+import ReviewsSection from '../components/ReviewsSection';
 
 export default function Home() {
   const router = useRouter();
