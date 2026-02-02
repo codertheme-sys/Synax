@@ -275,6 +275,7 @@ export default function Header() {
                   <Link href="/terms" className="block text-blue-300 hover:text-blue-200 hover:bg-white/10" style={{ fontSize: '18px', padding: '14px 16px' }}>Terms of Use</Link>
                   <Link href="/privacy" className="block text-blue-300 hover:text-blue-200 hover:bg-white/10" style={{ fontSize: '18px', padding: '14px 16px' }}>Privacy Policy</Link>
                   <Link href="/contact" className="block text-blue-300 hover:text-blue-200 hover:bg-white/10" style={{ fontSize: '18px', padding: '14px 16px' }}>Contact</Link>
+                  <Link href="/feedback" className="block text-blue-300 hover:text-blue-200 hover:bg-white/10" style={{ fontSize: '18px', padding: '14px 16px' }}>💬 Feedback</Link>
                 </div>
               </div>
             </div>

@@ -61,6 +61,11 @@ function AdminPage() {
   const [binaryTrades, setBinaryTrades] = useState([]);
   const [earnSubscriptions, setEarnSubscriptions] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [responseText, setResponseText] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
@@ -74,6 +79,42 @@ function AdminPage() {
     depositsEnabled: true,
     withdrawalsEnabled: true,
   });
+
+  const fetchFeedback = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return;
+      }
+
+      let url = `/api/admin/get-feedback?`;
+      if (filterStatus !== 'all') {
+        url += `status=${filterStatus}&`;
+      }
+      if (filterType !== 'all') {
+        url += `type=${filterType}&`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch feedback');
+      }
+
+      setFeedbackList(result.feedback || []);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      // Don't show error toast on initial load
+    }
+  };
 
   const fetchAdminData = async () => {
     try {
@@ -157,6 +198,9 @@ function AdminPage() {
           if (contactMessagesData) {
             setContactMessages(contactMessagesData || []);
           }
+
+          // Fetch feedback
+          await fetchFeedback();
         }
       } catch (error) {
         console.error('Error fetching admin data:', error);
@@ -360,7 +404,7 @@ function AdminPage() {
           WebkitOverflowScrolling: 'touch',
           paddingBottom: '4px',
         }}>
-          {['overview', 'users', 'trades', 'payments', 'messages', 'settings'].map((tab) => (
+          {['overview', 'users', 'trades', 'payments', 'messages', 'feedback', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -902,6 +946,652 @@ function AdminPage() {
                   )}
                 </div>
               )}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'feedback' && (
+          <>
+            <div style={{ ...cardStyle, padding: '28px', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>💬 Feedback Management</h2>
+              
+              {/* Filters */}
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                flexWrap: 'wrap'
+              }}>
+                <div>
+                  <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    style={{
+                      padding: '10px 15px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                    Type
+                  </label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    style={{
+                      padding: '10px 15px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="feedback">Feedback</option>
+                    <option value="suggestion">Suggestion</option>
+                    <option value="complaint">Complaint</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Feedback List */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: selectedFeedback ? '1fr 400px' : '1fr',
+                gap: '20px'
+              }}>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  maxHeight: '80vh',
+                  overflowY: 'auto'
+                }}>
+                  {feedbackList.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                      No feedback found
+                    </div>
+                  ) : (
+                    feedbackList.map((feedback) => (
+                      <div
+                        key={feedback.id}
+                        onClick={() => {
+                          setSelectedFeedback(feedback);
+                          setResponseText(feedback.admin_response || '');
+                        }}
+                        style={{
+                          background: selectedFeedback?.id === feedback.id
+                            ? 'rgba(59, 130, 246, 0.2)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: selectedFeedback?.id === feedback.id
+                            ? '2px solid #3b82f6'
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          marginBottom: '15px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedFeedback?.id !== feedback.id) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedFeedback?.id !== feedback.id) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '24px' }}>{getFeedbackTypeIcon(feedback.type)}</span>
+                            <div>
+                              <div style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                                {feedback.subject}
+                              </div>
+                              <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                                {feedback.user?.username || feedback.user?.email?.split('@')[0] || 'Anonymous'} • {new Date(feedback.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{
+                            background: getFeedbackStatusColor(feedback.status),
+                            color: 'white',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            textTransform: 'capitalize'
+                          }}>
+                            {feedback.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontSize: '14px',
+                          lineHeight: '1.6',
+                          marginTop: '10px',
+                          maxHeight: '100px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {feedback.message}
+                        </div>
+                        {feedback.admin_response && (
+                          <div style={{
+                            marginTop: '10px',
+                            padding: '10px',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            color: '#10b981'
+                          }}>
+                            ✓ Response sent
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Response Panel */}
+                {selectedFeedback && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    position: 'sticky',
+                    top: '20px',
+                    height: 'fit-content',
+                    maxHeight: '80vh',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedFeedback(null);
+                          setResponseText('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          float: 'right'
+                        }}
+                      >
+                        ✕
+                      </button>
+                      <h3 style={{ color: 'white', fontSize: '20px', marginBottom: '15px' }}>
+                        {getFeedbackTypeIcon(selectedFeedback.type)} {selectedFeedback.subject}
+                      </h3>
+                      <div style={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '12px',
+                        marginBottom: '15px'
+                      }}>
+                        From: {selectedFeedback.user?.username || selectedFeedback.user?.email?.split('@')[0] || 'Anonymous'}
+                        <br />
+                        Email: {selectedFeedback.user?.email || 'N/A'}
+                        <br />
+                        Date: {new Date(selectedFeedback.created_at).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '12px',
+                      padding: '15px',
+                      marginBottom: '20px',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {selectedFeedback.message}
+                    </div>
+
+                    {selectedFeedback.admin_response && (
+                      <div style={{
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '12px',
+                        padding: '15px',
+                        marginBottom: '20px'
+                      }}>
+                        <div style={{ color: '#10b981', fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
+                          Previous Response ({selectedFeedback.responder?.username || 'Admin'}):
+                        </div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                          {selectedFeedback.admin_response}
+                        </div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '11px', marginTop: '8px' }}>
+                          {selectedFeedback.admin_response_at && new Date(selectedFeedback.admin_response_at).toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ color: 'white', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                        Response
+                      </label>
+                      <textarea
+                        value={responseText}
+                        onChange={(e) => setResponseText(e.target.value)}
+                        placeholder="Enter your response to the user..."
+                        rows={6}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ color: 'white', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                        Status
+                      </label>
+                      <select
+                        value={selectedFeedback.status}
+                        onChange={(e) => handleFeedbackStatusChange(selectedFeedback.id, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={handleFeedbackRespond}
+                      disabled={!responseText.trim()}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: responseText.trim()
+                          ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        cursor: responseText.trim() ? 'pointer' : 'not-allowed',
+                        opacity: responseText.trim() ? 1 : 0.5,
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      {selectedFeedback.admin_response ? 'Update Response' : 'Send Response'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'feedback' && (
+          <>
+            <div style={{ ...cardStyle, padding: '28px', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>💬 Feedback Management</h2>
+              
+              {/* Filters */}
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '30px',
+                flexWrap: 'wrap'
+              }}>
+                <div>
+                  <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    style={{
+                      padding: '10px 15px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                    Type
+                  </label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    style={{
+                      padding: '10px 15px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="feedback">Feedback</option>
+                    <option value="suggestion">Suggestion</option>
+                    <option value="complaint">Complaint</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Feedback List */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: selectedFeedback ? '1fr 400px' : '1fr',
+                gap: '20px'
+              }}>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  maxHeight: '80vh',
+                  overflowY: 'auto'
+                }}>
+                  {feedbackList.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                      No feedback found
+                    </div>
+                  ) : (
+                    feedbackList.map((feedback) => (
+                      <div
+                        key={feedback.id}
+                        onClick={() => {
+                          setSelectedFeedback(feedback);
+                          setResponseText(feedback.admin_response || '');
+                        }}
+                        style={{
+                          background: selectedFeedback?.id === feedback.id
+                            ? 'rgba(59, 130, 246, 0.2)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: selectedFeedback?.id === feedback.id
+                            ? '2px solid #3b82f6'
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          marginBottom: '15px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedFeedback?.id !== feedback.id) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedFeedback?.id !== feedback.id) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '24px' }}>{getFeedbackTypeIcon(feedback.type)}</span>
+                            <div>
+                              <div style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                                {feedback.subject}
+                              </div>
+                              <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                                {feedback.user?.username || feedback.user?.email?.split('@')[0] || 'Anonymous'} • {new Date(feedback.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{
+                            background: getFeedbackStatusColor(feedback.status),
+                            color: 'white',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            textTransform: 'capitalize'
+                          }}>
+                            {feedback.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontSize: '14px',
+                          lineHeight: '1.6',
+                          marginTop: '10px',
+                          maxHeight: '100px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {feedback.message}
+                        </div>
+                        {feedback.admin_response && (
+                          <div style={{
+                            marginTop: '10px',
+                            padding: '10px',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            color: '#10b981'
+                          }}>
+                            ✓ Response sent
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Response Panel */}
+                {selectedFeedback && (
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    position: 'sticky',
+                    top: '20px',
+                    height: 'fit-content',
+                    maxHeight: '80vh',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedFeedback(null);
+                          setResponseText('');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          float: 'right'
+                        }}
+                      >
+                        ✕
+                      </button>
+                      <h3 style={{ color: 'white', fontSize: '20px', marginBottom: '15px' }}>
+                        {getFeedbackTypeIcon(selectedFeedback.type)} {selectedFeedback.subject}
+                      </h3>
+                      <div style={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '12px',
+                        marginBottom: '15px'
+                      }}>
+                        From: {selectedFeedback.user?.username || selectedFeedback.user?.email?.split('@')[0] || 'Anonymous'}
+                        <br />
+                        Email: {selectedFeedback.user?.email || 'N/A'}
+                        <br />
+                        Date: {new Date(selectedFeedback.created_at).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '12px',
+                      padding: '15px',
+                      marginBottom: '20px',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {selectedFeedback.message}
+                    </div>
+
+                    {selectedFeedback.admin_response && (
+                      <div style={{
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '12px',
+                        padding: '15px',
+                        marginBottom: '20px'
+                      }}>
+                        <div style={{ color: '#10b981', fontSize: '12px', marginBottom: '8px', fontWeight: '600' }}>
+                          Previous Response ({selectedFeedback.responder?.username || 'Admin'}):
+                        </div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                          {selectedFeedback.admin_response}
+                        </div>
+                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '11px', marginTop: '8px' }}>
+                          {selectedFeedback.admin_response_at && new Date(selectedFeedback.admin_response_at).toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ color: 'white', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                        Response
+                      </label>
+                      <textarea
+                        value={responseText}
+                        onChange={(e) => setResponseText(e.target.value)}
+                        placeholder="Enter your response to the user..."
+                        rows={6}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ color: 'white', fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                        Status
+                      </label>
+                      <select
+                        value={selectedFeedback.status}
+                        onChange={(e) => handleFeedbackStatusChange(selectedFeedback.id, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={handleFeedbackRespond}
+                      disabled={!responseText.trim()}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: responseText.trim()
+                          ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        cursor: responseText.trim() ? 'pointer' : 'not-allowed',
+                        opacity: responseText.trim() ? 1 : 0.5,
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      {selectedFeedback.admin_response ? 'Update Response' : 'Send Response'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
