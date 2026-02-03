@@ -36,6 +36,12 @@ export default async function handler(req, res) {
 
     const filterResult = filterText(comment);
     if (!filterResult.isValid) {
+      console.log('[REVIEW CREATE] Filter result:', {
+        isValid: filterResult.isValid,
+        reason: filterResult.reason,
+        commentLength: comment.length,
+        commentPreview: comment.substring(0, 100)
+      });
       return res.status(400).json({ 
         error: filterResult.reason || 'Invalid comment content',
         filtered: filterResult.filteredText
