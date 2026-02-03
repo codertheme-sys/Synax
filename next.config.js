@@ -30,7 +30,7 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   
-  // Bypass-friendly headers
+  // Security headers for trust score improvement
   async headers() {
     return [
       {
@@ -51,6 +51,22 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://*.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.stripe.com wss://*.supabase.co; frame-src https://*.stripe.com;"
           },
         ],
       },

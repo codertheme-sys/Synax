@@ -640,12 +640,28 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-[#0b0c1a] border-t border-gray-800 py-10">
-        <div className="max-w-7xl mx-auto px-6 text-center text-gray-400 text-sm">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/images/logo.png" alt="Synax" style={{ height: '32px', width: 'auto' }} />
-            <span className="text-xl font-semibold text-blue-300 hover:text-blue-200 transition">Synax</span>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center text-gray-400 text-sm mb-6">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src="/images/logo.png" alt="Synax" style={{ height: '32px', width: 'auto' }} />
+              <span className="text-xl font-semibold text-blue-300 hover:text-blue-200 transition">Synax</span>
+            </div>
+            <p className="mb-4">© Copyright 2023-2025 Synax. All rights reserved.</p>
           </div>
-          <p className="mb-0">© Copyright 2023-2025 Synax. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-6 text-sm">
+            <Link href="/about" className="text-gray-400 hover:text-blue-300 transition">
+              About Us
+            </Link>
+            <Link href="/contact" className="text-gray-400 hover:text-blue-300 transition">
+              Contact
+            </Link>
+            <Link href="/terms" className="text-gray-400 hover:text-blue-300 transition">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="text-gray-400 hover:text-blue-300 transition">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </footer>
 
