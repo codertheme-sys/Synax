@@ -34,23 +34,10 @@ export default async function handler(req, res) {
 
     const { status } = req.query; // Optional filter by status
 
+    // First, get all reviews
     let query = supabaseAdmin
       .from('reviews')
-      .select(`
-        id,
-        rating,
-        comment,
-        status,
-        admin_notes,
-        created_at,
-        updated_at,
-        profiles!reviews_user_id_fkey (
-          id,
-          username,
-          full_name,
-          email
-        )
-      `)
+      .select('id, rating, comment, status, admin_notes, created_at, updated_at, user_id')
       .order('created_at', { ascending: false });
 
     if (status && ['pending', 'approved', 'rejected'].includes(status)) {
@@ -64,21 +51,47 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to fetch reviews' });
     }
 
-    // Format reviews
-    const formattedReviews = reviews.map(review => ({
-      id: review.id,
-      rating: review.rating,
-      comment: review.comment,
-      status: review.status,
-      admin_notes: review.admin_notes,
-      created_at: review.created_at,
-      updated_at: review.updated_at,
-      user: {
-        id: review.profiles?.id,
-        username: review.profiles?.username || review.profiles?.full_name || 'N/A',
-        email: review.profiles?.email || 'N/A'
+    console.log('[ADMIN REVIEWS] Fetched reviews:', {
+      count: reviews?.length || 0,
+      reviews: reviews?.map(r => ({ id: r.id, status: r.status, user_id: r.user_id }))
+    });
+
+    // Get user profiles for all reviews
+    const userIds = [...new Set((reviews || []).map(r => r.user_id).filter(Boolean))];
+    let profilesMap = {};
+    
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, username, full_name, email')
+        .in('id', userIds);
+      
+      if (!profilesError && profiles) {
+        profilesMap = profiles.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {});
       }
-    }));
+    }
+
+    // Format reviews
+    const formattedReviews = (reviews || []).map(review => {
+      const profile = profilesMap[review.user_id];
+      return {
+        id: review.id,
+        rating: review.rating,
+        comment: review.comment,
+        status: review.status,
+        admin_notes: review.admin_notes,
+        created_at: review.created_at,
+        updated_at: review.updated_at,
+        user: {
+          id: profile?.id || review.user_id,
+          username: profile?.username || profile?.full_name || 'N/A',
+          email: profile?.email || 'N/A'
+        }
+      };
+    });
 
     return res.status(200).json({
       success: true,

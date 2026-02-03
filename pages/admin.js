@@ -186,9 +186,21 @@ function AdminPage() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('[ADMIN] Reviews API response:', {
+          success: result.success,
+          dataLength: result.data?.length || 0,
+          data: result.data
+        });
         if (result.success) {
           setReviews(result.data || []);
+        } else {
+          console.error('[ADMIN] Reviews API error:', result.error);
+          toast.error(result.error || 'Failed to load reviews');
         }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[ADMIN] Reviews API failed:', response.status, errorData);
+        toast.error('Failed to load reviews');
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
