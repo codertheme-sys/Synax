@@ -631,6 +631,13 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Reviews Section */}
+      <section className="bg-[#0b0c1a] py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <ReviewsSection />
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-[#0b0c1a] border-t border-gray-800 py-10">
         <div className="max-w-7xl mx-auto px-6 text-center text-gray-400 text-sm">
