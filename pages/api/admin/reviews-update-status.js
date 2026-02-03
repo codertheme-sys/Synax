@@ -1,5 +1,5 @@
 // pages/api/admin/reviews-update-status.js - Admin: Approve/Reject Review
-import { createServerClient } from '../../lib/supabase';
+import { createServerClient } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
