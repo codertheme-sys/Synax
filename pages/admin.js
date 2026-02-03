@@ -178,7 +178,7 @@ function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      const response = await fetch('/api/admin/reviews/list', {
+      const response = await fetch('/api/admin/reviews-list', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -976,7 +976,7 @@ function AdminPage() {
                                       const { data: { session } } = await supabase.auth.getSession();
                                       if (!session?.access_token) return;
 
-                                      const response = await fetch('/api/admin/reviews/update-status', {
+                                      const response = await fetch('/api/admin/reviews-update-status', {
                                         method: 'POST',
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -1019,7 +1019,7 @@ function AdminPage() {
                                       const { data: { session } } = await supabase.auth.getSession();
                                       if (!session?.access_token) return;
 
-                                      const response = await fetch('/api/admin/reviews/update-status', {
+                                      const response = await fetch('/api/admin/reviews-update-status', {
                                         method: 'POST',
                                         headers: {
                                           'Content-Type': 'application/json',

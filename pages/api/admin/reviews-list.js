@@ -1,5 +1,5 @@
-// pages/api/admin/reviews/list.js - Admin: List All Reviews
-import { createServerClient } from '../../../lib/supabase';
+// pages/api/admin/reviews-list.js - Admin: List All Reviews
+import { createServerClient } from '../../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
