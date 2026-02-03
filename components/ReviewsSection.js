@@ -72,15 +72,25 @@ function ReviewsSection() {
       const response = await fetch(`/api/reviews/list?limit=${reviewsPerPage}&offset=${offset}`);
       const result = await response.json();
 
+      console.log('[REVIEWS SECTION] API response:', {
+        success: result.success,
+        reviewsCount: result.data?.reviews?.length || 0,
+        averageRating: result.data?.average_rating,
+        totalReviews: result.data?.total_reviews
+      });
+
       if (result.success) {
         if (page === 1) {
-          setReviews(result.data.reviews);
+          setReviews(result.data.reviews || []);
         } else {
-          setReviews(prev => [...prev, ...result.data.reviews]);
+          setReviews(prev => [...prev, ...(result.data.reviews || [])]);
         }
-        setAverageRating(result.data.average_rating);
-        setTotalReviews(result.data.total_reviews);
-        setHasMore(result.data.reviews.length === reviewsPerPage);
+        setAverageRating(result.data.average_rating || 0);
+        setTotalReviews(result.data.total_reviews || 0);
+        setHasMore((result.data.reviews || []).length === reviewsPerPage);
+      } else {
+        console.error('[REVIEWS SECTION] API error:', result.error);
+        toast.error(result.error || 'Failed to load reviews');
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
