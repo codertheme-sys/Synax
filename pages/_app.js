@@ -732,6 +732,34 @@ function MyApp({ Component, pageProps }) {
         <link rel="icon" type="image/png" href="/images/logo.png" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
         
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#3b82f6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Synax" />
+        
+        {/* Service Worker Registration */}
+        {typeof window !== 'undefined' && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js')
+                      .then(function(registration) {
+                        console.log('[SW] Service Worker registered:', registration.scope);
+                      })
+                      .catch(function(error) {
+                        console.log('[SW] Service Worker registration failed:', error);
+                      });
+                  });
+                }
+              `,
+            }}
+          />
+        )}
+        
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://synax.vip/" />
