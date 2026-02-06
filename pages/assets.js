@@ -954,7 +954,7 @@ function AssetsPage() {
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}>
                       <img
-                        src={getPaymentInfo().qrCode}
+                        src={`${getPaymentInfo().qrCode}?v=${Date.now()}`}
                         alt={`${depositCoin} QR Code`}
                         style={{
                           maxWidth: '200px',
@@ -963,8 +963,12 @@ function AssetsPage() {
                           height: 'auto',
                         }}
                         onError={(e) => {
+                          console.error('QR Code load error:', getPaymentInfo().qrCode);
                           e.target.style.display = 'none';
                           e.target.parentElement.innerHTML = '<div style="color: #9ca3af; font-size: 12px; text-align: center; padding: 20px;">QR Code image not found</div>';
+                        }}
+                        onLoad={() => {
+                          console.log('QR Code loaded successfully:', getPaymentInfo().qrCode);
                         }}
                       />
                     </div>
@@ -1240,14 +1244,15 @@ function AssetsPage() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                  Amount ($) *
+                  {withdrawCoin ? `Amount (${withdrawCoin}) *` : 'Amount *'}
                 </label>
                 <input
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   required
-                  step="0.01"
+                  step={withdrawCoin === 'BTC' || withdrawCoin === 'ETH' || withdrawCoin === 'XRP' ? '0.00000001' : withdrawCoin === 'USDT' ? '0.01' : '0.01'}
+                  min="0"
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -1258,7 +1263,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder="0.00"
+                  placeholder={withdrawCoin === 'BTC' ? '0.00000000' : withdrawCoin === 'ETH' ? '0.00000000' : withdrawCoin === 'XRP' ? '0.00000000' : withdrawCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <button

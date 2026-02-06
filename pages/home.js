@@ -97,11 +97,12 @@ function HomePage() {
   const [profileUsername, setProfileUsername] = useState('');
   const [kycStatus, setKycStatus] = useState('pending');
 
-  const coins = ['USDT', 'BTC', 'ETH'];
+  const coins = ['USDT', 'BTC', 'ETH', 'XRP'];
   const networks = {
     USDT: ['Tron (TRC20)'],
     BTC: ['Bitcoin', 'Lightning Network'],
     ETH: ['Ethereum', 'Polygon', 'Arbitrum', 'Optimism'],
+    XRP: ['Ripple'],
   };
 
   // Check if mobile
