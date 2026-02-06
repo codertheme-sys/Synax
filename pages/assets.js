@@ -42,11 +42,12 @@ function AssetsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
 
-  const coins = ['USDT', 'BTC', 'ETH'];
+  const coins = ['USDT', 'BTC', 'ETH', 'XRP'];
   const networks = {
     USDT: ['Tron (TRC20)'],
     BTC: ['Bitcoin Network'],
     ETH: ['Ethereum (ERC20)'],
+    XRP: ['Ripple'],
   };
 
   // Payment information for deposits
@@ -70,6 +71,13 @@ function AssetsPage() {
         address: 'bc1qwdryv20f84ymsg8qltahfumlyvpkdgk9cv7jma5m9j9a82l3japsfrapqg',
         network: 'BTC',
         qrCode: '/images/btc-qr.png',
+      },
+    },
+    'XRP': {
+      'Ripple': {
+        address: 'rBuZfn1m4tA6znziHsRp9AyC1M3qg6rgbF',
+        network: 'Ripple',
+        qrCode: '/images/xrp-qr.png',
       },
     },
   };
@@ -984,7 +992,7 @@ function AssetsPage() {
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
-                  step={depositCoin === 'BTC' || depositCoin === 'ETH' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
+                  step={depositCoin === 'BTC' || depositCoin === 'ETH' || depositCoin === 'XRP' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
                   min="0"
                   style={{
                     width: '100%',
@@ -996,7 +1004,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
+                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'XRP' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <div>

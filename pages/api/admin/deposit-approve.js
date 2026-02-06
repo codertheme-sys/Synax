@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       const coin = deposit.payment_provider?.toUpperCase() || null;
       const cryptoAmount = parseFloat(deposit.amount); // Crypto amount (e.g., 0.065 ETH, 500 USDT)
       
-      if (!coin || !['BTC', 'ETH', 'USDT'].includes(coin)) {
+      if (!coin || !['BTC', 'ETH', 'USDT', 'XRP'].includes(coin)) {
         return res.status(400).json({ 
           success: false,
           error: 'Invalid or missing coin information in deposit' 
@@ -81,7 +81,8 @@ export default async function handler(req, res) {
           // CoinGecko ID mapping
           const coinGeckoIds = {
             'BTC': 'bitcoin',
-            'ETH': 'ethereum'
+            'ETH': 'ethereum',
+            'XRP': 'ripple'
           };
           
           const coinGeckoId = coinGeckoIds[coin];
