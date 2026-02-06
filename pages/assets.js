@@ -963,9 +963,16 @@ function AssetsPage() {
                           height: 'auto',
                         }}
                         onError={(e) => {
-                          console.error('QR Code load error:', getPaymentInfo().qrCode);
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div style="color: #9ca3af; font-size: 12px; text-align: center; padding: 20px;">QR Code image not found</div>';
+                          const qrCodePath = getPaymentInfo()?.qrCode || 'unknown';
+                          console.error('QR Code load error:', qrCodePath, 'Full path:', `${qrCodePath}?v=${Date.now()}`);
+                          const imgElement = e.target;
+                          if (imgElement && imgElement.parentElement) {
+                            imgElement.style.display = 'none';
+                            const parent = imgElement.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<div style="color: #9ca3af; font-size: 12px; text-align: center; padding: 20px;">QR Code image not found</div>';
+                            }
+                          }
                         }}
                         onLoad={() => {
                           console.log('QR Code loaded successfully:', getPaymentInfo().qrCode);
