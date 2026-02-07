@@ -24,7 +24,7 @@ function TradingViewNewsWidget() {
       // Clear any existing content
       newsWidgetRef.current.innerHTML = '';
 
-      // Create container structure
+      // Create container structure (TradingView format)
       const container = document.createElement('div');
       container.className = 'tradingview-widget-container';
       container.style.cssText = 'height: 100%; width: 100%; position: relative;';
@@ -37,7 +37,7 @@ function TradingViewNewsWidget() {
       container.appendChild(widgetDiv);
       newsWidgetRef.current.appendChild(container);
 
-      // Create and append script
+      // Create and append script (TradingView format)
       const script = document.createElement('script');
       script.type = 'text/javascript';
       script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js';
@@ -55,6 +55,8 @@ function TradingViewNewsWidget() {
 
       // Set config as script innerHTML (TradingView format)
       script.innerHTML = JSON.stringify(widgetConfig);
+      
+      // Append script to widget div (TradingView requires script inside widget div)
       widgetDiv.appendChild(script);
       
       script.onload = () => {
@@ -63,6 +65,10 @@ function TradingViewNewsWidget() {
       
       script.onerror = (error) => {
         console.error('Failed to load TradingView news widget script:', error);
+        // Retry after a delay
+        setTimeout(() => {
+          setWidgetKey(prev => prev + 1);
+        }, 2000);
       };
 
       return () => {
@@ -1066,6 +1072,10 @@ function TradePage() {
       
       script.onerror = (error) => {
         console.error('Crypto Screener script failed to load:', error);
+        // Retry mechanism - will be handled by useEffect dependency
+        if (tradingViewTARef.current) {
+          tradingViewTARef.current.innerHTML = '';
+        }
       };
       
       widgetDiv.appendChild(script);
