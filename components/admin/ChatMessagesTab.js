@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FiSend, FiMessageCircle, FiUser, FiClock, FiFile, FiImage, FiDownload } from 'react-icons/fi';
+import { FiSend, FiMessageCircle, FiUser, FiClock, FiFile, FiImage, FiDownload, FiPaperclip, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const ChatMessagesTab = () => {
@@ -10,9 +10,12 @@ const ChatMessagesTab = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [isUserTyping, setIsUserTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingChannelRef = useRef(null);
 
@@ -198,9 +201,117 @@ const ChatMessagesTab = () => {
     }
   };
 
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size exceeds 10MB limit');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Only images, PDF, TXT, DOC, and DOCX files are allowed.');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile || !selectedConversation || uploadingFile) return;
+
+    setUploadingFile(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Session expired');
+        return;
+      }
+
+      // Convert file to base64
+      const reader = new FileReader();
+      const fileBase64Promise = new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
+
+      const fileBase64 = await fileBase64Promise;
+
+      // Upload file via API
+      const uploadResponse = await fetch('/api/chat/upload-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: selectedConversation.user_id,
+          file_base64: fileBase64,
+          file_name: selectedFile.name,
+          file_type: selectedFile.type,
+        }),
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Failed to upload file');
+      }
+
+      // Get admin profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, username')
+        .eq('id', session.user.id)
+        .single();
+
+      // Send message with attachment
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          user_id: selectedConversation.user_id,
+          user_email: selectedConversation.user_email,
+          user_name: selectedConversation.user_name,
+          message: newMessage.trim() || `📎 ${selectedFile.name}`,
+          attachment_url: uploadResult.attachment_url,
+          attachment_name: uploadResult.attachment_name,
+          attachment_type: uploadResult.attachment_type,
+          is_admin: true,
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSelectedFile(null);
+      setNewMessage('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      toast.success('File uploaded successfully');
+      scrollToBottom();
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error(error.message || 'Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || sending) return;
+    if ((!newMessage.trim() && !selectedFile) || !selectedConversation || sending || uploadingFile) return;
+
+    // If file is selected, upload it first
+    if (selectedFile) {
+      await uploadFile();
+      return;
+    }
 
     const messageText = newMessage.trim();
     setNewMessage('');
@@ -592,7 +703,84 @@ const ChatMessagesTab = () => {
                 background: 'rgba(15, 17, 36, 0.95)',
               }}
             >
+              {selectedFile && (
+                <div style={{ 
+                  marginBottom: '12px', 
+                  padding: '10px 14px', 
+                  background: 'rgba(59, 130, 246, 0.1)', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
+                    <FiFile size={16} color="#60a5fa" />
+                    <span style={{ fontSize: '13px', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {selectedFile.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '12px' }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*,.pdf,.txt,.doc,.docx"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFile}
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    cursor: uploadingFile ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!uploadingFile) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.08)';
+                      e.target.style.borderColor = '#3b82f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!uploadingFile) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }
+                  }}
+                >
+                  <FiPaperclip size={18} />
+                </button>
                 <input
                   type="text"
                   value={newMessage}
@@ -616,8 +804,8 @@ const ChatMessagesTab = () => {
                       }, 300); // Debounce 300ms
                     }
                   }}
-                  placeholder="Type your reply..."
-                  disabled={sending}
+                  placeholder={selectedFile ? "Add a message (optional)..." : "Type your reply..."}
+                  disabled={sending || uploadingFile}
                   style={{
                     flex: 1,
                     padding: '14px 18px',
@@ -640,16 +828,16 @@ const ChatMessagesTab = () => {
                 />
                 <button
                   type="submit"
-                  disabled={sending || !newMessage.trim()}
+                  disabled={sending || uploadingFile || (!newMessage.trim() && !selectedFile)}
                   style={{
                     padding: '14px 24px',
                     borderRadius: '12px',
-                    background: sending || !newMessage.trim()
+                    background: (sending || uploadingFile || (!newMessage.trim() && !selectedFile))
                       ? 'rgba(59, 130, 246, 0.5)'
                       : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                     border: 'none',
                     color: '#ffffff',
-                    cursor: sending || !newMessage.trim() ? 'not-allowed' : 'pointer',
+                    cursor: (sending || uploadingFile || (!newMessage.trim() && !selectedFile)) ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -659,8 +847,14 @@ const ChatMessagesTab = () => {
                     transition: 'all 0.2s',
                   }}
                 >
-                  <FiSend size={18} />
-                  Send
+                  {uploadingFile ? (
+                    <span style={{ fontSize: '12px' }}>Uploading...</span>
+                  ) : (
+                    <>
+                      <FiSend size={18} />
+                      Send
+                    </>
+                  )}
                 </button>
               </div>
             </form>
