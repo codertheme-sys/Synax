@@ -19,6 +19,70 @@ const ChatWidget = ({ user }) => {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingChannelRef = useRef(null);
+  const notificationPermissionRef = useRef(null);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        notificationPermissionRef.current = permission;
+      });
+    } else if ('Notification' in window) {
+      notificationPermissionRef.current = Notification.permission;
+    }
+  }, []);
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.error('Error playing notification sound:', error);
+    }
+  };
+
+  // Show browser notification
+  const showBrowserNotification = (title, message) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        const notification = new Notification(title, {
+          body: message,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'chat-message',
+          requireInteraction: false,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          setIsOpen(true);
+          setIsMinimized(false);
+          notification.close();
+        };
+
+        // Auto close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+      } catch (error) {
+        console.error('Error showing browser notification:', error);
+      }
+    }
+  };
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -48,9 +112,9 @@ const ChatWidget = ({ user }) => {
     }
   }, [isOpen, user]);
 
-  // Subscribe to new messages via Realtime
+  // Subscribe to new messages via Realtime (always active, even when chat is closed)
   useEffect(() => {
-    if (!user || !isOpen) return;
+    if (!user) return;
 
     const channel = supabase
       .channel('chat_messages')
@@ -64,19 +128,23 @@ const ChatWidget = ({ user }) => {
         },
         (payload) => {
           console.log('New message received:', payload);
-          setMessages((prev) => {
-            // Check if message already exists to prevent duplicates
-            const exists = prev.find((m) => m.id === payload.new.id);
-            if (exists) return prev;
-            return [...prev, payload.new];
-          });
-          scrollToBottom();
           
-          // Show notification if chat is minimized or not focused
-          if (isMinimized || document.hidden) {
-            toast.success('New message received', {
-              icon: '💬',
+          // If chat is open, add message to list
+          if (isOpen) {
+            setMessages((prev) => {
+              // Check if message already exists to prevent duplicates
+              const exists = prev.find((m) => m.id === payload.new.id);
+              if (exists) return prev;
+              return [...prev, payload.new];
             });
+            scrollToBottom();
+            
+            // Show notification if chat is minimized or not focused
+            if (isMinimized || document.hidden) {
+              toast.success('New message received', {
+                icon: '💬',
+              });
+            }
           }
         }
       )
@@ -90,19 +158,41 @@ const ChatWidget = ({ user }) => {
         },
         (payload) => {
           // Admin messages for this user
-          if (payload.new.user_id === user.id || payload.new.is_admin) {
+          if (payload.new.user_id === user.id && payload.new.is_admin) {
             console.log('New admin message received:', payload);
-            setMessages((prev) => {
-              // Check if message already exists to prevent duplicates
-              const exists = prev.find((m) => m.id === payload.new.id);
-              if (exists) return prev;
-              return [...prev, payload.new];
-            });
-            scrollToBottom();
             
-            if (isMinimized || document.hidden) {
+            // If chat is open, add message to list
+            if (isOpen) {
+              setMessages((prev) => {
+                // Check if message already exists to prevent duplicates
+                const exists = prev.find((m) => m.id === payload.new.id);
+                if (exists) return prev;
+                return [...prev, payload.new];
+              });
+              scrollToBottom();
+              
+              if (isMinimized || document.hidden) {
+                toast.success('New message from support', {
+                  icon: '💬',
+                });
+              }
+            }
+            
+            // If chat is closed, show browser notification and play sound
+            if (!isOpen) {
+              const messageText = payload.new.message || 'New message from support';
+              const title = '💬 New Message from Support';
+              
+              // Play sound
+              playNotificationSound();
+              
+              // Show browser notification
+              showBrowserNotification(title, messageText);
+              
+              // Show toast notification
               toast.success('New message from support', {
                 icon: '💬',
+                duration: 5000,
               });
             }
           }
@@ -110,31 +200,35 @@ const ChatWidget = ({ user }) => {
       )
       .subscribe();
 
-    // Subscribe to typing indicator for admin messages
-    const typingChannel = supabase
-      .channel(`typing:${user.id}`)
-      .on('broadcast', { event: 'typing' }, (payload) => {
-        console.log('Typing broadcast received:', payload);
-        if (payload.payload && payload.payload.isAdmin) {
-          setIsAdminTyping(true);
-          // Clear existing timeout
-          if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
+    // Subscribe to typing indicator for admin messages (only when chat is open)
+    let typingChannel = null;
+    if (isOpen) {
+      typingChannel = supabase
+        .channel(`typing:${user.id}`)
+        .on('broadcast', { event: 'typing' }, (payload) => {
+          console.log('Typing broadcast received:', payload);
+          if (payload.payload && payload.payload.isAdmin) {
+            setIsAdminTyping(true);
+            // Clear existing timeout
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+            // Reset timeout to 5 seconds after last typing indicator
+            typingTimeoutRef.current = setTimeout(() => {
+              setIsAdminTyping(false);
+            }, 5000);
           }
-          // Reset timeout to 5 seconds after last typing indicator
-          typingTimeoutRef.current = setTimeout(() => {
-            setIsAdminTyping(false);
-          }, 5000);
-        }
-      })
-      .subscribe();
-
-    typingChannelRef.current = typingChannel;
+        })
+        .subscribe();
+      
+      typingChannelRef.current = typingChannel;
+    }
 
     return () => {
       supabase.removeChannel(channel);
       if (typingChannelRef.current) {
         supabase.removeChannel(typingChannelRef.current);
+        typingChannelRef.current = null;
       }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
