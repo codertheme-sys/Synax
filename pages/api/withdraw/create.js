@@ -24,7 +24,11 @@ export default async function handler(req, res) {
 
     const { amount, coin, network, address, payment_method, bank_account, crypto_address, crypto_network } = req.body;
 
-    if (!amount || amount <= 0) {
+    // Normalize amount (support both comma and dot as decimal separator)
+    const rawAmount = typeof amount === 'string' ? amount.replace(',', '.') : amount;
+    const amountNum = parseFloat(rawAmount);
+
+    if (!amount || isNaN(amountNum) || amountNum <= 0) {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
@@ -60,22 +64,98 @@ export default async function handler(req, res) {
       });
     }
 
-    // Balance check
-    if (parseFloat(profile.balance || 0) < parseFloat(amount)) {
-      return res.status(400).json({ 
-        error: 'Insufficient balance',
-        available: parseFloat(profile.balance || 0),
-        requested: parseFloat(amount)
-      });
-    }
+    const finalCoin = coin?.toUpperCase?.() || null;
+    const isCryptoWithdrawal = finalPaymentMethod === 'crypto' && finalCoin;
 
-    // Minimum withdrawal amount check
-    const minWithdraw = finalPaymentMethod === 'crypto' ? 20 : 50;
-    if (parseFloat(amount) < minWithdraw) {
-      return res.status(400).json({ 
-        error: `Minimum withdrawal is $${minWithdraw}`,
-        minimum: minWithdraw
-      });
+    if (isCryptoWithdrawal) {
+      // --- CRYPTO WITHDRAWAL: amount is in crypto (e.g. 0.92 ETH) ---
+      if (!['BTC', 'ETH', 'USDT', 'XRP'].includes(finalCoin)) {
+        return res.status(400).json({ error: `Unsupported coin: ${finalCoin}` });
+      }
+
+      // Get current price for minimum check
+      let currentPrice = 1;
+      if (finalCoin !== 'USDT') {
+        const coinGeckoIds = { 'BTC': 'bitcoin', 'ETH': 'ethereum', 'XRP': 'ripple' };
+        try {
+          const priceRes = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoIds[finalCoin]}&vs_currencies=usd`,
+            { headers: { 'Accept': 'application/json' } }
+          );
+          if (priceRes.ok) {
+            const data = await priceRes.json();
+            const d = data[coinGeckoIds[finalCoin]];
+            if (d?.usd != null) currentPrice = parseFloat(d.usd);
+          }
+        } catch (e) {
+          const { data: ph } = await supabaseAdmin
+            .from('price_history')
+            .select('price')
+            .or(`asset_id.eq.${finalCoin},asset_symbol.eq.${finalCoin}`)
+            .eq('asset_type', 'crypto')
+            .order('last_updated', { ascending: false })
+            .limit(1)
+            .single();
+          if (ph?.price) currentPrice = parseFloat(ph.price);
+        }
+      }
+
+      const amountUsd = amountNum * currentPrice;
+
+      // Minimum withdrawal: $20 USD equivalent
+      const minWithdrawUsd = 20;
+      if (amountUsd < minWithdrawUsd) {
+        return res.status(400).json({ 
+          error: `Minimum withdrawal is $${minWithdrawUsd} (your ${amountNum} ${finalCoin} ≈ $${amountUsd.toFixed(2)} USD)`,
+          minimum: minWithdrawUsd
+        });
+      }
+
+      // Balance check: portfolio (crypto holdings)
+      if (finalCoin === 'USDT') {
+        if (parseFloat(profile.balance || 0) < amountNum) {
+          return res.status(400).json({ 
+            error: 'Insufficient balance',
+            available: parseFloat(profile.balance || 0),
+            requested: amountNum
+          });
+        }
+      } else {
+        const { data: portfolio } = await supabaseAdmin
+          .from('portfolio')
+          .select('quantity')
+          .eq('user_id', user.id)
+          .eq('asset_type', 'crypto')
+          .or(`asset_id.eq.${finalCoin},asset_symbol.eq.${finalCoin}`)
+          .limit(1)
+          .single();
+
+        const qty = portfolio ? parseFloat(portfolio.quantity || 0) : 0;
+        if (qty < amountNum) {
+          return res.status(400).json({ 
+            error: 'Insufficient balance',
+            available: qty,
+            requested: amountNum
+          });
+        }
+      }
+    } else {
+      // --- CASH/BANK WITHDRAWAL: amount is in USD ---
+      if (parseFloat(profile.balance || 0) < amountNum) {
+        return res.status(400).json({ 
+          error: 'Insufficient balance',
+          available: parseFloat(profile.balance || 0),
+          requested: amountNum
+        });
+      }
+
+      const minWithdraw = 50;
+      if (amountNum < minWithdraw) {
+        return res.status(400).json({ 
+          error: `Minimum withdrawal is $${minWithdraw}`,
+          minimum: minWithdraw
+        });
+      }
     }
 
     // Payment method'a göre gerekli alanları kontrol et
@@ -88,18 +168,19 @@ export default async function handler(req, res) {
     }
 
     // Withdrawal kaydı oluştur (pending)
+    const withdrawalCurrency = isCryptoWithdrawal ? finalCoin : 'USD';
     const { data: withdrawal, error: withdrawalError } = await supabaseAdmin
       .from('withdrawals')
       .insert({
         user_id: user.id,
-        amount: parseFloat(amount),
-        currency: 'USD',
+        amount: amountNum,
+        currency: withdrawalCurrency,
         payment_method: finalPaymentMethod,
         bank_account: bank_account || null,
         crypto_address: finalCryptoAddress || null,
         crypto_network: finalCryptoNetwork || null,
         status: 'pending',
-        admin_notes: coin ? `Coin: ${coin}, Network: ${finalCryptoNetwork}` : null
+        admin_notes: finalCoin ? `Coin: ${finalCoin}, Network: ${finalCryptoNetwork}` : null
       })
       .select()
       .single();
@@ -117,8 +198,8 @@ export default async function handler(req, res) {
         .eq('id', user.id)
         .single();
       
-      const user = userProfile || { email: 'N/A', username: 'N/A' };
-      const message = formatWithdrawalNotification(withdrawal, user, parseFloat(amount));
+      const notifyUser = userProfile || { email: 'N/A', username: 'N/A' };
+      const message = formatWithdrawalNotification(withdrawal, notifyUser, amountNum);
       await sendTelegramNotification(message);
     } catch (telegramError) {
       // Don't fail the request if Telegram notification fails

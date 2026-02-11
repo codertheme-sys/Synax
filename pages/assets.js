@@ -1139,7 +1139,7 @@ function AssetsPage() {
                       coin: withdrawCoin,
                       network: withdrawNetwork,
                       address: withdrawAddress,
-                      amount: parseFloat(withdrawAmount),
+                      amount: withdrawAmount,
                     }),
                   });
 

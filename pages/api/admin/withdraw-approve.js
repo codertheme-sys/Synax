@@ -58,26 +58,62 @@ export default async function handler(req, res) {
     }
 
     if (action === 'approve') {
-      // Balance check
-      const { data: userProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('balance')
-        .eq('id', withdrawal.user_id)
-        .single();
+      const currency = (withdrawal.currency || 'USD').toUpperCase();
+      const amount = parseFloat(withdrawal.amount);
 
-      if (parseFloat(userProfile.balance || 0) < parseFloat(withdrawal.amount)) {
-        return res.status(400).json({ error: 'Insufficient balance' });
+      // Crypto withdrawal: deduct from portfolio
+      if (['BTC', 'ETH', 'XRP'].includes(currency)) {
+        const { data: portfolio } = await supabaseAdmin
+          .from('portfolio')
+          .select('id, quantity, average_price, total_value')
+          .eq('user_id', withdrawal.user_id)
+          .eq('asset_type', 'crypto')
+          .or(`asset_id.eq.${currency},asset_symbol.eq.${currency}`)
+          .limit(1)
+          .single();
+
+        if (!portfolio || parseFloat(portfolio.quantity || 0) < amount) {
+          return res.status(400).json({ error: 'Insufficient balance' });
+        }
+
+        const qty = parseFloat(portfolio.quantity || 0);
+        const avgPrice = parseFloat(portfolio.average_price || 0);
+        const newQty = qty - amount;
+        const newTotalValue = newQty * avgPrice;
+
+        if (newQty <= 0) {
+          await supabaseAdmin.from('portfolio').delete().eq('id', portfolio.id);
+        } else {
+          await supabaseAdmin
+            .from('portfolio')
+            .update({
+              quantity: newQty,
+              total_value: newTotalValue,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', portfolio.id);
+        }
+      } else {
+        // USD/USDT: deduct from balance
+        const { data: userProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('balance')
+          .eq('id', withdrawal.user_id)
+          .single();
+
+        if (!userProfile || parseFloat(userProfile.balance || 0) < amount) {
+          return res.status(400).json({ error: 'Insufficient balance' });
+        }
+
+        const newBalance = parseFloat(userProfile.balance || 0) - amount;
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            balance: newBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', withdrawal.user_id);
       }
-
-      // Decrease balance
-      const newBalance = parseFloat(userProfile.balance || 0) - parseFloat(withdrawal.amount);
-      await supabaseAdmin
-        .from('profiles')
-        .update({
-          balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', withdrawal.user_id);
 
       // Withdrawal'ı onayla (processed_at and processed_by columns don't exist in schema)
       await supabaseAdmin

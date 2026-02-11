@@ -128,6 +128,9 @@ function PaymentsTab({ adminData, onRefresh }) {
       const coinNetwork = item.transaction_id?.split(':') || [];
       coin = coinNetwork[0] || item.payment_provider || 'N/A';
       network = coinNetwork[1] || 'N/A';
+    } else {
+      coin = item.currency || (item.admin_notes?.match(/Coin:\s*(\w+)/)?.[1] || 'USD');
+      network = item.crypto_network || 'N/A';
     }
     
     const receiptUrl = item.bank_receipt_url || item.receipt_url || item.bank_receipt || null;
@@ -169,7 +172,7 @@ function PaymentsTab({ adminData, onRefresh }) {
             ) : (
               <>
                 <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-                  Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>{parseFloat(item.amount || 0).toFixed(2)} USDT</span>
+                  Amount: <span style={{ color: '#ffffff', fontWeight: 600 }}>{parseFloat(item.amount || 0).toFixed(coin === 'BTC' || coin === 'ETH' || coin === 'XRP' ? 8 : 2)} {coin}</span>
                 </div>
                 {item.crypto_address && (
                   <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
@@ -210,8 +213,8 @@ function PaymentsTab({ adminData, onRefresh }) {
                 </>
               ) : (
                 <>
-                  {parseFloat(item.amount || 0).toFixed(2)}
-                  <span style={{ fontSize: isMobile ? '16px' : '24px', marginLeft: '4px' }}>USDT</span>
+                  {parseFloat(item.amount || 0).toFixed(coin === 'BTC' || coin === 'ETH' || coin === 'XRP' ? 8 : 2)}
+                  <span style={{ fontSize: isMobile ? '16px' : '24px', marginLeft: '4px' }}>{coin}</span>
                 </>
               )}
             </div>

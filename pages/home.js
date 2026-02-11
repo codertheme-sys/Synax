@@ -1560,7 +1560,7 @@ function HomePage() {
                       coin: withdrawCoin,
                       network: withdrawNetwork,
                       address: withdrawAddress,
-                      amount: parseFloat(withdrawAmount),
+                      amount: withdrawAmount,
                     }),
                   });
 
