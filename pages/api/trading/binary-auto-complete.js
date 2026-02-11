@@ -329,9 +329,9 @@ export default async function handler(req, res) {
         .eq('id', trade.user_id)
         .single();
       
-      const user = userProfile || { email: 'N/A', username: 'N/A' };
-      const message = formatTradeNotification(trade, user, winLost, profitAmount, initialPrice, lastPrice);
-      await sendTelegramNotification(message);
+      const notifyUser = userProfile || { email: 'N/A', username: 'N/A', full_name: 'N/A' };
+      const message = formatTradeNotification(trade, notifyUser, winLost, profitAmount, initialPrice, lastPrice);
+      await sendTelegramNotification(message, { context: 'trade' });
     } catch (telegramError) {
       // Don't fail the request if Telegram notification fails
       console.error('Binary trade complete - Telegram notification error:', telegramError);

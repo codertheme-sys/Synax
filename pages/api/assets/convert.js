@@ -1,5 +1,96 @@
 import { createServerClient } from '../../../lib/supabase';
 
+async function getPriceInUSDT(supabaseAdmin, symbol) {
+  if (symbol === 'USDT') return 1;
+  try {
+    const res = await fetch(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}USDT`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (res.ok) {
+      const d = await res.json();
+      const p = parseFloat(d?.price);
+      if (p > 0) return p;
+    }
+  } catch (e) {}
+  const { data: ph } = await supabaseAdmin
+    .from('price_history')
+    .select('price')
+    .eq('asset_symbol', symbol)
+    .eq('asset_type', 'crypto')
+    .order('last_updated', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return ph?.price ? parseFloat(ph.price) : 0;
+}
+
+async function addToPortfolio(supabaseAdmin, userId, symbol, quantity, price) {
+  const assetId = symbol;
+  const assetName = { BTC: 'Bitcoin', ETH: 'Ethereum', XRP: 'Ripple', USDT: 'Tether' }[symbol] || symbol;
+  const { data: existing } = await supabaseAdmin
+    .from('portfolio')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('asset_type', 'crypto')
+    .or(`asset_id.eq.${symbol},asset_symbol.eq.${symbol}`)
+    .limit(1)
+    .maybeSingle();
+  const qty = parseFloat(quantity);
+  const totalVal = qty * price;
+  if (existing) {
+    const oldQty = parseFloat(existing.quantity || 0);
+    const oldAvg = parseFloat(existing.average_price || 0);
+    const newQty = oldQty + qty;
+    const newAvg = oldQty <= 0 ? price : (oldQty * oldAvg + qty * price) / newQty;
+    await supabaseAdmin
+      .from('portfolio')
+      .update({
+        quantity: newQty,
+        average_price: newAvg,
+        current_price: price,
+        total_value: newQty * price,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+  } else {
+    await supabaseAdmin
+      .from('portfolio')
+      .insert({
+        user_id: userId,
+        asset_type: 'crypto',
+        asset_id: assetId,
+        asset_symbol: symbol,
+        asset_name: assetName,
+        quantity: qty,
+        average_price: price,
+        current_price: price,
+        total_value: totalVal,
+        profit_loss: 0,
+        profit_loss_percent: 0,
+      });
+  }
+}
+
+async function addConvertHistory(supabaseAdmin, userId, portfolioId, assetId, assetType, assetSymbol, quantity, price, usdValue) {
+  try {
+    await supabaseAdmin
+      .from('convert_history')
+      .insert({
+        user_id: userId,
+        portfolio_id: portfolioId,
+        asset_id: assetId,
+        asset_type: assetType,
+        asset_symbol: assetSymbol,
+        quantity,
+        price,
+        usd_value: usdValue,
+        created_at: new Date().toISOString(),
+      });
+  } catch (e) {
+    console.warn('Convert history insert failed:', e.message);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -20,8 +111,157 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { portfolio_id, asset_id, asset_type, asset_symbol, quantity } = req.body;
+    const {
+      portfolio_id,
+      asset_id,
+      asset_type,
+      asset_symbol,
+      quantity,
+      source_type,
+      source_coin,
+      target_coin,
+    } = req.body;
 
+    const ALLOWED_COINS = ['BTC', 'ETH', 'USDT', 'XRP'];
+
+    // New format: source_type, source_coin, target_coin, quantity
+    const isNewFormat = source_type && source_coin && target_coin;
+    if (isNewFormat) {
+      const src = source_coin?.toUpperCase();
+      const tgt = target_coin?.toUpperCase();
+      if (!ALLOWED_COINS.includes(src) || !ALLOWED_COINS.includes(tgt)) {
+        return res.status(400).json({ error: 'Invalid source or target coin' });
+      }
+      if (src === tgt) {
+        return res.status(400).json({ error: 'Source and target cannot be the same' });
+      }
+      const qty = parseFloat(quantity);
+      if (!quantity || isNaN(qty) || qty <= 0) {
+        return res.status(400).json({ error: 'Invalid quantity' });
+      }
+
+      if (source_type === 'balance') {
+        if (src !== 'USDT') {
+          return res.status(400).json({ error: 'Balance source supports only USDT' });
+        }
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('balance')
+          .eq('id', user.id)
+          .single();
+        if (!profile || parseFloat(profile.balance || 0) < qty) {
+          return res.status(400).json({ error: 'Insufficient USDT balance' });
+        }
+        const usdtValue = qty;
+        const targetPrice = await getPriceInUSDT(supabaseAdmin, tgt);
+        if (!targetPrice || targetPrice <= 0) {
+          return res.status(500).json({ error: `Unable to fetch ${tgt} price` });
+        }
+        const targetQty = usdtValue / targetPrice;
+        const { error: balErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ balance: parseFloat(profile.balance || 0) - qty, updated_at: new Date().toISOString() })
+          .eq('id', user.id);
+        if (balErr) return res.status(500).json({ error: 'Failed to update balance' });
+        await addToPortfolio(supabaseAdmin, user.id, tgt, targetQty, targetPrice);
+        await addConvertHistory(supabaseAdmin, user.id, null, 'USDT', 'crypto', 'USDT', qty, 1, usdtValue);
+        return res.status(200).json({
+          success: true,
+          message: `Converted ${qty} USDT to ${targetQty.toFixed(8)} ${tgt}`,
+          usdt_value: usdtValue,
+          target_quantity: targetQty,
+          target_coin: tgt,
+        });
+      }
+
+      if (source_type === 'portfolio') {
+        let portfolioItem = null;
+        if (portfolio_id) {
+          const { data, error } = await supabaseAdmin
+            .from('portfolio')
+            .select('*')
+            .eq('id', portfolio_id)
+            .eq('user_id', user.id)
+            .single();
+          if (!error && data) portfolioItem = data;
+        }
+        if (!portfolioItem) {
+          const { data, error } = await supabaseAdmin
+            .from('portfolio')
+            .select('*')
+            .eq('user_id', user.id)
+            .or(`asset_id.eq.${src},asset_symbol.eq.${src}`)
+            .eq('asset_type', 'crypto')
+            .limit(1)
+            .maybeSingle();
+          if (!error && data) portfolioItem = data;
+        }
+        const portfolioError = portfolioItem ? null : { message: 'Portfolio item not found' };
+        if (portfolioError || !portfolioItem) {
+          return res.status(404).json({ error: 'Portfolio item not found for source coin' });
+        }
+        const currentQuantity = parseFloat(portfolioItem.quantity || 0);
+        if (qty > currentQuantity) {
+          return res.status(400).json({ error: 'Insufficient quantity' });
+        }
+        const sourcePrice = await getPriceInUSDT(supabaseAdmin, src);
+        if (!sourcePrice || sourcePrice <= 0) {
+          return res.status(500).json({ error: `Unable to fetch ${src} price` });
+        }
+        const usdtValue = qty * sourcePrice;
+
+        if (tgt === 'USDT') {
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('balance')
+            .eq('id', user.id)
+            .single();
+          if (!profile) return res.status(404).json({ error: 'Profile not found' });
+          const newBalance = parseFloat(profile.balance || 0) + usdtValue;
+          const { error: balErr } = await supabaseAdmin
+            .from('profiles')
+            .update({ balance: newBalance, updated_at: new Date().toISOString() })
+            .eq('id', user.id);
+          if (balErr) return res.status(500).json({ error: 'Failed to update balance' });
+        } else {
+          const targetPrice = await getPriceInUSDT(supabaseAdmin, tgt);
+          if (!targetPrice || targetPrice <= 0) {
+            return res.status(500).json({ error: `Unable to fetch ${tgt} price` });
+          }
+          const targetQty = usdtValue / targetPrice;
+          await addToPortfolio(supabaseAdmin, user.id, tgt, targetQty, targetPrice);
+        }
+
+        const newQty = currentQuantity - qty;
+        if (newQty <= 0) {
+          await supabaseAdmin.from('portfolio').delete().eq('id', portfolioItem.id).eq('user_id', user.id);
+        } else {
+          const newTotal = newQty * sourcePrice;
+          await supabaseAdmin
+            .from('portfolio')
+            .update({
+              quantity: newQty,
+              total_value: newTotal,
+              current_price: sourcePrice,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', portfolioItem.id);
+        }
+
+        await addConvertHistory(supabaseAdmin, user.id, newQty > 0 ? portfolioItem.id : null, src, 'crypto', src, qty, sourcePrice, usdtValue);
+        const targetAmount = tgt === 'USDT' ? usdtValue : usdtValue / (await getPriceInUSDT(supabaseAdmin, tgt));
+        return res.status(200).json({
+          success: true,
+          message: `Converted ${qty} ${src} to ${tgt === 'USDT' ? usdtValue.toFixed(2) : targetAmount.toFixed(8)} ${tgt}`,
+          usdt_value: usdtValue,
+          target_coin: tgt,
+        });
+      }
+
+      return res.status(400).json({ error: 'Invalid source_type' });
+    }
+
+    // Legacy format: portfolio_id, asset_id, asset_type, asset_symbol, quantity (always to USDT)
     if (!portfolio_id || !asset_id || !asset_type || !asset_symbol || !quantity) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -30,15 +270,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Quantity must be greater than 0' });
     }
 
-    // USDT cannot be converted to USDT (it's already USDT)
     if (asset_symbol?.toUpperCase() === 'USDT' || asset_id?.toUpperCase() === 'USDT') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'USDT cannot be converted. USDT is already in USDT format. Use withdraw instead.' 
+        error: 'USDT cannot be converted. Use the new Convert with From/To selection.',
       });
     }
 
-    // Get current portfolio item
     const { data: portfolioItem, error: portfolioError } = await supabaseAdmin
       .from('portfolio')
       .select('*')

@@ -21,6 +21,7 @@ function AssetsPage() {
   
   // Data states
   const [holdings, setHoldings] = useState([]);
+  const [balance, setBalance] = useState(0);
   const [recentDeposits, setRecentDeposits] = useState([]);
   const [recentWithdrawals, setRecentWithdrawals] = useState([]);
   const [allPayments, setAllPayments] = useState([]);
@@ -31,8 +32,11 @@ function AssetsPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState(null);
+  const [convertFrom, setConvertFrom] = useState('');
+  const [convertTo, setConvertTo] = useState('');
   const [convertAmount, setConvertAmount] = useState('');
-  const [convertUsdValue, setConvertUsdValue] = useState(0);
+  const [convertResultValue, setConvertResultValue] = useState(0);
+  const [convertLoading, setConvertLoading] = useState(false);
   const [depositCoin, setDepositCoin] = useState('');
   const [depositNetwork, setDepositNetwork] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
@@ -126,8 +130,9 @@ function AssetsPage() {
           if (result.success) {
             const data = result.data;
 
-            // Format holdings
+            // Format holdings and balance
             const portfolioValue = data.kpis?.portfolioValue || 0;
+            setBalance(parseFloat(data.kpis?.cashBalance || 0));
             const formattedHoldings = (data.holdings || []).map(h => {
               const qty = parseFloat(h.quantity || 0);
               const avgPrice = parseFloat(h.average_price || 0);
@@ -329,6 +334,35 @@ function AssetsPage() {
           >
             Withdraw
           </button>
+          <button
+            onClick={() => {
+              setConvertFrom('');
+              setConvertTo('');
+              setConvertAmount('');
+              setConvertResultValue(0);
+              setSelectedHolding(null);
+              setShowConvertModal(true);
+            }}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+            }}
+          >
+            Convert
+          </button>
         </div>
 
         {/* Holdings, Payment Monitor, Earn Products - Grid Layout */}
@@ -413,13 +447,14 @@ function AssetsPage() {
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '13px', fontWeight: 800, color: '#4ade80', textShadow: '0 0 10px rgba(34, 197, 94, 0.5)' }}>{h.pnl}</td>
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px', fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{h.alloc}</td>
                       <td style={{ paddingTop: '10px', paddingBottom: '10px', paddingRight: '12px' }}>
-                        {/* Don't show convert button for USDT - USDT is already USDT */}
                         {h.symbol?.toUpperCase() !== 'USDT' && (
                           <button
                             onClick={() => {
                               setSelectedHolding(h);
+                              setConvertFrom(`portfolio:${h.id}:${h.symbol}`);
+                              setConvertTo('');
                               setConvertAmount('');
-                              setConvertUsdValue(0);
+                              setConvertResultValue(0);
                               setShowConvertModal(true);
                             }}
                             style={{
@@ -1216,7 +1251,6 @@ function AssetsPage() {
                       outline: 'none',
                     }}
                   className="deposit-select"
-                  className="deposit-select"
                   >
                     <option value="" style={{ background: '#0f1124', color: '#ffffff' }}>Select a network</option>
                     {networks[withdrawCoin]?.map((network) => (
@@ -1295,8 +1329,8 @@ function AssetsPage() {
         </div>
       )}
 
-      {/* Convert Modal */}
-      {showConvertModal && selectedHolding && (
+      {/* Convert Modal - Option A: From/To cross-coin */}
+      {showConvertModal && (
         <div
           style={{
             position: 'fixed',
@@ -1322,7 +1356,7 @@ function AssetsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Convert {selectedHolding.symbol} to USDT</h2>
+              <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Convert</h2>
               <button
                 onClick={() => setShowConvertModal(false)}
                 style={{
@@ -1337,164 +1371,225 @@ function AssetsPage() {
                 ×
               </button>
             </div>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <span style={{ fontSize: '14px', color: '#9ca3af' }}>Available: </span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
-                  {selectedHolding.qty} {selectedHolding.symbol}
-                </span>
-              </div>
-              <div>
-                <span style={{ fontSize: '14px', color: '#9ca3af' }}>Current Price: </span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
-                  {selectedHolding.price}
-                </span>
-              </div>
-            </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
-                Amount to Convert ({selectedHolding.symbol}) *
-              </label>
-              <input
-                type="number"
-                value={convertAmount}
-                onChange={(e) => {
-                  const amount = parseFloat(e.target.value) || 0;
-                  setConvertAmount(e.target.value);
-                  const usdValue = amount * selectedHolding.currentPrice;
-                  setConvertUsdValue(usdValue);
-                }}
-                placeholder="0.00"
-                min="0"
-                max={selectedHolding.quantity}
-                step="0.00000001"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#ffffff',
-                  fontSize: '15px',
-                  outline: 'none',
-                }}
-              />
-              <button
-                onClick={() => {
-                  setConvertAmount(selectedHolding.quantity.toString());
-                  const usdValue = selectedHolding.quantity * selectedHolding.currentPrice;
-                  setConvertUsdValue(usdValue);
-                }}
-                style={{
-                  marginTop: '8px',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  border: '1px solid rgba(59, 130, 246, 0.5)',
-                  color: '#60a5fa',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Use Max
-              </button>
-            </div>
+            {(() => {
+              const fromIsBalance = convertFrom === 'balance:USDT';
+              const fromHolding = convertFrom.startsWith('portfolio:') ? holdings.find(h => `portfolio:${h.id}:${h.symbol}` === convertFrom) : null;
+              const fromSymbol = fromIsBalance ? 'USDT' : fromHolding?.symbol || '';
+              const fromQty = fromIsBalance ? balance : (fromHolding?.quantity ?? 0);
+              const fromPrice = fromIsBalance ? 1 : (fromHolding?.currentPrice ?? 0);
+              const amt = parseFloat(convertAmount) || 0;
+              const usdtValue = fromSymbol ? (fromSymbol === 'USDT' ? amt : amt * fromPrice) : 0;
+              const targetPrice = convertTo === 'USDT' ? 1 : (holdings.find(h => h.symbol === convertTo)?.currentPrice || 0);
+              const toQty = convertTo && targetPrice > 0 ? usdtValue / targetPrice : (convertTo === 'USDT' ? usdtValue : 0);
+              const canSubmit = fromSymbol && convertTo && fromSymbol !== convertTo && amt > 0 && amt <= fromQty;
+              return (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>From *</label>
+                    <select
+                      value={convertFrom}
+                      onChange={(e) => {
+                        setConvertFrom(e.target.value);
+                        setConvertTo('');
+                        setConvertAmount('');
+                        setConvertResultValue(0);
+                        setSelectedHolding(holdings.find(h => `portfolio:${h.id}:${h.symbol}` === e.target.value) || null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#ffffff',
+                        fontSize: '15px',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Select source</option>
+                      <option value="balance:USDT">USDT (Available Balance) — {balance.toFixed(2)}</option>
+                      {holdings.filter(h => h.symbol?.toUpperCase() !== 'USDT').map(h => (
+                        <option key={h.id} value={`portfolio:${h.id}:${h.symbol}`}>
+                          {h.symbol} (Holdings) — {h.qty}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            {convertAmount && parseFloat(convertAmount) > 0 && (
-              <div style={{
-                marginBottom: '20px',
-                padding: '16px',
-                borderRadius: '8px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-              }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#9ca3af' }}>You will receive: </span>
-                  <span style={{ fontSize: '18px', fontWeight: 700, color: '#60a5fa' }}>
-                    {convertUsdValue.toFixed(2)} USDT
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                  {parseFloat(convertAmount).toFixed(8)} {selectedHolding.symbol} × {selectedHolding.price} = {convertUsdValue.toFixed(2)} USDT
-                </div>
-              </div>
-            )}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>To *</label>
+                    <select
+                      value={convertTo}
+                      onChange={(e) => {
+                        setConvertTo(e.target.value);
+                        setConvertResultValue(0);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#ffffff',
+                        fontSize: '15px',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Select target</option>
+                      {['USDT', 'BTC', 'ETH', 'XRP'].filter(c => c !== fromSymbol).map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <button
-              onClick={async () => {
-                if (!convertAmount || parseFloat(convertAmount) <= 0) {
-                  toast.error('Please enter a valid amount');
-                  return;
-                }
-                if (parseFloat(convertAmount) > selectedHolding.quantity) {
-                  toast.error('Amount exceeds available balance');
-                  return;
-                }
+                  {fromSymbol && convertTo && fromSymbol !== convertTo && (
+                    <>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#e5e7eb', marginBottom: '8px' }}>
+                          Amount ({fromSymbol}) * — Available: {fromQty.toFixed(8)}
+                        </label>
+                        <input
+                          type="number"
+                          value={convertAmount}
+                          onChange={(e) => {
+                            setConvertAmount(e.target.value);
+                            const a = parseFloat(e.target.value) || 0;
+                            const usd = fromSymbol === 'USDT' ? a : a * fromPrice;
+                            setConvertResultValue(convertTo === 'USDT' ? usd : (targetPrice > 0 ? usd / targetPrice : 0));
+                          }}
+                          placeholder="0.00"
+                          min="0"
+                          max={fromQty}
+                          step={fromSymbol === 'USDT' ? '0.01' : '0.00000001'}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: '#ffffff',
+                            fontSize: '15px',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            setConvertAmount(fromQty.toString());
+                            const usd = fromSymbol === 'USDT' ? fromQty : fromQty * fromPrice;
+                            setConvertResultValue(convertTo === 'USDT' ? usd : (targetPrice > 0 ? usd / targetPrice : 0));
+                          }}
+                          style={{
+                            marginTop: '8px',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            background: 'rgba(59, 130, 246, 0.2)',
+                            border: '1px solid rgba(59, 130, 246, 0.5)',
+                            color: '#60a5fa',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Use Max
+                        </button>
+                      </div>
 
-                try {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (!session) {
-                    toast.error('Please log in');
-                    return;
-                  }
+                      {amt > 0 && (
+                        <div style={{
+                          marginBottom: '20px',
+                          padding: '16px',
+                          borderRadius: '8px',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                        }}>
+                          <span style={{ fontSize: '14px', color: '#9ca3af' }}>You will receive: </span>
+                          <span style={{ fontSize: '18px', fontWeight: 700, color: '#60a5fa' }}>
+                            {convertTo === 'USDT'
+                              ? `${usdtValue.toFixed(2)} USDT`
+                              : targetPrice > 0
+                                ? `${toQty.toFixed(8)} ${convertTo}`
+                                : `≈ ${usdtValue.toFixed(2)} USDT worth of ${convertTo}`}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
 
-                  const response = await fetch('/api/assets/convert', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({
-                      portfolio_id: selectedHolding.id,
-                      asset_id: selectedHolding.asset_id,
-                      asset_type: selectedHolding.asset_type,
-                      asset_symbol: selectedHolding.symbol,
-                      quantity: parseFloat(convertAmount),
-                      usd_value: convertUsdValue,
-                    }),
-                  });
-
-                  const result = await response.json();
-                  if (result.success) {
-                    toast.success('Converted successfully!');
-                    setShowConvertModal(false);
-                    setSelectedHolding(null);
-                    setConvertAmount('');
-                    setConvertUsdValue(0);
-                    // Wait a bit to ensure database write completes, then refresh
-                    setTimeout(() => {
-                      window.location.reload();
-                    }, 500);
-                  } else {
-                    toast.error(result.error || 'Failed to convert');
-                  }
-                } catch (error) {
-                  console.error('Convert error:', error);
-                  toast.error('Failed to convert');
-                }
-              }}
-              disabled={!convertAmount || parseFloat(convertAmount) <= 0 || parseFloat(convertAmount) > selectedHolding.quantity}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '10px',
-                background: (!convertAmount || parseFloat(convertAmount) <= 0 || parseFloat(convertAmount) > selectedHolding.quantity)
-                  ? 'rgba(255, 255, 255, 0.1)'
-                  : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: (!convertAmount || parseFloat(convertAmount) <= 0 || parseFloat(convertAmount) > selectedHolding.quantity) ? 'not-allowed' : 'pointer',
-                marginTop: '8px',
-                opacity: (!convertAmount || parseFloat(convertAmount) <= 0 || parseFloat(convertAmount) > selectedHolding.quantity) ? 0.5 : 1,
-              }}
-            >
-              Confirm Convert
-            </button>
+                  <button
+                    onClick={async () => {
+                      if (!canSubmit || convertLoading) return;
+                      setConvertLoading(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) {
+                          toast.error('Please log in');
+                          return;
+                        }
+                        const body = fromIsBalance
+                          ? {
+                              source_type: 'balance',
+                              source_coin: 'USDT',
+                              target_coin: convertTo,
+                              quantity: amt,
+                            }
+                          : {
+                              source_type: 'portfolio',
+                              source_coin: fromSymbol,
+                              target_coin: convertTo,
+                              quantity: amt,
+                              portfolio_id: fromHolding.id,
+                              asset_id: fromHolding.asset_id,
+                              asset_type: fromHolding.asset_type,
+                              asset_symbol: fromSymbol,
+                            };
+                        const response = await fetch('/api/assets/convert', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify(body),
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          toast.success('Converted successfully!');
+                          setShowConvertModal(false);
+                          setConvertFrom('');
+                          setConvertTo('');
+                          setConvertAmount('');
+                          setSelectedHolding(null);
+                          setTimeout(() => window.location.reload(), 500);
+                        } else {
+                          toast.error(result.error || 'Failed to convert');
+                        }
+                      } catch (error) {
+                        console.error('Convert error:', error);
+                        toast.error('Failed to convert');
+                      } finally {
+                        setConvertLoading(false);
+                      }
+                    }}
+                    disabled={!canSubmit || convertLoading}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '10px',
+                      background: (!canSubmit || convertLoading) ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      cursor: (!canSubmit || convertLoading) ? 'not-allowed' : 'pointer',
+                      marginTop: '8px',
+                      opacity: (!canSubmit || convertLoading) ? 0.5 : 1,
+                    }}
+                  >
+                    {convertLoading ? 'Converting...' : 'Confirm Convert'}
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

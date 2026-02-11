@@ -967,7 +967,7 @@ function HomePage() {
             <div className="space-y-2" style={{ maxHeight: '350px', overflowY: 'auto' }}>
               {converts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>
-                  No convert operations yet. Convert your coins to USDT from the Assets page.
+                  No convert operations yet. Convert between BTC, ETH, USDT, and XRP from the Assets page.
                 </div>
               ) : (
                 converts.map((c) => {

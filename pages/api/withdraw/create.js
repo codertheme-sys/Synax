@@ -73,41 +73,55 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Unsupported coin: ${finalCoin}` });
       }
 
-      // Get current price for minimum check
-      let currentPrice = 1;
+      // Get current price in USDT for minimum check (Binance primary, fallback price_history)
+      let currentPriceInUSDT = finalCoin === 'USDT' ? 1 : 0;
       if (finalCoin !== 'USDT') {
-        const coinGeckoIds = { 'BTC': 'bitcoin', 'ETH': 'ethereum', 'XRP': 'ripple' };
         try {
+          const binanceSymbol = `${finalCoin}USDT`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
           const priceRes = await fetch(
-            `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoIds[finalCoin]}&vs_currencies=usd`,
-            { headers: { 'Accept': 'application/json' } }
+            `https://api.binance.com/api/v3/ticker/price?symbol=${binanceSymbol}`,
+            { headers: { 'Accept': 'application/json' }, signal: controller.signal }
           );
+          clearTimeout(timeoutId);
           if (priceRes.ok) {
             const data = await priceRes.json();
-            const d = data[coinGeckoIds[finalCoin]];
-            if (d?.usd != null) currentPrice = parseFloat(d.usd);
+            if (data?.price) {
+              const p = parseFloat(data.price);
+              if (p > 0) currentPriceInUSDT = p;
+            }
           }
-        } catch (e) {
+        } catch (e) { /* Binance failed */ }
+        if (!currentPriceInUSDT || currentPriceInUSDT <= 0) {
           const { data: ph } = await supabaseAdmin
             .from('price_history')
             .select('price')
-            .or(`asset_id.eq.${finalCoin},asset_symbol.eq.${finalCoin}`)
             .eq('asset_type', 'crypto')
+            .eq('asset_symbol', finalCoin)
             .order('last_updated', { ascending: false })
             .limit(1)
-            .single();
-          if (ph?.price) currentPrice = parseFloat(ph.price);
+            .maybeSingle();
+          if (ph?.price) {
+            const p = parseFloat(ph.price);
+            if (p > 0) currentPriceInUSDT = p;
+          }
+        }
+        if (!currentPriceInUSDT || currentPriceInUSDT <= 0) {
+          return res.status(500).json({
+            error: `Unable to fetch ${finalCoin} price. Please try again in a moment.`,
+          });
         }
       }
 
-      const amountUsd = amountNum * currentPrice;
+      const amountUsdt = amountNum * currentPriceInUSDT;
 
-      // Minimum withdrawal: $20 USD equivalent
-      const minWithdrawUsd = 20;
-      if (amountUsd < minWithdrawUsd) {
+      // Minimum withdrawal: 20 USDT equivalent
+      const minWithdrawUsdt = 20;
+      if (amountUsdt < minWithdrawUsdt) {
         return res.status(400).json({ 
-          error: `Minimum withdrawal is $${minWithdrawUsd} (your ${amountNum} ${finalCoin} ≈ $${amountUsd.toFixed(2)} USD)`,
-          minimum: minWithdrawUsd
+          error: `Minimum withdrawal is ${minWithdrawUsdt} USDT (your ${amountNum} ${finalCoin} ≈ ${amountUsdt.toFixed(2)} USDT)`,
+          minimum: minWithdrawUsdt
         });
       }
 
@@ -152,7 +166,7 @@ export default async function handler(req, res) {
       const minWithdraw = 50;
       if (amountNum < minWithdraw) {
         return res.status(400).json({ 
-          error: `Minimum withdrawal is $${minWithdraw}`,
+          error: `Minimum withdrawal is ${minWithdraw} USDT`,
           minimum: minWithdraw
         });
       }
@@ -198,9 +212,9 @@ export default async function handler(req, res) {
         .eq('id', user.id)
         .single();
       
-      const notifyUser = userProfile || { email: 'N/A', username: 'N/A' };
+      const notifyUser = userProfile || { email: user?.email || 'N/A', username: user?.user_metadata?.username || 'N/A', full_name: user?.user_metadata?.full_name || 'N/A' };
       const message = formatWithdrawalNotification(withdrawal, notifyUser, amountNum);
-      await sendTelegramNotification(message);
+      await sendTelegramNotification(message, { context: 'withdraw' });
     } catch (telegramError) {
       // Don't fail the request if Telegram notification fails
       console.error('Withdraw create - Telegram notification error:', telegramError);

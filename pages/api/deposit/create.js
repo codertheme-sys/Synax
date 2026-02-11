@@ -107,9 +107,9 @@ export default async function handler(req, res) {
         .eq('id', user.id)
         .single();
       
-      const user = userProfile || { email: 'N/A', username: 'N/A' };
-      const message = formatDepositNotification(deposit, user, coin, parseFloat(amount), 0);
-      await sendTelegramNotification(message);
+      const notifyUser = userProfile || { email: user?.email || 'N/A', username: user?.user_metadata?.username || 'N/A', full_name: user?.user_metadata?.full_name || 'N/A' };
+      const message = formatDepositNotification(deposit, notifyUser, coin, parseFloat(amount), 0);
+      await sendTelegramNotification(message, { context: 'deposit' });
     } catch (telegramError) {
       // Don't fail the request if Telegram notification fails
       console.error('Deposit create - Telegram notification error:', telegramError);
