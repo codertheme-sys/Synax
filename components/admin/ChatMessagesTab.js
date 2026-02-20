@@ -781,9 +781,9 @@ const ChatMessagesTab = () => {
                 >
                   <FiPaperclip size={18} />
                 </button>
-                <input
-                  type="text"
+                <textarea
                   value={newMessage}
+                  rows={3}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
                     // Broadcast typing indicator with debounce
@@ -804,11 +804,19 @@ const ChatMessagesTab = () => {
                       }, 300); // Debounce 300ms
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      e.target.form?.requestSubmit();
+                    }
+                  }}
                   placeholder={selectedFile ? "Add a message (optional)..." : "Type your reply..."}
                   disabled={sending || uploadingFile}
                   style={{
                     flex: 1,
                     padding: '14px 18px',
+                    minHeight: '80px',
+                    resize: 'vertical',
                     borderRadius: '12px',
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',

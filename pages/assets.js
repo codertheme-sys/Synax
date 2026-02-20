@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
@@ -16,6 +16,7 @@ const cardStyle = {
 function AssetsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   
@@ -91,161 +92,102 @@ function AssetsPage() {
     return paymentInfo[depositCoin]?.[depositNetwork] || null;
   };
 
-  useEffect(() => {
-    const checkUser = async () => {
+  const loadData = useCallback(async (isInitial = true) => {
+    if (isInitial) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (isInitial) router.push('/login');
+        return;
+      }
+      if (isInitial) setUser(session.user);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      let response;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          router.push('/login');
+        response = await fetch('/api/dashboard', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          if (isInitial) toast.error('Request timeout. Please try again.');
           return;
         }
-        setUser(session.user);
-
-        // Fetch dashboard data with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        let response;
-        try {
-          response = await fetch('/api/dashboard', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-        } catch (fetchError) {
-          clearTimeout(timeoutId);
-          if (fetchError.name === 'AbortError') {
-            console.error('Dashboard API timeout (15s)');
-            toast.error('Request timeout. Please try again.');
-            setLoading(false);
-            return;
-          }
-          throw fetchError;
-        }
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            const data = result.data;
-
-            // Format holdings and balance
-            const portfolioValue = data.kpis?.portfolioValue || 0;
-            setBalance(parseFloat(data.kpis?.cashBalance || 0));
-            const formattedHoldings = (data.holdings || []).map(h => {
-              const qty = parseFloat(h.quantity || 0);
-              const avgPrice = parseFloat(h.average_price || 0);
-              const currentPrice = parseFloat(h.current_price || 0);
-              const pnl = parseFloat(h.profit_loss_percent || 0);
-              const totalValue = parseFloat(h.total_value || 0);
-              const portfolioTotal = portfolioValue || 1;
-              const allocation = (totalValue / portfolioTotal) * 100;
-
-              return {
-                id: h.id,
-                asset_id: h.asset_id,
-                asset_type: h.asset_type,
-                symbol: h.asset_symbol,
-                name: h.asset_name,
-                quantity: qty,
-                qty: h.asset_type === 'gold' ? `${qty.toFixed(2)} oz` : qty.toFixed(8),
-                avg: `$${avgPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                price: `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                currentPrice: currentPrice,
-                pnl: `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%`,
-                alloc: `${allocation.toFixed(1)}%`,
-                totalValue: totalValue,
-              };
-            });
-            setHoldings(formattedHoldings);
-
-            // Fetch recent deposits and withdrawals
-            const [depositsResult, withdrawalsResult] = await Promise.all([
-              supabase
-                .from('deposits')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false })
-                .limit(10),
-              supabase
-                .from('withdrawals')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false })
-                .limit(10)
-            ]);
-            
-            if (depositsResult.data) {
-              setRecentDeposits(depositsResult.data);
-            }
-            
-            if (withdrawalsResult.data) {
-              setRecentWithdrawals(withdrawalsResult.data);
-            }
-            
-            // Combine deposits and withdrawals for Payment Monitor
-            const combined = [
-              ...(depositsResult.data || []).map(d => ({ ...d, type: 'deposit' })),
-              ...(withdrawalsResult.data || []).map(w => ({ ...w, type: 'withdrawal' }))
-            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
-            
-            setAllPayments(combined);
-
-            // Fetch user's subscribed earn products
-            try {
-              const { data: subscriptions, error: subError } = await supabase
-                .from('earn_subscriptions')
-                .select('*, earn_products(*)')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false });
-              
-              if (!subError && subscriptions) {
-                const subscribedProducts = subscriptions.map(sub => {
-                  const product = sub.earn_products || {};
-                  return {
-                    subscriptionId: sub.id,
-                    id: product.id || sub.id,
-                    symbol: product.asset_symbol || product.asset || product.symbol || 'N/A',
-                    apr: product.apr || '0%',
-                    type: product.product_type === 'flexible' ? 'Flexible' : 'Locked',
-                    days: product.duration_days || null,
-                    duration: product.product_type === 'flexible' ? 'Flexible' : (product.duration_days ? `${product.duration_days} days` : 'N/A'),
-                    amount: sub.amount || 0,
-                    status: sub.status || 'active',
-                    earnedAmount: sub.earned_amount || 0,
-                    startDate: sub.start_date,
-                    endDate: sub.end_date,
-                    subscribedAt: sub.created_at
-                  };
-                });
-                setEarnProducts(subscribedProducts);
-              } else {
-                setEarnProducts([]);
-              }
-            } catch (err) {
-              console.error('Error fetching subscribed earn products:', err);
-              setEarnProducts([]);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching assets data:', error);
-        toast.error('Failed to load assets data');
-      } finally {
-        setLoading(false);
+        throw fetchError;
       }
-    };
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const data = result.data;
+          const portfolioValue = data.kpis?.portfolioValue || 0;
+          setBalance(parseFloat(data.kpis?.cashBalance || 0));
+          setHoldings((data.holdings || []).map(h => {
+            const qty = parseFloat(h.quantity || 0);
+            const avgPrice = parseFloat(h.average_price || 0);
+            const currentPrice = parseFloat(h.current_price || 0);
+            const pnl = parseFloat(h.profit_loss_percent || 0);
+            const totalValue = parseFloat(h.total_value || 0);
+            const allocation = (totalValue / (portfolioValue || 1)) * 100;
+            return {
+              id: h.id,
+              asset_id: h.asset_id,
+              asset_type: h.asset_type,
+              symbol: h.asset_symbol,
+              name: h.asset_name,
+              quantity: qty,
+              qty: h.asset_type === 'gold' ? `${qty.toFixed(2)} oz` : qty.toFixed(8),
+              avg: `$${avgPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              price: `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              currentPrice,
+              pnl: `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%`,
+              alloc: `${allocation.toFixed(1)}%`,
+              totalValue,
+            };
+          }));
+          const [depRes, withRes] = await Promise.all([
+            supabase.from('deposits').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(10),
+            supabase.from('withdrawals').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(10),
+          ]);
+          if (depRes.data) setRecentDeposits(depRes.data);
+          if (withRes.data) setRecentWithdrawals(withRes.data);
+          const combined = [...(depRes.data || []).map(d => ({ ...d, type: 'deposit' })), ...(withRes.data || []).map(w => ({ ...w, type: 'withdrawal' }))]
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+          setAllPayments(combined);
+          try {
+            const { data: subs } = await supabase.from('earn_subscriptions').select('*, earn_products(*)').eq('user_id', session.user.id).order('created_at', { ascending: false });
+            if (subs) {
+              setEarnProducts(subs.map(sub => {
+                const p = sub.earn_products || {};
+                return { subscriptionId: sub.id, id: p.id || sub.id, symbol: p.asset_symbol || p.asset || p.symbol || 'N/A', apr: p.apr || '0%', type: p.product_type === 'flexible' ? 'Flexible' : 'Locked', days: p.duration_days, duration: p.product_type === 'flexible' ? 'Flexible' : (p.duration_days ? `${p.duration_days} days` : 'N/A'), amount: sub.amount || 0, status: sub.status || 'active', earnedAmount: sub.earned_amount || 0, startDate: sub.start_date, endDate: sub.end_date, subscribedAt: sub.created_at };
+              }));
+            } else setEarnProducts([]);
+          } catch { setEarnProducts([]); }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+      if (isInitial) toast.error('Failed to load assets data');
+      else toast.error('Failed to refresh');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [router]);
 
-    checkUser();
+  useEffect(() => {
+    loadData(true);
+  }, [loadData]);
 
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (
@@ -274,7 +216,24 @@ function AssetsPage() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0b0c1a 0%, #11142d 50%, #0b0c1a 100%)',
+      position: 'relative',
     }}>
+      {refreshing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{ background: 'rgba(15,17,36,0.95)', padding: '20px 32px', borderRadius: '12px', fontSize: '14px', fontWeight: 600 }}>Refreshing...</div>
+        </div>
+      )}
       <Header />
       <main style={{
         maxWidth: '1400px',
@@ -843,7 +802,7 @@ function AssetsPage() {
                     setDepositNetwork('');
                     setDepositAmount('');
                     setDepositReceipt(null);
-                    window.location.reload();
+                    loadData(false);
                   } else {
                     throw new Error(result.error || 'Failed to submit deposit');
                   }
@@ -1189,7 +1148,7 @@ function AssetsPage() {
                     setWithdrawNetwork('');
                     setWithdrawAddress('');
                     setWithdrawAmount('');
-                    window.location.reload();
+                    loadData(false);
                   } else {
                     throw new Error(result.error || 'Failed to submit withdrawal');
                   }
@@ -1559,7 +1518,7 @@ function AssetsPage() {
                           setConvertTo('');
                           setConvertAmount('');
                           setSelectedHolding(null);
-                          setTimeout(() => window.location.reload(), 500);
+                          loadData(false);
                         } else {
                           toast.error(result.error || 'Failed to convert');
                         }

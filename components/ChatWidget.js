@@ -340,6 +340,16 @@ const ChatWidget = ({ user }) => {
 
       if (error) throw error;
 
+      // Optimistically add file message to UI
+      if (data) {
+        setMessages((prev) => {
+          const exists = prev.find((m) => m.id === data.id);
+          if (exists) return prev;
+          return [...prev, data];
+        });
+        scrollToBottom();
+      }
+
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -390,8 +400,13 @@ const ChatWidget = ({ user }) => {
 
       if (error) throw error;
 
-      // Don't add immediately - let Realtime subscription handle it
-      // This prevents duplicate messages
+      // Optimistically add user's message - Realtime may not broadcast to same client
+      setMessages((prev) => {
+        const exists = prev.find((m) => m.id === data.id);
+        if (exists) return prev;
+        return [...prev, data];
+      });
+      scrollToBottom();
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
