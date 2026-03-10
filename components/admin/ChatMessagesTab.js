@@ -109,50 +109,24 @@ const ChatMessagesTab = () => {
     }
   }, [selectedConversation]);
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    return { Authorization: `Bearer ${session.access_token}` };
+  };
+
   const loadConversations = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const headers = await getAuthHeaders();
+      if (!headers) return;
 
-      // Get all unique users who have sent messages
-      const { data: allMessages, error } = await supabase
-        .from('chat_messages')
-        .select('user_id, user_email, user_name, created_at, is_read, is_admin')
-        .order('created_at', { ascending: false });
+      const res = await fetch('/api/admin/chat-conversations', { headers });
+      const json = await res.json();
 
-      if (error) throw error;
-
-      // Group by user_id and get latest message for each
-      const userMap = new Map();
-      const unreadMap = {};
-
-      allMessages.forEach((msg) => {
-        if (msg.is_admin) return; // Skip admin messages in grouping
-
-        if (!userMap.has(msg.user_id)) {
-          userMap.set(msg.user_id, {
-            user_id: msg.user_id,
-            user_email: msg.user_email,
-            user_name: msg.user_name,
-            last_message: msg,
-            last_message_time: msg.created_at,
-          });
-          unreadMap[msg.user_id] = 0;
-        }
-
-        // Count unread messages
-        if (!msg.is_read && !msg.is_admin) {
-          unreadMap[msg.user_id] = (unreadMap[msg.user_id] || 0) + 1;
-        }
-      });
-
-      const conversationsList = Array.from(userMap.values()).sort(
-        (a, b) => new Date(b.last_message_time) - new Date(a.last_message_time)
-      );
-
-      setConversations(conversationsList);
-      setUnreadCounts(unreadMap);
+      if (!json.success) throw new Error(json.error || 'Failed to load');
+      setConversations(json.data.conversations || []);
+      setUnreadCounts(json.data.unreadCounts || {});
     } catch (error) {
       console.error('Error loading conversations:', error);
       toast.error('Failed to load conversations');
@@ -163,16 +137,14 @@ const ChatMessagesTab = () => {
 
   const loadMessages = async (userId) => {
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(100);
+      const headers = await getAuthHeaders();
+      if (!headers) return;
 
-      if (error) throw error;
+      const res = await fetch(`/api/admin/chat-messages?userId=${encodeURIComponent(userId)}`, { headers });
+      const json = await res.json();
 
-      setMessages(data || []);
+      if (!json.success) throw new Error(json.error || 'Failed to load');
+      setMessages(json.data || []);
       scrollToBottom();
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -182,20 +154,15 @@ const ChatMessagesTab = () => {
 
   const markAsRead = async (userId) => {
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('is_read', false)
-        .eq('is_admin', false);
+      const headers = await getAuthHeaders();
+      if (!headers) return;
 
-      if (error) throw error;
-
-      // Update unread counts
-      setUnreadCounts((prev) => ({
-        ...prev,
-        [userId]: 0,
-      }));
+      await fetch('/api/admin/chat-mark-read', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      setUnreadCounts((prev) => ({ ...prev, [userId]: 0 }));
     } catch (error) {
       console.error('Error marking as read:', error);
     }

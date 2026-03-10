@@ -122,14 +122,12 @@ export default async function handler(req, res) {
       target_coin,
     } = req.body;
 
-    const ALLOWED_COINS = ['BTC', 'ETH', 'USDT', 'XRP'];
-
     // New format: source_type, source_coin, target_coin, quantity
     const isNewFormat = source_type && source_coin && target_coin;
     if (isNewFormat) {
-      const src = source_coin?.toUpperCase();
-      const tgt = target_coin?.toUpperCase();
-      if (!ALLOWED_COINS.includes(src) || !ALLOWED_COINS.includes(tgt)) {
+      const src = (source_coin || '').toUpperCase().trim();
+      const tgt = (target_coin || '').toUpperCase().trim();
+      if (!src || !tgt || !/^[A-Z0-9]{2,15}$/.test(src) || !/^[A-Z0-9]{2,15}$/.test(tgt)) {
         return res.status(400).json({ error: 'Invalid source or target coin' });
       }
       if (src === tgt) {
