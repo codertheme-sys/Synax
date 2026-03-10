@@ -38,8 +38,8 @@ const ChatMessagesTab = () => {
         (payload) => {
           console.log('New chat message:', payload);
           
-          // Reload conversations to update unread counts
-          loadConversations();
+          // Reload conversations in background (no loading state - prevents scroll reset)
+          loadConversations(false);
           
           // If this message is for the selected conversation, add it
           if (selectedConversation && 
@@ -115,9 +115,9 @@ const ChatMessagesTab = () => {
     return { Authorization: `Bearer ${session.access_token}` };
   };
 
-  const loadConversations = async () => {
+  const loadConversations = async (isInitial = true) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const headers = await getAuthHeaders();
       if (!headers) return;
 
@@ -129,9 +129,9 @@ const ChatMessagesTab = () => {
       setUnreadCounts(json.data.unreadCounts || {});
     } catch (error) {
       console.error('Error loading conversations:', error);
-      toast.error('Failed to load conversations');
+      if (isInitial) toast.error('Failed to load conversations');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
@@ -360,7 +360,7 @@ const ChatMessagesTab = () => {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '20px' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 120px)', minHeight: '500px', gap: '20px' }}>
       {/* Conversations List */}
       <div
         style={{
@@ -500,10 +500,11 @@ const ChatMessagesTab = () => {
               </div>
             </div>
 
-            {/* Messages */}
+            {/* Messages - extended height for better visibility */}
             <div
               style={{
                 flex: 1,
+                minHeight: '400px',
                 overflowY: 'auto',
                 padding: '20px',
                 display: 'flex',
