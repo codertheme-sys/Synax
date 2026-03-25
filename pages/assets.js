@@ -4,11 +4,7 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import dynamic from 'next/dynamic';
-
-const QRCode = dynamic(() => import('qrcode.react').then(mod => mod.default), {
-  ssr: false,
-});
+import { QRCodeSVG } from 'qrcode.react';
 
 const cardStyle = {
   borderRadius: '16px',
@@ -943,13 +939,12 @@ function AssetsPage() {
                     }}>
                       {getPaymentInfo() && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <QRCode
+                          <QRCodeSVG
                             value={getPaymentInfo().address}
                             size={200}
                             bgColor="transparent"
                             fgColor="#ffffff"
                             includeMargin={false}
-                            renderAs="svg"
                           />
                         </div>
                       )}
