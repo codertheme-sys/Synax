@@ -4,8 +4,6 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import { QRCodeSVG } from 'qrcode.react';
-
 const cardStyle = {
   borderRadius: '16px',
   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -43,6 +41,7 @@ function AssetsPage() {
   const [depositNetwork, setDepositNetwork] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositReceipt, setDepositReceipt] = useState(null);
+  const [depositQrDataUrl, setDepositQrDataUrl] = useState('');
   const [withdrawCoin, setWithdrawCoin] = useState('');
   const [withdrawNetwork, setWithdrawNetwork] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -81,6 +80,37 @@ function AssetsPage() {
     if (!depositCoin || !depositNetwork) return null;
     return paymentInfo[depositCoin]?.[depositNetwork] || null;
   };
+
+  useEffect(() => {
+    if (!depositCoin || !depositNetwork) {
+      setDepositQrDataUrl('');
+      return;
+    }
+    const address = paymentInfo[depositCoin]?.[depositNetwork]?.address;
+    if (!address) {
+      setDepositQrDataUrl('');
+      return;
+    }
+    let cancelled = false;
+    import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(address, {
+          width: 240,
+          margin: 2,
+          color: { dark: '#000000', light: '#ffffff' },
+          errorCorrectionLevel: 'M',
+        })
+      )
+      .then((url) => {
+        if (!cancelled) setDepositQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setDepositQrDataUrl('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [depositCoin, depositNetwork]);
 
   const loadData = useCallback(async (isInitial = true) => {
     if (isInitial) setLoading(true);
@@ -938,14 +968,48 @@ function AssetsPage() {
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}>
                       {getPaymentInfo() && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <QRCodeSVG
-                            value={getPaymentInfo().address}
-                            size={200}
-                            bgColor="transparent"
-                            fgColor="#ffffff"
-                            includeMargin={false}
-                          />
+                        <div
+                          style={{
+                            display: 'inline-block',
+                            lineHeight: 0,
+                            padding: '12px',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            filter: 'none',
+                            isolation: 'isolate',
+                            forcedColorAdjust: 'none',
+                            WebkitForcedColorAdjust: 'none',
+                          }}
+                        >
+                          {depositQrDataUrl ? (
+                            <img
+                              src={depositQrDataUrl}
+                              alt=""
+                              width={240}
+                              height={240}
+                              decoding="async"
+                              style={{
+                                display: 'block',
+                                width: 240,
+                                height: 240,
+                                imageRendering: 'pixelated',
+                                borderRadius: 4,
+                                filter: 'none',
+                                forcedColorAdjust: 'none',
+                                WebkitForcedColorAdjust: 'none',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 240,
+                                height: 240,
+                                backgroundColor: '#e5e7eb',
+                                borderRadius: 4,
+                              }}
+                              aria-hidden
+                            />
+                          )}
                         </div>
                       )}
                     </div>
