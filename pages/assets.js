@@ -4,6 +4,11 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+
+const QRCode = dynamic(() => import('qrcode.react').then(mod => mod.default), {
+  ssr: false,
+});
 
 const cardStyle = {
   borderRadius: '16px',
@@ -47,42 +52,31 @@ function AssetsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
 
-  const coins = ['USDT', 'BTC', 'ETH', 'XRP'];
+  const coins = ['USDT', 'BTC', 'ETH'];
   const networks = {
-    USDT: ['Tron (TRC20)'],
-    BTC: ['Bitcoin Network'],
+    USDT: ['TRON (TRC20)'],
+    BTC: ['BTC'],
     ETH: ['Ethereum (ERC20)'],
-    XRP: ['Ripple'],
   };
 
   // Payment information for deposits
   const paymentInfo = {
     'USDT': {
-      'Tron (TRC20)': {
-        address: 'TFieCTCx9UxXEeB1Bu977jKCurxDxLPXXP',
-        network: 'Tron (TRC-20)',
-        qrCode: '/images/usdt-qr.png',
+      'TRON (TRC20)': {
+        address: 'TYWz3Q8xj6FvSevrfC3YYsdQAAAHc6zr5h1',
+        network: 'TRON (TRC20)',
       },
     },
     'ETH': {
       'Ethereum (ERC20)': {
-        address: '0x6fb2603489e0fc38bb90bef6618b44d28b301a1b',
-        network: 'ERC-20',
-        qrCode: '/images/eth-qr-new.png', // New QR code file name to bypass cache
+        address: '0x0432eb49b1fd13a963e410b3422e16c677ff216f',
+        network: 'Ethereum (ERC20)',
       },
     },
     'BTC': {
-      'Bitcoin Network': {
-        address: 'bc1qwdryv20f84ymsg8qltahfumlyvpkdgk9cv7jma5m9j9a82l3japsfrapqg',
+      'BTC': {
+        address: '1Kr5q1qwhTp7uECJmSZKspdoGyjoEdudDq',
         network: 'BTC',
-        qrCode: '/images/btc-qr.png',
-      },
-    },
-    'XRP': {
-      'Ripple': {
-        address: 'rBuZfn1m4tA6znziHsRp9AyC1M3qg6rgbF',
-        network: 'Ripple',
-        qrCode: '/images/xrp-qr.png',
       },
     },
   };
@@ -947,31 +941,18 @@ function AssetsPage() {
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}>
-                      <img
-                        src={`${getPaymentInfo().qrCode}?v=${Date.now()}`}
-                        alt={`${depositCoin} QR Code`}
-                        style={{
-                          maxWidth: '200px',
-                          maxHeight: '200px',
-                          width: '100%',
-                          height: 'auto',
-                        }}
-                        onError={(e) => {
-                          const qrCodePath = getPaymentInfo()?.qrCode || 'unknown';
-                          console.error('QR Code load error:', qrCodePath, 'Full path:', `${qrCodePath}?v=${Date.now()}`);
-                          const imgElement = e.target;
-                          if (imgElement && imgElement.parentElement) {
-                            imgElement.style.display = 'none';
-                            const parent = imgElement.parentElement;
-                            if (parent) {
-                              parent.innerHTML = '<div style="color: #9ca3af; font-size: 12px; text-align: center; padding: 20px;">QR Code image not found</div>';
-                            }
-                          }
-                        }}
-                        onLoad={() => {
-                          console.log('QR Code loaded successfully:', getPaymentInfo().qrCode);
-                        }}
-                      />
+                      {getPaymentInfo() && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <QRCode
+                            value={getPaymentInfo().address}
+                            size={200}
+                            bgColor="transparent"
+                            fgColor="#ffffff"
+                            includeMargin={false}
+                            renderAs="svg"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{
@@ -997,7 +978,7 @@ function AssetsPage() {
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   required
-                  step={depositCoin === 'BTC' || depositCoin === 'ETH' || depositCoin === 'XRP' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
+                  step={depositCoin === 'BTC' || depositCoin === 'ETH' ? '0.00000001' : depositCoin === 'USDT' ? '0.01' : '0.01'}
                   min="0"
                   style={{
                     width: '100%',
@@ -1009,7 +990,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'XRP' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
+                  placeholder={depositCoin === 'BTC' ? '0.00000000' : depositCoin === 'ETH' ? '0.00000000' : depositCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <div>
@@ -1251,7 +1232,7 @@ function AssetsPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   required
-                  step={withdrawCoin === 'BTC' || withdrawCoin === 'ETH' || withdrawCoin === 'XRP' ? '0.00000001' : withdrawCoin === 'USDT' ? '0.01' : '0.01'}
+                  step={withdrawCoin === 'BTC' || withdrawCoin === 'ETH' ? '0.00000001' : withdrawCoin === 'USDT' ? '0.01' : '0.01'}
                   min="0"
                   style={{
                     width: '100%',
@@ -1263,7 +1244,7 @@ function AssetsPage() {
                     fontSize: '15px',
                     outline: 'none',
                   }}
-                  placeholder={withdrawCoin === 'BTC' ? '0.00000000' : withdrawCoin === 'ETH' ? '0.00000000' : withdrawCoin === 'XRP' ? '0.00000000' : withdrawCoin === 'USDT' ? '0.00' : '0.00'}
+                  placeholder={withdrawCoin === 'BTC' ? '0.00000000' : withdrawCoin === 'ETH' ? '0.00000000' : withdrawCoin === 'USDT' ? '0.00' : '0.00'}
                 />
               </div>
               <button
