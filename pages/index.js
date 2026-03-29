@@ -275,27 +275,51 @@ export default function Home() {
   }, [slides.length]);
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    setLoading(false);
-    
-    // Check admin status
-    if (user) {
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single();
-        
-        if (!error && profile) {
-          setIsAdmin(profile.is_admin === true);
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
+    let user = null;
+    try {
+      // Mobilde yavaş / kesilen ağda getUser() reject veya uzun süre askıda kalabiliyor; loading hiç kapanmamasın diye:
+      const AUTH_MS = 12000;
+      const result = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise((resolve) =>
+          setTimeout(
+            () => resolve({ data: { user: null }, error: null, __authTimeout: true }),
+            AUTH_MS
+          )
+        ),
+      ]);
+
+      if (result?.__authTimeout) {
+        console.warn('[INDEX] auth.getUser timed out; continuing without session');
+      } else if (result?.error) {
+        console.warn('[INDEX] auth.getUser error:', result.error.message);
       }
+
+      user = result?.data?.user ?? null;
+      setUser(user);
+
+      if (user) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single();
+
+          if (!error && profile) {
+            setIsAdmin(profile.is_admin === true);
+          }
+        } catch (err) {
+          console.error('Error checking admin status:', err);
+        }
+      }
+    } catch (error) {
+      console.error('[INDEX] checkUser failed:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+      setCheckingAdmin(false);
     }
-    setCheckingAdmin(false);
   };
 
   const fetchPrices = async () => {
