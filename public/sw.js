@@ -1,56 +1,69 @@
-// Service Worker for PWA
-const CACHE_NAME = 'synax-v1';
-const urlsToCache = [
-  '/',
-  '/trade',
-  '/dashboard',
-  '/assets',
-  '/images/logo.png'
-];
+// Service Worker — network-first for pages so Next.js HTML + hashed chunks stay in sync after deploy.
+// v1 cache-first on '/' caused stale HTML → old _next/static URLs → broken JS → infinite Loading on mobile.
 
-// Install event - cache resources
+const CACHE_NAME = 'synax-v3-assets';
+const OFFLINE_ASSETS = ['/images/logo.png'];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-      .catch((error) => {
-        console.error('[SW] Cache failed:', error);
-      })
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(OFFLINE_ASSETS))
+      .catch(() => {})
   );
+  self.skipWaiting();
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-      .catch(() => {
-        // If both fail, return offline page (optional)
-        if (event.request.destination === 'document') {
-          return caches.match('/');
-        }
-      })
-  );
-});
-
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
+    caches.keys().then((names) =>
+      Promise.all(
+        names.map((name) => {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
           }
         })
-      );
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+function isNavigationOrDocument(request) {
+  if (request.mode === 'navigate') return true;
+  const accept = request.headers.get('accept') || '';
+  return accept.includes('text/html');
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Never serve cached HTML/shell: always hit network for documents (Next.js needs fresh build refs).
+  if (isNavigationOrDocument(request)) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Same-origin API: always network (prices, auth proxies, etc.)
+  const url = new URL(request.url);
+  const scopeOrigin = new URL(self.registration.scope).origin;
+  if (url.origin === scopeOrigin && url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Static files: try cache, then network
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((res) => {
+        const sameOrigin = url.origin === scopeOrigin;
+        if (res.ok && request.method === 'GET' && sameOrigin) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(request, copy)).catch(() => {});
+        }
+        return res;
+      });
     })
   );
 });
