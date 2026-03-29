@@ -58,7 +58,7 @@ function AssetsPage() {
   const paymentInfo = {
     'USDT': {
       'TRON (TRC20)': {
-        address: 'TYWz3Q8xj6FvSevrfC3YYsdQAAAHc6zr5h1',
+        address: 'TYWz3Q8xj6FvSevrfC3YYsdQAAHc6zr5h1',
         network: 'TRON (TRC20)',
       },
     },
