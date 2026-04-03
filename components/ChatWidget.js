@@ -241,16 +241,21 @@ const ChatWidget = ({ user }) => {
 
     setLoading(true);
     try {
+      // En son N mesaj: asc+limit önce EN ESKİ N satırı veriyordu; uzun konuşmalarda yeni mesajlar kayboluyordu.
+      const CHAT_PAGE_SIZE = 200;
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: true })
-        .limit(50);
+        .order('created_at', { ascending: false })
+        .limit(CHAT_PAGE_SIZE);
 
       if (error) throw error;
 
-      setMessages(data || []);
+      const chronological = [...(data || [])].sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      );
+      setMessages(chronological);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast.error('Failed to load messages');

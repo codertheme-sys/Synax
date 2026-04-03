@@ -35,18 +35,24 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
+    // asc+limit önce en eski N satırı döndürüyordu; 100+ mesajda güncel mesajlar görünmüyordu.
+    const CHAT_LIMIT = 300;
     const { data: messages, error } = await supabaseAdmin
       .from('chat_messages')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(100);
+      .order('created_at', { ascending: false })
+      .limit(CHAT_LIMIT);
 
     if (error) throw error;
 
+    const chronological = [...(messages || [])].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+
     return res.status(200).json({
       success: true,
-      data: messages || [],
+      data: chronological,
     });
   } catch (error) {
     console.error('Admin chat-messages API error:', error);

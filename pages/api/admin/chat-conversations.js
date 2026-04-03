@@ -33,29 +33,41 @@ export default async function handler(req, res) {
     const { data: allMessages, error } = await supabaseAdmin
       .from('chat_messages')
       .select('user_id, user_email, user_name, created_at, is_read, is_admin')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(8000);
 
     if (error) throw error;
 
     const userMap = new Map();
     const unreadMap = {};
 
+    // Önce: yalnızca kullanıcı (is_admin=false) mesajlarıyla konuşma açılıyordu;
+    // sadece admin yazdıysa konuşma listede yoktu. Tüm satırlarda user_id konuşma anahtarıdır.
     (allMessages || []).forEach((msg) => {
-      if (msg.is_admin) return;
+      const uid = msg.user_id;
+      if (!uid) return;
 
-      if (!userMap.has(msg.user_id)) {
-        userMap.set(msg.user_id, {
-          user_id: msg.user_id,
+      if (!userMap.has(uid)) {
+        userMap.set(uid, {
+          user_id: uid,
           user_email: msg.user_email,
           user_name: msg.user_name,
           last_message: msg,
           last_message_time: msg.created_at,
         });
-        unreadMap[msg.user_id] = 0;
+        unreadMap[uid] = 0;
+      } else {
+        const existing = userMap.get(uid);
+        if (new Date(msg.created_at) > new Date(existing.last_message_time)) {
+          existing.last_message = msg;
+          existing.last_message_time = msg.created_at;
+        }
+        if (msg.user_email) existing.user_email = msg.user_email;
+        if (msg.user_name) existing.user_name = msg.user_name;
       }
 
       if (!msg.is_read && !msg.is_admin) {
-        unreadMap[msg.user_id] = (unreadMap[msg.user_id] || 0) + 1;
+        unreadMap[uid] = (unreadMap[uid] || 0) + 1;
       }
     });
 
