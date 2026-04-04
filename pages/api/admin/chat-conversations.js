@@ -32,11 +32,21 @@ export default async function handler(req, res) {
 
     const { data: allMessages, error } = await supabaseAdmin
       .from('chat_messages')
-      .select('user_id, user_email, user_name, created_at, is_read, is_admin')
+      .select('user_id, user_email, user_name, created_at, is_read, is_admin, is_ai')
       .order('created_at', { ascending: false })
       .limit(8000);
 
     if (error) throw error;
+
+    const handoffMap = {};
+    const { data: handoffRows, error: handoffErr } = await supabaseAdmin
+      .from('chat_handoff_state')
+      .select('user_id, human_handoff');
+    if (!handoffErr && handoffRows) {
+      handoffRows.forEach((h) => {
+        handoffMap[h.user_id] = h.human_handoff === true;
+      });
+    }
 
     const userMap = new Map();
     const unreadMap = {};
@@ -66,14 +76,19 @@ export default async function handler(req, res) {
         if (msg.user_name) existing.user_name = msg.user_name;
       }
 
-      if (!msg.is_read && !msg.is_admin) {
+      if (!msg.is_read && !msg.is_admin && !msg.is_ai) {
         unreadMap[uid] = (unreadMap[uid] || 0) + 1;
       }
     });
 
-    const conversations = Array.from(userMap.values()).sort(
-      (a, b) => new Date(b.last_message_time) - new Date(a.last_message_time)
-    );
+    const conversations = Array.from(userMap.values())
+      .map((c) => ({
+        ...c,
+        human_handoff: handoffMap[c.user_id] === true,
+      }))
+      .sort(
+        (a, b) => new Date(b.last_message_time) - new Date(a.last_message_time)
+      );
 
     return res.status(200).json({
       success: true,

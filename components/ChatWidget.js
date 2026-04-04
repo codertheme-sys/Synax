@@ -14,6 +14,8 @@ const ChatWidget = ({ user }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [humanHandoff, setHumanHandoff] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -105,10 +107,23 @@ const ChatWidget = ({ user }) => {
     }
   }, [messages, isOpen]);
 
-  // Load initial messages
+  // Load initial messages + handoff state
   useEffect(() => {
     if (isOpen && user) {
       loadMessages();
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) return;
+          const r = await fetch('/api/chat/handoff', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const j = await r.json();
+          if (j.success) setHumanHandoff(!!j.humanHandoff);
+        } catch (e) {
+          console.warn('handoff fetch', e);
+        }
+      })();
     }
   }, [isOpen, user]);
 
@@ -264,6 +279,61 @@ const ChatWidget = ({ user }) => {
     }
   };
 
+  const requestHumanAgent = async () => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please sign in again');
+        return;
+      }
+      const r = await fetch('/api/chat/handoff', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ humanHandoff: true }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Failed');
+      setHumanHandoff(true);
+      toast.success('A live agent will reply as soon as possible.');
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Could not request human agent');
+    }
+  };
+
+  const triggerAiReply = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      setAiTyping(true);
+      const res = await fetch('/api/chat/ai-reply', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (j.escalated || j.handoff) {
+        setHumanHandoff(true);
+      }
+      const hr = await fetch('/api/chat/handoff', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const hj = await hr.json();
+      if (hj.success) setHumanHandoff(!!hj.humanHandoff);
+    } catch (e) {
+      console.warn('AI reply:', e);
+    } finally {
+      setAiTyping(false);
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -412,6 +482,8 @@ const ChatWidget = ({ user }) => {
         return [...prev, data];
       });
       scrollToBottom();
+
+      await triggerAiReply();
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -528,7 +600,7 @@ const ChatWidget = ({ user }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <FiMessageCircle size={20} color="#ffffff" />
               <span style={{ color: '#ffffff', fontWeight: 600, fontSize: isMobile ? '13px' : '16px' }}>
-                Support Chat
+                Support {humanHandoff ? '(Live team)' : '(AI + team)'}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -595,17 +667,19 @@ const ChatWidget = ({ user }) => {
                       👋 Hello!
                     </p>
                     <p style={{ fontSize: '14px' }}>
-                      Start a conversation with our support team. We're here to help!
+                      Ask anything — our assistant replies first. Use &quot;Talk to a person&quot; anytime for a live agent.
                     </p>
                   </div>
                 ) : (
-                  messages.map((message) => (
+                  messages.map((message) => {
+                    const isMine = !message.is_admin && !message.is_ai;
+                    return (
                     <div
                       key={message.id}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: message.is_admin ? 'flex-start' : 'flex-end',
+                        alignItems: isMine ? 'flex-end' : 'flex-start',
                         gap: '4px',
                       }}
                     >
@@ -616,6 +690,8 @@ const ChatWidget = ({ user }) => {
                           borderRadius: '12px',
                           background: message.is_admin
                             ? 'rgba(59, 130, 246, 0.2)'
+                            : message.is_ai
+                              ? 'rgba(139, 92, 246, 0.28)'
                             : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                           color: '#ffffff',
                           fontSize: isMobile ? '11px' : '14px',
@@ -701,9 +777,29 @@ const ChatWidget = ({ user }) => {
                       >
                         {formatTime(message.created_at)}
                         {message.is_admin && ' • Support'}
+                        {message.is_ai && ' • AI assistant'}
                       </div>
                     </div>
-                  ))
+                  );
+                  })
+                )}
+                {aiTyping && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 16px',
+                    color: '#a78bfa',
+                    fontSize: '13px',
+                    fontStyle: 'italic',
+                  }}>
+                    <span>Assistant is typing</span>
+                    <span style={{ display: 'inline-flex', gap: '4px' }}>
+                      <span style={{ animation: 'typing 1.4s infinite', animationDelay: '0s' }}>.</span>
+                      <span style={{ animation: 'typing 1.4s infinite', animationDelay: '0.2s' }}>.</span>
+                      <span style={{ animation: 'typing 1.4s infinite', animationDelay: '0.4s' }}>.</span>
+                    </span>
+                  </div>
                 )}
                 {isAdminTyping && (
                   <div style={{
@@ -747,6 +843,26 @@ const ChatWidget = ({ user }) => {
                   background: 'rgba(15, 17, 36, 0.95)',
                 }}
               >
+                <div style={{ marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={requestHumanAgent}
+                    disabled={humanHandoff}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(251, 191, 36, 0.45)',
+                      background: humanHandoff ? 'rgba(55, 65, 81, 0.5)' : 'rgba(251, 191, 36, 0.12)',
+                      color: '#fbbf24',
+                      fontSize: isMobile ? '11px' : '12px',
+                      fontWeight: 600,
+                      cursor: humanHandoff ? 'default' : 'pointer',
+                    }}
+                  >
+                    {humanHandoff ? 'Live team will reply here' : 'Talk to a person (live agent)'}
+                  </button>
+                </div>
                 {selectedFile && (
                   <div style={{ 
                     marginBottom: '8px', 

@@ -431,6 +431,9 @@ const ChatMessagesTab = () => {
                         whiteSpace: 'nowrap',
                       }}
                     >
+                      {conv.human_handoff && (
+                        <span style={{ color: '#fbbf24', marginRight: '6px' }}>[Live]</span>
+                      )}
                       {conv.last_message?.message || 'No messages'}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
@@ -487,17 +490,63 @@ const ChatMessagesTab = () => {
                 background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <FiUser size={20} color="#ffffff" />
-                <div>
-                  <h3 style={{ color: '#ffffff', margin: 0, fontSize: '16px', fontWeight: 600 }}>
-                    {selectedConversation.user_name || selectedConversation.user_email || 'Unknown User'}
-                  </h3>
-                  <p style={{ color: '#93c5fd', margin: '4px 0 0 0', fontSize: '12px' }}>
-                    {selectedConversation.user_email}
-                  </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FiUser size={20} color="#ffffff" />
+                  <div>
+                    <h3 style={{ color: '#ffffff', margin: 0, fontSize: '16px', fontWeight: 600 }}>
+                      {selectedConversation.user_name || selectedConversation.user_email || 'Unknown User'}
+                    </h3>
+                    <p style={{ color: '#93c5fd', margin: '4px 0 0 0', fontSize: '12px' }}>
+                      {selectedConversation.user_email}
+                    </p>
+                  </div>
                 </div>
+                {selectedConversation.human_handoff && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const headers = await getAuthHeaders();
+                        if (!headers) return;
+                        const r = await fetch('/api/chat/handoff', {
+                          method: 'POST',
+                          headers: { ...headers, 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            humanHandoff: false,
+                            userId: selectedConversation.user_id,
+                          }),
+                        });
+                        const j = await r.json();
+                        if (!j.success) throw new Error(j.error || 'Failed');
+                        setSelectedConversation((prev) => (prev ? { ...prev, human_handoff: false } : prev));
+                        loadConversations(false);
+                        toast.success('AI assistant re-enabled for this user');
+                      } catch (e) {
+                        console.error(e);
+                        toast.error(e.message || 'Could not reset AI');
+                      }
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(167, 139, 250, 0.6)',
+                      background: 'rgba(139, 92, 246, 0.25)',
+                      color: '#e9d5ff',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Re-enable AI assistant
+                  </button>
+                )}
               </div>
+              {selectedConversation.human_handoff && (
+                <p style={{ color: '#fde68a', fontSize: '12px', margin: '12px 0 0 0' }}>
+                  User is in live-agent mode — AI replies are paused until you re-enable above.
+                </p>
+              )}
             </div>
 
             {/* Messages - extended height for better visibility */}
@@ -534,6 +583,8 @@ const ChatMessagesTab = () => {
                         borderRadius: '12px',
                         background: message.is_admin
                           ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                          : message.is_ai
+                            ? 'rgba(139, 92, 246, 0.35)'
                           : 'rgba(59, 130, 246, 0.2)',
                         color: '#ffffff',
                         fontSize: '14px',
@@ -625,6 +676,7 @@ const ChatMessagesTab = () => {
                     >
                       {formatTime(message.created_at)}
                       {message.is_admin && ' • You'}
+                      {message.is_ai && !message.is_admin && ' • AI assistant'}
                     </div>
                   </div>
                 ))
