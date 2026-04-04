@@ -114,21 +114,13 @@ export default async function handler(req, res) {
 
     const lastUserText = (last.message || '').trim();
     if (HANDOFF_REGEX.test(lastUserText)) {
-      await supabaseAdmin.from('chat_handoff_state').upsert(
-        {
-          user_id: userId,
-          human_handoff: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('full_name, email, username')
         .eq('id', userId)
         .single();
 
-      await supabaseAdmin.from('chat_messages').insert({
+      const { error: kwInsErr } = await supabaseAdmin.from('chat_messages').insert({
         user_id: userId,
         user_email: user.email || profile?.email,
         user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
@@ -138,6 +130,16 @@ export default async function handler(req, res) {
         is_ai: true,
         is_read: false,
       });
+      if (kwInsErr) throw kwInsErr;
+
+      await supabaseAdmin.from('chat_handoff_state').upsert(
+        {
+          user_id: userId,
+          human_handoff: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
 
       return res.status(200).json({
         success: true,
@@ -183,17 +185,6 @@ export default async function handler(req, res) {
       .eq('id', userId)
       .single();
 
-    if (escalate) {
-      await supabaseAdmin.from('chat_handoff_state').upsert(
-        {
-          user_id: userId,
-          human_handoff: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
-    }
-
     const { error: insErr } = await supabaseAdmin.from('chat_messages').insert({
       user_id: userId,
       user_email: user.email || profile?.email,
@@ -212,6 +203,17 @@ export default async function handler(req, res) {
         });
       }
       throw insErr;
+    }
+
+    if (escalate) {
+      await supabaseAdmin.from('chat_handoff_state').upsert(
+        {
+          user_id: userId,
+          human_handoff: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
     }
 
     return res.status(200).json({

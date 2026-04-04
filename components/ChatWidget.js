@@ -16,6 +16,7 @@ const ChatWidget = ({ user }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [humanHandoff, setHumanHandoff] = useState(false);
   const [aiTyping, setAiTyping] = useState(false);
+  const humanHandoffRef = useRef(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -95,6 +96,10 @@ const ChatWidget = ({ user }) => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    humanHandoffRef.current = humanHandoff;
+  }, [humanHandoff]);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -306,6 +311,9 @@ const ChatWidget = ({ user }) => {
   };
 
   const triggerAiReply = async () => {
+    if (humanHandoffRef.current) {
+      return;
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
@@ -322,6 +330,19 @@ const ChatWidget = ({ user }) => {
       if (j.escalated || j.handoff) {
         setHumanHandoff(true);
       }
+      if (j.skipped && j.reason === 'OPENAI_API_KEY not configured') {
+        toast.error('AI is not configured on the server (OPENAI_API_KEY).');
+      } else if (j.skipped && j.reason === 'human_handoff') {
+        setHumanHandoff(true);
+        humanHandoffRef.current = true;
+        toast('Live team mode is on — AI will not reply. Use “Continue with AI assistant” below to turn the bot back on.', {
+          icon: '💬',
+        });
+      } else if (j.skipped && j.reason === 'no_user_message') {
+        toast.error('Assistant could not attach to your last message. Send again in a second.');
+      } else if (j.skipped && j.reason === 'openai_error') {
+        toast.error('Assistant could not reply. Try again or use live support.');
+      }
       const hr = await fetch('/api/chat/handoff', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -331,6 +352,32 @@ const ChatWidget = ({ user }) => {
       console.warn('AI reply:', e);
     } finally {
       setAiTyping(false);
+    }
+  };
+
+  const resumeAiAssistant = async () => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please sign in again');
+        return;
+      }
+      const r = await fetch('/api/chat/handoff', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ humanHandoff: false }),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Failed');
+      setHumanHandoff(false);
+      toast.success('AI assistant is on again. Send a message to get a reply.');
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Could not resume AI');
     }
   };
 
@@ -483,7 +530,13 @@ const ChatWidget = ({ user }) => {
       });
       scrollToBottom();
 
-      await triggerAiReply();
+      if (humanHandoffRef.current) {
+        toast('Message sent to the live team. Use “Continue with AI assistant” if you want the bot to answer again.', {
+          icon: '👤',
+        });
+      } else {
+        await triggerAiReply();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -597,11 +650,36 @@ const ChatWidget = ({ user }) => {
             }}
             onClick={() => isMinimized && setIsMinimized(false)}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <FiMessageCircle size={20} color="#ffffff" />
-              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: isMobile ? '13px' : '16px' }}>
-                Support {humanHandoff ? '(Live team)' : '(AI + team)'}
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <FiMessageCircle size={20} color="#ffffff" />
+                <span style={{ color: '#ffffff', fontWeight: 600, fontSize: isMobile ? '13px' : '16px' }}>
+                  Support {humanHandoff ? '(Live team)' : '(AI + team)'}
+                </span>
+              </div>
+              {humanHandoff && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resumeAiAssistant();
+                  }}
+                  style={{
+                    marginLeft: '32px',
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    color: '#c4b5fd',
+                    fontSize: isMobile ? '11px' : '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                  }}
+                >
+                  Continue with AI assistant
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -650,6 +728,7 @@ const ChatWidget = ({ user }) => {
               <div
                 style={{
                   flex: 1,
+                  minHeight: 0,
                   overflowY: 'auto',
                   padding: isMobile ? '12px' : '20px',
                   display: 'flex',
@@ -838,12 +917,13 @@ const ChatWidget = ({ user }) => {
               <form
                 onSubmit={sendMessage}
                 style={{
+                  flexShrink: 0,
                   padding: '16px 20px',
                   borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                   background: 'rgba(15, 17, 36, 0.95)',
                 }}
               >
-                <div style={{ marginBottom: '10px' }}>
+                <div style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
                   <button
                     type="button"
                     onClick={requestHumanAgent}
@@ -862,6 +942,25 @@ const ChatWidget = ({ user }) => {
                   >
                     {humanHandoff ? 'Live team will reply here' : 'Talk to a person (live agent)'}
                   </button>
+                  {humanHandoff && (
+                    <button
+                      type="button"
+                      onClick={resumeAiAssistant}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(167, 139, 250, 0.5)',
+                        background: 'rgba(139, 92, 246, 0.15)',
+                        color: '#c4b5fd',
+                        fontSize: isMobile ? '11px' : '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Continue with AI assistant
+                    </button>
+                  )}
                 </div>
                 {selectedFile && (
                   <div style={{ 

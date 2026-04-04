@@ -82,8 +82,10 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, error: 'Admin only' });
       }
       subjectId = targetUserId;
-    } else if (!admin && humanHandoff === false) {
-      return res.status(403).json({ success: false, error: 'Only admins can re-enable AI' });
+    }
+    // Kullanıcı kendi hesabında AI'yı tekrar açabilir; başka kullanıcı için sadece admin
+    if (!admin && humanHandoff === false && subjectId !== user.id) {
+      return res.status(403).json({ success: false, error: 'Admin only' });
     }
 
     const { error } = await supabaseAdmin.from('chat_handoff_state').upsert(
