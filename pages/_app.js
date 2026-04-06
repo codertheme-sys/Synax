@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
+import { isBlockedEmail } from '../lib/blocked-users';
 import ChatWidget from '../components/ChatWidget';
 
 function MyApp({ Component, pageProps }) {
@@ -265,6 +266,15 @@ function MyApp({ Component, pageProps }) {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && isBlockedEmail(session.user.email)) {
+        await supabase.auth.signOut();
+        setUser(null);
+        toast.error('Access to this account has been restricted.');
+        if (typeof window !== 'undefined') {
+          window.location.replace('/login');
+        }
+        return;
+      }
       setUser(session?.user || null);
     };
     checkUser();
@@ -316,7 +326,17 @@ function MyApp({ Component, pageProps }) {
           }
         }
       }
-      
+
+      if (session?.user && isBlockedEmail(session.user.email)) {
+        await supabase.auth.signOut();
+        setUser(null);
+        toast.error('Access to this account has been restricted.');
+        if (typeof window !== 'undefined') {
+          window.location.replace('/login');
+        }
+        return;
+      }
+
       setUser(session?.user || null);
       
       // CRITICAL: Don't redirect if we're on reset-password page (let the page handle it)
@@ -372,8 +392,6 @@ function MyApp({ Component, pageProps }) {
       subscription.unsubscribe();
       router.events.off('routeChangeStart', handleRouteChangeStart);
     };
-
-    return () => subscription.unsubscribe();
   }, []);
 
   // Check if user is admin
@@ -804,7 +822,7 @@ function MyApp({ Component, pageProps }) {
           },
         }}
       />
-      <ChatWidget user={user} />
+      <ChatWidget user={user && !isBlockedEmail(user.email) ? user : null} />
     </>
   );
 }

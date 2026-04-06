@@ -1,4 +1,5 @@
 import { createServerClient } from '../../../lib/supabase';
+import { isBlockedEmail } from '../../../lib/blocked-users';
 import { CHAT_AI_SYSTEM_PROMPT } from '../../../lib/chat-ai-system-prompt';
 
 const HANDOFF_REGEX =
@@ -74,6 +75,10 @@ export default async function handler(req, res) {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    if (isBlockedEmail(user.email)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
     const userId = user.id;

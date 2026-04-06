@@ -1,4 +1,5 @@
 import { createServerClient } from '../../../lib/supabase';
+import { isBlockedEmail } from '../../../lib/blocked-users';
 
 async function requireUser(supabaseAdmin, token) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
@@ -27,6 +28,10 @@ export default async function handler(req, res) {
       const user = await requireUser(supabaseAdmin, token);
       if (!user) {
         return res.status(401).json({ success: false, error: 'Unauthorized' });
+      }
+
+      if (isBlockedEmail(user.email)) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
       }
 
       const { data, error } = await supabaseAdmin
@@ -67,6 +72,10 @@ export default async function handler(req, res) {
     const user = await requireUser(supabaseAdmin, token);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    if (isBlockedEmail(user.email)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
     const { humanHandoff, userId: targetUserId } = req.body || {};

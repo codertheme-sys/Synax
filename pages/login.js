@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
+import { isBlockedEmail } from '../lib/blocked-users';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -208,6 +209,13 @@ function LoginPage() {
           setShowEmailModal(true);
           setLoading(false);
           toast.error('Please verify your email before logging in');
+          return;
+        }
+
+        if (isBlockedEmail(data.user.email)) {
+          await supabase.auth.signOut();
+          setLoading(false);
+          toast.error('Access to this account has been restricted.');
           return;
         }
         

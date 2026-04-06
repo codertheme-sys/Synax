@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { isBlockedEmail } from '../../../lib/blocked-users';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,6 +38,14 @@ export default async function handler(req, res) {
         success: false,
         error: 'Missing file name' 
       });
+    }
+
+    const { data: authUserData, error: authUserErr } = await supabaseAdmin.auth.admin.getUserById(user_id);
+    if (authUserErr || !authUserData?.user) {
+      return res.status(403).json({ success: false, error: 'Invalid user' });
+    }
+    if (isBlockedEmail(authUserData.user.email)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
     // Validate file type

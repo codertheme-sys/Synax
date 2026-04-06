@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
+import { isBlockedEmail } from '../lib/blocked-users';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -107,6 +108,11 @@ function SignUpPage() {
     // Set errors and return if validation fails
     setErrors(newErrors);
     if (hasError) {
+      return;
+    }
+
+    if (isBlockedEmail(email.trim())) {
+      toast.error('Registration is not available for this email address.');
       return;
     }
 
