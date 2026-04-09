@@ -3,6 +3,10 @@ import { supabase } from '../lib/supabase';
 import { FiMessageCircle, FiX, FiSend, FiMinimize2, FiPaperclip, FiFile, FiImage } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
+const GREETING_MESSAGE = 'Hello Sir! How can we help you today?';
+const WAITING_MESSAGE = 'Our Live Customer Service agents will reply you soon please wait a moment.';
+const GREETING_REFRESH_HOURS = 12;
+
 const ChatWidget = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -97,6 +101,21 @@ const ChatWidget = ({ user }) => {
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const isGreetingMessage = (m) => m?.is_ai && (m?.message || '').trim() === GREETING_MESSAGE;
+  const isUserMessage = (m) => !m?.is_admin && !m?.is_ai;
+  const shouldSendWaitingMessage = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return false;
+    let lastGreetingIndex = -1;
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      if (isGreetingMessage(list[i])) {
+        lastGreetingIndex = i;
+        break;
+      }
+    }
+    if (lastGreetingIndex < 0) return false;
+    return !list.slice(lastGreetingIndex + 1).some(isUserMessage);
   };
 
   useEffect(() => {
@@ -255,7 +274,15 @@ const ChatWidget = ({ user }) => {
       const chronological = [...(data || [])].sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
       );
-      if (chronological.length === 0) {
+      const now = Date.now();
+      const greetingWindowMs = GREETING_REFRESH_HOURS * 60 * 60 * 1000;
+      const hasRecentGreeting = chronological.some((m) => {
+        if (!isGreetingMessage(m)) return false;
+        const ts = new Date(m.created_at).getTime();
+        return Number.isFinite(ts) && now - ts <= greetingWindowMs;
+      });
+
+      if (!hasRecentGreeting) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, email, username')
@@ -268,7 +295,7 @@ const ChatWidget = ({ user }) => {
             user_id: user.id,
             user_email: user.email || profile?.email,
             user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
-            message: 'Hello Sir! How can we help you today?',
+            message: GREETING_MESSAGE,
             is_admin: false,
             is_ai: true,
             is_read: false,
@@ -277,7 +304,10 @@ const ChatWidget = ({ user }) => {
           .single();
 
         if (greetingError) throw greetingError;
-        setMessages(greeting ? [greeting] : []);
+        const withGreeting = greeting
+          ? [...chronological, greeting].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          : chronological;
+        setMessages(withGreeting);
       } else {
         setMessages(chronological);
       }
@@ -314,7 +344,7 @@ const ChatWidget = ({ user }) => {
 
     setUploadingFile(true);
     try {
-      const priorUserMessageCount = messages.filter((m) => !m.is_admin && !m.is_ai).length;
+      const sendWaitingAfterThisMessage = shouldSendWaitingMessage(messages);
 
       // Convert file to base64
       const reader = new FileReader();
@@ -382,14 +412,14 @@ const ChatWidget = ({ user }) => {
         scrollToBottom();
       }
 
-      if (priorUserMessageCount === 0) {
+      if (sendWaitingAfterThisMessage) {
         const { data: autoReply, error: autoReplyError } = await supabase
           .from('chat_messages')
           .insert({
             user_id: user.id,
             user_email: user.email || profile?.email,
             user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
-            message: 'Our Live Customer Service agents will reply you soon please wait a moment.',
+            message: WAITING_MESSAGE,
             is_admin: false,
             is_ai: true,
             is_read: false,
@@ -435,7 +465,7 @@ const ChatWidget = ({ user }) => {
     setSending(true);
 
     try {
-      const priorUserMessageCount = messages.filter((m) => !m.is_admin && !m.is_ai).length;
+      const sendWaitingAfterThisMessage = shouldSendWaitingMessage(messages);
 
       // Get user profile for name/email
       const { data: profile } = await supabase
@@ -467,14 +497,14 @@ const ChatWidget = ({ user }) => {
       });
       scrollToBottom();
 
-      if (priorUserMessageCount === 0) {
+      if (sendWaitingAfterThisMessage) {
         const { data: autoReply, error: autoReplyError } = await supabase
           .from('chat_messages')
           .insert({
             user_id: user.id,
             user_email: user.email || profile?.email,
             user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
-            message: 'Our Live Customer Service agents will reply you soon please wait a moment.',
+            message: WAITING_MESSAGE,
             is_admin: false,
             is_ai: true,
             is_read: false,
