@@ -713,13 +713,14 @@ const ChatWidget = ({ user }) => {
                 ) : (
                   messages.map((message) => {
                     const isMine = !message.is_admin && !message.is_ai;
+                    const isAutoReply = message.is_ai;
                     return (
                     <div
                       key={message.id}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: isMine ? 'flex-end' : 'flex-start',
+                        alignItems: isAutoReply ? 'flex-end' : (isMine ? 'flex-end' : 'flex-start'),
                         gap: '4px',
                       }}
                     >
