@@ -59,6 +59,62 @@ export default async function handler(req, res) {
     // Filter to ensure only active users are returned
     const filteredUsers = (allUsers || []).filter(user => activeUserIds.includes(user.id));
 
+    // Calculate portfolio value for each user:
+    // portfolioValue = assets (portfolio holdings excluding USDT) + active earn_products + cash balance
+    let portfolioByUser = new Map();
+    let earnByUser = new Map();
+    try {
+      const { data: portfoliosData, error: portfoliosError } = activeUserIds.length > 0
+        ? await supabaseAdmin
+            .from('portfolio')
+            .select('user_id, quantity, total_value, asset_symbol, asset_id')
+            .in('user_id', activeUserIds)
+        : { data: [], error: null };
+
+      if (portfoliosError) throw portfoliosError;
+
+      (portfoliosData || []).forEach((p) => {
+        const qty = parseFloat(p.quantity || 0);
+        if (!(qty > 0)) return;
+        const sym = (p.asset_symbol || '').toUpperCase();
+        const id = (p.asset_id || '').toUpperCase();
+        if (sym === 'USDT' || id === 'USDT') return;
+
+        const v = parseFloat(p.total_value || 0);
+        const prev = portfolioByUser.get(p.user_id) || 0;
+        portfolioByUser.set(p.user_id, prev + v);
+      });
+    } catch (err) {
+      console.error('Error fetching portfolios for admin users:', err);
+    }
+
+    try {
+      const { data: earnSubsData, error: earnSubsError } = activeUserIds.length > 0
+        ? await supabaseAdmin
+            .from('earn_subscriptions')
+            .select('user_id, amount, status')
+            .in('user_id', activeUserIds)
+        : { data: [], error: null };
+
+      if (earnSubsError) throw earnSubsError;
+
+      (earnSubsData || []).forEach((s) => {
+        if ((s.status || '').toLowerCase() !== 'active') return;
+        const v = parseFloat(s.amount || 0);
+        const prev = earnByUser.get(s.user_id) || 0;
+        earnByUser.set(s.user_id, prev + v);
+      });
+    } catch (err) {
+      console.error('Error fetching earn subscriptions for admin users:', err);
+    }
+
+    filteredUsers.forEach((u) => {
+      const cashBalance = parseFloat(u.balance || 0);
+      const assetsValue = portfolioByUser.get(u.id) || 0;
+      const earnProductsValue = earnByUser.get(u.id) || 0;
+      u.portfolio_value = assetsValue + earnProductsValue + cashBalance;
+    });
+
     return res.status(200).json({
       success: true,
       data: filteredUsers

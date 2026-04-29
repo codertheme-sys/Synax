@@ -272,6 +272,7 @@ function AdminPage() {
         deposits: result.data?.deposits || [],
         withdrawals: result.data?.withdrawals || [],
         balance: result.data?.balance ?? user.balance ?? 0,
+        portfolio_value: result.data?.portfolio_value ?? 0,
         earn_subscriptions: result.data?.earn_subscriptions || [],
         binary_trades: result.data?.binary_trades || [],
         kyc_documents: result.data?.kyc_documents || [],
@@ -661,7 +662,9 @@ function AdminPage() {
                       <tr key={user.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{user.email || 'N/A'}</td>
                         <td style={{ padding: '12px', color: '#ffffff' }}>{user.username || user.user_name || 'N/A'}</td>
-                        <td style={{ padding: '12px', color: '#ffffff' }}>{parseFloat(user.balance || 0).toFixed(2)} USDT</td>
+                        <td style={{ padding: '12px', color: '#ffffff' }}>
+                          {parseFloat(user.portfolio_value ?? user.balance ?? 0).toFixed(2)} USDT
+                        </td>
                         <td style={{ padding: '12px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -1504,9 +1507,9 @@ function AdminPage() {
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Balance (Total)</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Portfolio Value (Total)</div>
                       <div style={{ fontSize: '24px', fontWeight: 700, color: '#4ade80' }}>
-                        {parseFloat(userDetails.balance || 0).toFixed(2)} USDT
+                        {parseFloat(userDetails.portfolio_value ?? userDetails.balance ?? 0).toFixed(2)} USDT
                       </div>
                     </div>
                     <div>

@@ -54,6 +54,24 @@ export default async function handler(req, res) {
       supabaseAdmin.from('convert_history').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
     ]);
 
+    const cashBalance = parseFloat(userProfile?.balance || 0);
+
+    // Portfolio value = (current holdings value) + (active earn products) + (cash balance)
+    const assetsValue = (portfolio || [])
+      .filter((p) => parseFloat(p.quantity || 0) > 0)
+      .filter((p) => {
+        const sym = (p.asset_symbol || '').toUpperCase();
+        const id = (p.asset_id || '').toUpperCase();
+        return sym !== 'USDT' && id !== 'USDT';
+      })
+      .reduce((sum, p) => sum + parseFloat(p.total_value || 0), 0);
+
+    const earnProductsValue = (subscriptions || [])
+      .filter((s) => (s.status || '').toLowerCase() === 'active')
+      .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+
+    const portfolioValue = assetsValue + earnProductsValue + cashBalance;
+
     // Debug: Log KYC documents query result
     console.log('🔍 [API User Details] KYC Documents Query:', {
       user_id,
@@ -73,6 +91,7 @@ export default async function handler(req, res) {
       data: {
         profile: userProfile || null,
         balance: userProfile?.balance ?? 0,
+        portfolio_value: portfolioValue,
         portfolio: portfolio || [],
         deposits: deposits || [],
         withdrawals: withdrawals || [],
