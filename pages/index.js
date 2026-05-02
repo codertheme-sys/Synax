@@ -576,7 +576,8 @@ export default function Home() {
           >
             {slides[currentSlide].hideHeroText ? (
               <h1 className="sr-only">
-                Crypto deposit bonus: 10% on first crypto deposit, 15% on deposits of $3,000 USDT or more
+                Crypto deposit bonus: 10% on your first deposit; 15% when the deposit is worth $3,000 USDT or
+                more. Bonus is credited in the same asset as your deposit.
               </h1>
             ) : (
               <>
