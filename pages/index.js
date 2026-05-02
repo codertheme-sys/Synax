@@ -22,6 +22,14 @@ export default function Home() {
   const [isDesktop, setIsDesktop] = useState(false);
   const slides = [
     {
+      title: 'Crypto deposit bonus',
+      subtitle:
+        'Get 10% on your first crypto deposit and 15% on deposits valued at $3,000 USDT or more—credited automatically to your USDT balance after approval.',
+      image: '/images/slider-crypto-bonus.svg',
+      href: '/deposit',
+      ctaLabel: 'Deposit now',
+    },
+    {
       title: 'Seize every opportunity in gold and crypto',
       subtitle: 'Real-time liquidity across metals and digital assets so you never miss a move.',
       image: '/images/slider-1.jpg',
@@ -565,6 +573,16 @@ export default function Home() {
             <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto transition-all duration-500 reveal-show" data-reveal>
               {slides[currentSlide].subtitle}
             </p>
+            {slides[currentSlide].href ? (
+              <div className="pt-6 reveal-show" data-reveal>
+                <Link
+                  href={slides[currentSlide].href}
+                  className="inline-flex items-center justify-center rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-8 py-3 text-base shadow-lg shadow-amber-500/25 transition-colors"
+                >
+                  {slides[currentSlide].ctaLabel || 'Devam et'}
+                </Link>
+              </div>
+            ) : null}
             <div className="flex items-center justify-center gap-2 pt-4">
               {slides.map((_, idx) => (
                 <button

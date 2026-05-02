@@ -1,5 +1,6 @@
 // pages/api/admin/deposit-approve.js - Deposit Onay/Red
 import { createServerClient } from '../../../lib/supabase';
+import { computeCryptoDepositBonus } from '../../../lib/crypto-deposit-bonus';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -281,12 +282,74 @@ export default async function handler(req, res) {
         }
       }
 
+      let bonusMeta = null;
+      if (deposit.payment_method === 'crypto' && totalValue > 0) {
+        const { data: priorCrypto } = await supabaseAdmin
+          .from('deposits')
+          .select('id')
+          .eq('user_id', deposit.user_id)
+          .eq('payment_method', 'crypto')
+          .eq('status', 'completed')
+          .neq('id', deposit_id)
+          .limit(1);
+
+        const isFirstCrypto = !priorCrypto?.length;
+        const bonus = computeCryptoDepositBonus(totalValue, isFirstCrypto);
+
+        if (bonus.bonusUsdt > 0) {
+          const { data: profileForBonus } = await supabaseAdmin
+            .from('profiles')
+            .select('balance')
+            .eq('id', deposit.user_id)
+            .single();
+
+          if (!profileForBonus) {
+            throw new Error('User profile not found for crypto bonus credit');
+          }
+
+          const bal = parseFloat(profileForBonus.balance || 0);
+          const newBal = bal + bonus.bonusUsdt;
+          const { error: bonusErr } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              balance: newBal,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', deposit.user_id);
+
+          if (bonusErr) {
+            console.error('Deposit approve - Crypto bonus balance error:', bonusErr);
+            throw bonusErr;
+          }
+
+          const reasonLabel =
+            bonus.reason === 'high_tier'
+              ? '≥3000 USDT tier'
+              : bonus.reason === 'first_crypto'
+                ? 'first crypto deposit'
+                : bonus.reason;
+          bonusMeta = {
+            bonusUsdt: bonus.bonusUsdt,
+            ratePercent: Math.round(bonus.rate * 1000) / 10,
+            reason: bonus.reason,
+            reasonLabel
+          };
+          console.log('Deposit approve - Crypto deposit bonus credited:', bonusMeta);
+        }
+      }
+
+      const bonusNoteLine =
+        bonusMeta != null
+          ? `Crypto bonus: +${bonusMeta.bonusUsdt.toFixed(2)} USDT (${bonusMeta.ratePercent}%, ${bonusMeta.reasonLabel}).`
+          : null;
+      const mergedAdminNotes = [notes, bonusNoteLine].filter(Boolean).join('\n') || null;
+
       // Deposit'i onayla
       const { data: updatedDeposit, error: updateError } = await supabaseAdmin
         .from('deposits')
         .update({
           status: 'completed',
-          admin_notes: notes || null,
+          admin_notes: mergedAdminNotes,
           updated_at: new Date().toISOString()
         })
         .eq('id', deposit_id)
@@ -307,12 +370,20 @@ export default async function handler(req, res) {
         totalValue
       });
 
+      const baseMsg =
+        coin === 'USDT'
+          ? `Deposit approved successfully. ${cryptoAmount} ${coin} added to balance.`
+          : `Deposit approved successfully. ${cryptoAmount} ${coin} added to portfolio.`;
+      const bonusMsg =
+        bonusMeta != null
+          ? ` Bonus credited: ${bonusMeta.bonusUsdt.toFixed(2)} USDT (${bonusMeta.ratePercent}%).`
+          : '';
+
       return res.status(200).json({
         success: true,
-        message: coin === 'USDT' 
-          ? `Deposit approved successfully. ${cryptoAmount} ${coin} added to balance.`
-          : `Deposit approved successfully. ${cryptoAmount} ${coin} added to portfolio.`,
-        deposit: updatedDeposit
+        message: baseMsg + bonusMsg,
+        deposit: updatedDeposit,
+        cryptoBonus: bonusMeta
       });
     } else if (action === 'reject') {
       // Deposit'i reddet (processed_at and processed_by columns don't exist in schema)
