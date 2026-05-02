@@ -22,12 +22,8 @@ export default function Home() {
   const [isDesktop, setIsDesktop] = useState(false);
   const slides = [
     {
-      title: 'Crypto deposit bonus',
-      subtitle:
-        'Get 10% on your first crypto deposit and 15% on deposits valued at $3,000 USDT or more—credited automatically to your USDT balance after approval.',
       image: '/images/slider-crypto-bonus.svg',
-      href: '/deposit',
-      ctaLabel: 'Deposit now',
+      hideHeroText: true,
     },
     {
       title: 'Seize every opportunity in gold and crypto',
@@ -469,7 +465,9 @@ export default function Home() {
           id="comp-lt8qi2wq"
           className="relative overflow-hidden min-h-[70vh] md:min-h-[75vh] flex items-center justify-center px-4 pt-32 pb-20 border-none"
           style={{
-            backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.25), rgba(0,0,0,0.4)), url(${slides[currentSlide].image})`,
+            backgroundImage: slides[currentSlide].hideHeroText
+              ? `url(${slides[currentSlide].image})`
+              : `linear-gradient(135deg, rgba(0,0,0,0.25), rgba(0,0,0,0.4)), url(${slides[currentSlide].image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
@@ -479,7 +477,9 @@ export default function Home() {
               key={idx}
               className="absolute inset-0"
               style={{
-                backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.25), rgba(0,0,0,0.4)), url(${slide.image})`,
+                backgroundImage: slide.hideHeroText
+                  ? `url(${slide.image})`
+                  : `linear-gradient(135deg, rgba(0,0,0,0.25), rgba(0,0,0,0.4)), url(${slide.image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 transition: 'opacity 0.8s ease-in-out',
@@ -489,7 +489,14 @@ export default function Home() {
               }}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/30 to-black/60" style={{ zIndex: 3 }} />
+          <div
+            className={
+              slides[currentSlide].hideHeroText
+                ? 'absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20'
+                : 'absolute inset-0 bg-gradient-to-b from-black/30 via-black/30 to-black/60'
+            }
+            style={{ zIndex: 3 }}
+          />
           
           {/* Navigation Arrows */}
           <button
@@ -559,30 +566,45 @@ export default function Home() {
             </svg>
           </button>
 
-          <div className="relative z-10 max-w-5xl w-full text-center space-y-8 reveal-show" data-reveal>
-            <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-white/15 text-sm text-white border border-white/30 backdrop-blur-sm reveal-show" data-reveal>
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
-              <span className="flex items-center gap-2 font-semibold">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5.5 4.5L17 21l-5-3-5 3 1.5-7.5L2 9h7z"/></svg>
-                Live pricing • Gold & Crypto
-              </span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight text-white drop-shadow transition-all duration-500 reveal-show" data-reveal>
-              {slides[currentSlide].title}
-            </h1>
-            <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto transition-all duration-500 reveal-show" data-reveal>
-              {slides[currentSlide].subtitle}
-            </p>
-            {slides[currentSlide].href ? (
-              <div className="pt-6 reveal-show" data-reveal>
-                <Link
-                  href={slides[currentSlide].href}
-                  className="inline-flex items-center justify-center rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-8 py-3 text-base shadow-lg shadow-amber-500/25 transition-colors"
-                >
-                  {slides[currentSlide].ctaLabel || 'Devam et'}
-                </Link>
-              </div>
-            ) : null}
+          <div
+            className={`relative z-10 max-w-5xl w-full text-center reveal-show ${
+              slides[currentSlide].hideHeroText
+                ? 'flex min-h-[42vh] flex-col justify-end space-y-0 pb-16 md:pb-24'
+                : 'space-y-8'
+            }`}
+            data-reveal
+          >
+            {slides[currentSlide].hideHeroText ? (
+              <h1 className="sr-only">
+                Crypto deposit bonus: 10% on first crypto deposit, 15% on deposits of $3,000 USDT or more
+              </h1>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-white/15 text-sm text-white border border-white/30 backdrop-blur-sm reveal-show" data-reveal>
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
+                  <span className="flex items-center gap-2 font-semibold">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5.5 4.5L17 21l-5-3-5 3 1.5-7.5L2 9h7z"/></svg>
+                    Live pricing • Gold & Crypto
+                  </span>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold leading-tight text-white drop-shadow transition-all duration-500 reveal-show" data-reveal>
+                  {slides[currentSlide].title}
+                </h1>
+                <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto transition-all duration-500 reveal-show" data-reveal>
+                  {slides[currentSlide].subtitle}
+                </p>
+                {slides[currentSlide].href ? (
+                  <div className="pt-6 reveal-show" data-reveal>
+                    <Link
+                      href={slides[currentSlide].href}
+                      className="inline-flex items-center justify-center rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-8 py-3 text-base shadow-lg shadow-amber-500/25 transition-colors"
+                    >
+                      {slides[currentSlide].ctaLabel || 'Continue'}
+                    </Link>
+                  </div>
+                ) : null}
+              </>
+            )}
             <div className="flex items-center justify-center gap-2 pt-4">
               {slides.map((_, idx) => (
                 <button
