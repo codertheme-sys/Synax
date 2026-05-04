@@ -1180,9 +1180,19 @@ function AssetsPage() {
                   const result = await response.json();
                   
                   if (result.success) {
-                    toast.success('Withdrawal request submitted successfully! Your withdrawal request will be processed within 24 hours.', {
-                      duration: 5000,
-                    });
+                    toast.success(
+                      'Your withdrawal request was submitted. Withdrawal processing takes between 3 and 24 hours to complete.',
+                      {
+                        duration: 9000,
+                        style: {
+                          borderRadius: '12px',
+                          padding: '16px 20px',
+                          maxWidth: 'min(420px, 92vw)',
+                          fontSize: '15px',
+                          lineHeight: 1.45,
+                        },
+                      }
+                    );
                     setShowWithdrawModal(false);
                     setWithdrawCoin('');
                     setWithdrawNetwork('');

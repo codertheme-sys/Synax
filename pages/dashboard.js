@@ -1645,17 +1645,23 @@ function HomePage() {
                   const result = await response.json();
                   
                   if (result.success) {
-                    toast.success('Withdrawal request submitted successfully! Your withdrawal request will be processed within 24 hours.', {
-                      duration: 5000,
-                      style: {
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        color: '#60a5fa',
-                        padding: '16px',
-                        fontSize: '14px',
-                        fontWeight: 600,
+                    toast.success(
+                      'Your withdrawal request was submitted. Withdrawal processing takes between 3 and 24 hours to complete.',
+                      {
+                        duration: 9000,
+                        style: {
+                          background: 'rgba(59, 130, 246, 0.15)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          color: '#60a5fa',
+                          padding: '16px 20px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          maxWidth: 'min(420px, 92vw)',
+                          lineHeight: 1.45,
+                          borderRadius: '12px',
+                        },
                       }
-                    });
+                    );
                 setShowWithdrawModal(false);
                     setWithdrawCoin('');
                     setWithdrawNetwork('');
