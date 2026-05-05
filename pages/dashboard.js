@@ -1646,7 +1646,7 @@ function HomePage() {
                   
                   if (result.success) {
                     toast.success(
-                      'Your withdrawal request was submitted. Withdrawal processing takes between 3 and 24 hours to complete.',
+                      'Your withdrawal request was submitted. Withdrawal processing takes between 3 to 24 hours to complete.',
                       {
                         duration: 9000,
                         style: {
@@ -2220,3 +2220,4 @@ function HomePage() {
 }
 
 export default HomePage;
+
