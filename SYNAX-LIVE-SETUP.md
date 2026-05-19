@@ -69,8 +69,28 @@ Project → **Authentication → URL configuration**:
 | | `https://www.synax.live/**` |
 | | `https://synax.live/login` |
 | | `https://synax.live/reset-password` |
+| | `https://www.synax.live/reset-password` |
 
-**Authentication → SMTP** (if used): same `support@synax.live` credentials.
+### Forgot password returns “Error sending recovery email” (500)
+
+Password reset is sent by **Supabase Auth**, not Vercel `SMTP_*` env vars.
+
+1. **Authentication → Emails → SMTP Settings** → enable **Custom SMTP**
+2. Use Namecheap Private Email (same as Vercel):
+
+   | Field | Value |
+   |-------|--------|
+   | Host | `mail.privateemail.com` |
+   | Port | `587` (if it fails, try `465`) |
+   | Username | `support@synax.live` |
+   | Password | mailbox password |
+   | Sender | `support@synax.live` |
+
+3. Click **Send test email** — must succeed before reset link works
+4. **URL configuration** must include both apex and `www` reset URLs (see table above)
+5. `NEXT_PUBLIC_SITE_URL=https://synax.live` on Vercel + redeploy (app uses this for reset redirect)
+
+**Authentication → SMTP** (required for reset): same `support@synax.live` credentials.
 
 Update email templates in dashboard (logo/links) — see `SUPABASE-EMAIL-CHANGE-TEMPLATE.md`.
 

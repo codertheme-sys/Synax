@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
+import { getSiteUrl } from '../lib/site-config';
 import toast from 'react-hot-toast';
 
 const cardStyle = {
@@ -53,7 +54,8 @@ function ForgotPasswordPage() {
       console.log('🔐 [Forgot Password] Email:', email);
       console.log('🔐 [Forgot Password] Window location:', window.location.href);
       console.log('🔐 [Forgot Password] Window origin:', window.location.origin);
-      console.log('🔐 [Forgot Password] Redirect URL:', `${window.location.origin}/reset-password`);
+      const redirectTo = getSiteUrl('/reset-password');
+      console.log('🔐 [Forgot Password] Redirect URL:', redirectTo);
       
       // Check Supabase client
       console.log('🔐 [Forgot Password] Supabase client exists:', !!supabase);
@@ -65,7 +67,7 @@ function ForgotPasswordPage() {
       console.log('🔐 [Forgot Password] Making API call at:', new Date(startTime).toISOString());
       
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo,
       });
 
       const endTime = Date.now();
