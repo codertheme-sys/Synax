@@ -3,6 +3,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
+import {
+  restoreRecoveryCodeVerifier,
+  clearRecoveryCodeVerifierCookie,
+} from '../lib/auth-pkce-recovery';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -128,24 +132,38 @@ function ResetPasswordPage() {
         return;
       }
 
-      // PKCE ?code= links need code_verifier in the same browser that requested reset.
-      // Prefer implicit-flow emails (#access_token). If only ?code= is present, ask for a new link.
+      // Direct link (custom Supabase email template) — works in any browser
+      const tokenHash = queryParams.get('token_hash') || queryParams.get('token');
+      if (tokenHash && type === 'recovery') {
+        console.log('🔐 [RESET PASSWORD] Verifying recovery token_hash...');
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          type: 'recovery',
+          token_hash: tokenHash,
+        });
+        if (cancelled) return;
+        if (otpError) {
+          markFailure(otpError.message);
+          return;
+        }
+        clearRecoveryCodeVerifierCookie();
+        markSuccess();
+        return;
+      }
+
+      // PKCE: Supabase redirects with ?code= after /auth/v1/verify
       const code = queryParams.get('code');
       if (code) {
-        const hasVerifier = Object.keys(localStorage).some((key) =>
-          key.includes('code-verifier')
-        );
-        if (hasVerifier) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (cancelled) return;
-          if (!exchangeError) {
-            markSuccess();
-            return;
-          }
-          console.error('🔐 [RESET PASSWORD] exchangeCodeForSession error:', exchangeError);
+        restoreRecoveryCodeVerifier();
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (!exchangeError) {
+          clearRecoveryCodeVerifierCookie();
+          markSuccess();
+          return;
         }
+        console.error('🔐 [RESET PASSWORD] exchangeCodeForSession error:', exchangeError);
         markFailure(
-          'Open the reset link in the same browser where you requested it, or request a new reset link from Forgot Password.'
+          'Open the reset link in the same browser where you requested it (same Chrome/Edge profile), or ask admin to update the Supabase reset email template. Then request a new link.'
         );
         return;
       }
@@ -168,24 +186,7 @@ function ResetPasswordPage() {
         return;
       }
 
-      // Legacy email link — token_hash or token in query
-      const tokenHash = queryParams.get('token_hash') || queryParams.get('token');
-      if (tokenHash && type === 'recovery') {
-        console.log('🔐 [RESET PASSWORD] Verifying recovery OTP...');
-        const { error: otpError } = await supabase.auth.verifyOtp({
-          type: 'recovery',
-          token_hash: tokenHash,
-        });
-        if (cancelled) return;
-        if (otpError) {
-          markFailure(otpError.message);
-          return;
-        }
-        markSuccess();
-        return;
-      }
-
-      // detectSessionInUrl (implicit hash) may still be processing
+      // detectSessionInUrl may still be processing
       await new Promise((resolve) => setTimeout(resolve, 1200));
       const { data: { session } } = await supabase.auth.getSession();
       if (cancelled) return;

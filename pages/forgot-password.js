@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import { getSiteUrl } from '../lib/site-config';
+import { saveRecoveryCodeVerifier } from '../lib/auth-pkce-recovery';
 import toast from 'react-hot-toast';
 
 const cardStyle = {
@@ -136,8 +137,10 @@ function ForgotPasswordPage() {
       }
 
       console.log('✅ [Forgot Password] Password reset email sent successfully');
+      const savedVerifier = saveRecoveryCodeVerifier();
+      console.log('🔐 [Forgot Password] PKCE verifier cookie saved:', savedVerifier);
       setEmailSent(true);
-      toast.success('Password reset email sent! Please check your inbox.');
+      toast.success('Password reset email sent! Open the link in this same browser if possible.');
       setLoading(false);
     } catch (error) {
       console.error('='.repeat(80));
