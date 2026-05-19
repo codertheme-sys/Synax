@@ -44,7 +44,7 @@ Veya online tool kullanın:
 1. Dashboard'da **"Create cronjob"** butonuna tıklayın
 2. Ayarlar:
    - **Title**: `Synax Price History Update`
-   - **Address (URL)**: `https://www.synax.vip/api/prices/crypto?secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!`
+   - **Address (URL)**: `https://www.synax.live/api/prices/crypto?secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!`
      - ⚠️ **ÖNEMLİ**: `Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` yerine Vercel'de oluşturduğunuz **GERÇEK** `CRON_SECRET` değerini yazın!
      - ❌ YANLIŞ: `secret=openssl rand -hex 32` (bu bir komut, değer değil!)
      - ✅ DOĞRU: `secret=Syn4xPr1c3Upd4t3Cr0nS3cr3t2024!` (gerçek secret değeri)
@@ -77,7 +77,7 @@ Veya online tool kullanın:
 1. Dashboard'da **"Add Cron Job"** butonuna tıklayın
 2. Ayarlar:
    - **Cron Job Title**: `Synax Price History Update`
-   - **URL**: `https://www.synax.vip/api/prices/crypto?secret=YOUR_CRON_SECRET`
+   - **URL**: `https://www.synax.live/api/prices/crypto?secret=YOUR_CRON_SECRET`
    - **Schedule**: `*/2 * * * *` (her 2 dakikada bir)
    - **HTTP Method**: `GET`
    - **Timeout**: `60` saniye
@@ -96,12 +96,12 @@ Veya online tool kullanın:
 
 Manuel test için:
 ```bash
-curl "https://www.synax.vip/api/prices/crypto?secret=YOUR_CRON_SECRET"
+curl "https://www.synax.live/api/prices/crypto?secret=YOUR_CRON_SECRET"
 ```
 
 Veya tarayıcıda:
 ```
-https://www.synax.vip/api/prices/crypto?secret=YOUR_CRON_SECRET
+https://www.synax.live/api/prices/crypto?secret=YOUR_CRON_SECRET
 ```
 
 ## Sorun Giderme

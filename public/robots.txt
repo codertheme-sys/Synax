@@ -5,4 +5,4 @@ Disallow: /admin
 Disallow: /dashboard
 Disallow: /home
 
-Sitemap: https://synax.vip/sitemap.xml
+Sitemap: https://synax.live/sitemap.xml

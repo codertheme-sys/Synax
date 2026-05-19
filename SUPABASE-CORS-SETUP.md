@@ -42,8 +42,8 @@ Eğer custom domain kullanıyorsanız:
 
 1. **Supabase Dashboard** > **Settings** > **API**
 2. **Additional Allowed Origins** bölümüne domain'inizi ekleyin:
-   - `https://www.synax.vip`
-   - `https://synax.vip`
+   - `https://www.synax.live`
+   - `https://synax.live`
    - Vercel preview URL'leri (otomatik eklenir)
 
 ### 4. Browser Console Kontrolü

@@ -15,7 +15,7 @@ LIMIT 20;
 -- 3. Belirli bir email ile admin yap (EMAIL'i kendi admin email'inizle değiştirin)
 UPDATE profiles 
 SET is_admin = true 
-WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@synax.vip')
+WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@synax.live')
 RETURNING id, email, is_admin;
 
 -- 4. Profil yoksa: auth.users'dan profil oluştur ve admin yap
@@ -23,6 +23,6 @@ RETURNING id, email, is_admin;
 INSERT INTO profiles (id, full_name, email, is_admin)
 SELECT id, COALESCE(raw_user_meta_data->>'full_name', split_part(email, '@', 1)), email, true
 FROM auth.users 
-WHERE email = 'admin@synax.vip'
+WHERE email = 'admin@synax.live'
   AND NOT EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.users.id)
 ON CONFLICT (id) DO UPDATE SET is_admin = true;

@@ -6,12 +6,12 @@ Bu rehber, Synax platformunu Android APK olarak dağıtmanın yollarını açık
 
 ## Yöntem 1: PWA Builder (En Kolay) ✅ Önerilen
 
-**Gereksinim:** Sadece canlı site URL'si (synax.vip)
+**Gereksinim:** Sadece canlı site URL'si (synax.live)
 
 ### Adımlar
 
 1. **https://www.pwabuilder.com/** adresine gidin
-2. Site URL'sini girin: `https://synax.vip`
+2. Site URL'sini girin: `https://synax.live`
 3. **"Start"** butonuna tıklayın
 4. PWA Builder sitenizi analiz edecek
 5. **"Package for stores"** veya **"Android"** seçeneğini seçin
@@ -71,7 +71,7 @@ const nextConfig = {
 
 ### Alternatif: Capacitor + Canlı URL
 
-Capacitor ile sadece WebView açıp `https://synax.vip` yükleyebilirsiniz. Bu durumda static export gerekmez:
+Capacitor ile sadece WebView açıp `https://synax.live` yükleyebilirsiniz. Bu durumda static export gerekmez:
 
 ```javascript
 // capacitor.config.js
@@ -80,7 +80,7 @@ const config = {
   appName: 'Synax',
   webDir: 'out',  // veya build çıktısı
   server: {
-    url: 'https://synax.vip',
+    url: 'https://synax.live',
     cleartext: true
   }
 };
@@ -119,7 +119,7 @@ Google'ın TWA aracı. PWA'nızı Play Store benzeri deneyimle APK'ya çevirir.
 npm install -g @bubblewrap/cli
 
 # Başlat
-bubblewrap init --manifest=https://synax.vip/manifest.json
+bubblewrap init --manifest=https://synax.live/manifest.json
 ```
 
 Bubblewrap, manifest.json'dan bilgileri alır ve TWA projesi oluşturur.
@@ -139,7 +139,7 @@ Bubblewrap, manifest.json'dan bilgileri alır ve TWA projesi oluşturur.
 
 ## Öneri: PWA Builder ile Başlayın
 
-1. **synax.vip** canlı ve erişilebilir olmalı
+1. **synax.live** canlı ve erişilebilir olmalı
 2. **manifest.json** doğru yapılandırılmış olmalı (zaten var)
 3. **Service Worker** çalışıyor olmalı
 4. https://www.pwabuilder.com/ → URL girin → APK indirin
@@ -153,12 +153,12 @@ APK'yı kendi sitenizden veya başka kanallardan dağıtabilirsiniz. Kullanıcı
 APK oluşturduktan sonra:
 
 1. **Web sitesinde indirme linki:** `/download` veya `/app` sayfası
-2. **Direct link:** `https://synax.vip/synax.apk` (public klasörde)
+2. **Direct link:** `https://synax.live/synax.apk` (public klasörde)
 3. **QR kod:** İndirme sayfasına yönlendiren QR
 
 ### Güvenlik Notu
 
 APK'yı dağıtırken:
 - HTTPS üzerinden sunun
-- Kullanıcılara sadece resmi synax.vip'ten indirmelerini söyleyin
+- Kullanıcılara sadece resmi synax.live'ten indirmelerini söyleyin
 - APK imzalı olmalı (PWA Builder ve Capacitor otomatik imzalar)

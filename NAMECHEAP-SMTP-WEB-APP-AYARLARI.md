@@ -13,7 +13,7 @@ Resimlerde görünen ayarlar **email client** (Outlook, Thunderbird, Apple Mail)
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587) veya SSL (port 465)
 Authentication: Required
@@ -37,9 +37,9 @@ Projenizin `.env.local` dosyasına şu ayarları ekleyin:
 # Namecheap Private Email SMTP Configuration
 SMTP_HOST=mail.privateemail.com
 SMTP_PORT=587
-SMTP_USER=support@synax.vip
+SMTP_USER=support@synax.live
 SMTP_PASSWORD=your_email_password_here
-SMTP_FROM=support@synax.vip
+SMTP_FROM=support@synax.live
 ```
 
 **Not:** 
@@ -56,9 +56,9 @@ SMTP_FROM=support@synax.vip
 ```
 SMTP_HOST = mail.privateemail.com
 SMTP_PORT = 587
-SMTP_USER = support@synax.vip
+SMTP_USER = support@synax.live
 SMTP_PASSWORD = [email hesabınızın şifresi]
-SMTP_FROM = support@synax.vip
+SMTP_FROM = support@synax.live
 ```
 
 3. **Save** butonuna tıklayın
@@ -75,9 +75,9 @@ SMTP_FROM = support@synax.vip
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (veya 465)
-SMTP User: support@synax.vip
+SMTP User: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
-Sender Email: support@synax.vip
+Sender Email: support@synax.live
 Sender Name: Synax Support
 ```
 
@@ -120,7 +120,7 @@ Sender Name: Synax Support
 ### Test 3: Yeni Kullanıcı Kaydı
 1. Yeni bir kullanıcı kaydı oluşturun
 2. Email confirmation mailinin geldiğini kontrol edin
-3. Email'in `support@synax.vip` adresinden geldiğini kontrol edin
+3. Email'in `support@synax.live` adresinden geldiğini kontrol edin
 
 ---
 
@@ -134,7 +134,7 @@ Sender Name: Synax Support
 
 ### Problem: "Authentication failed"
 **Çözüm:**
-1. Username'in tam email adresi olduğundan emin olun: `support@synax.vip`
+1. Username'in tam email adresi olduğundan emin olun: `support@synax.live`
 2. Password'un doğru olduğundan emin olun
 3. Email hesabının aktif olduğundan emin olun (Status: ON)
 
@@ -152,7 +152,7 @@ Sender Name: Synax Support
 ```
 Server name: localhost
 Port: 25
-Username: support@synax.vip
+Username: support@synax.live
 Password: [şifre]
 ```
 
@@ -160,7 +160,7 @@ Password: [şifre]
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (veya 465)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [şifre]
 ```
 
@@ -172,9 +172,9 @@ SMTP Password: [şifre]
    ```env
    SMTP_HOST=mail.privateemail.com
    SMTP_PORT=587
-   SMTP_USER=support@synax.vip
+   SMTP_USER=support@synax.live
    SMTP_PASSWORD=[şifreniz]
-   SMTP_FROM=support@synax.vip
+   SMTP_FROM=support@synax.live
    ```
 
 2. Vercel Environment Variables ekleyin (yukarıdaki değerlerle)
@@ -192,7 +192,7 @@ SMTP Password: [şifre]
 1. **localhost kullanmayın!** - Bu sadece email client için
 2. **mail.privateemail.com kullanın** - Web uygulaması için
 3. **Port 587 veya 465 kullanın** - Port 25 genellikle çalışmaz
-4. **Username tam email adresi olmalı:** `support@synax.vip`
+4. **Username tam email adresi olmalı:** `support@synax.live`
 5. **Password email hesabının şifresi olmalı**
 
 
@@ -212,7 +212,7 @@ Resimlerde görünen ayarlar **email client** (Outlook, Thunderbird, Apple Mail)
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587) veya SSL (port 465)
 Authentication: Required
@@ -236,9 +236,9 @@ Projenizin `.env.local` dosyasına şu ayarları ekleyin:
 # Namecheap Private Email SMTP Configuration
 SMTP_HOST=mail.privateemail.com
 SMTP_PORT=587
-SMTP_USER=support@synax.vip
+SMTP_USER=support@synax.live
 SMTP_PASSWORD=your_email_password_here
-SMTP_FROM=support@synax.vip
+SMTP_FROM=support@synax.live
 ```
 
 **Not:** 
@@ -255,9 +255,9 @@ SMTP_FROM=support@synax.vip
 ```
 SMTP_HOST = mail.privateemail.com
 SMTP_PORT = 587
-SMTP_USER = support@synax.vip
+SMTP_USER = support@synax.live
 SMTP_PASSWORD = [email hesabınızın şifresi]
-SMTP_FROM = support@synax.vip
+SMTP_FROM = support@synax.live
 ```
 
 3. **Save** butonuna tıklayın
@@ -274,9 +274,9 @@ SMTP_FROM = support@synax.vip
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (veya 465)
-SMTP User: support@synax.vip
+SMTP User: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
-Sender Email: support@synax.vip
+Sender Email: support@synax.live
 Sender Name: Synax Support
 ```
 
@@ -319,7 +319,7 @@ Sender Name: Synax Support
 ### Test 3: Yeni Kullanıcı Kaydı
 1. Yeni bir kullanıcı kaydı oluşturun
 2. Email confirmation mailinin geldiğini kontrol edin
-3. Email'in `support@synax.vip` adresinden geldiğini kontrol edin
+3. Email'in `support@synax.live` adresinden geldiğini kontrol edin
 
 ---
 
@@ -333,7 +333,7 @@ Sender Name: Synax Support
 
 ### Problem: "Authentication failed"
 **Çözüm:**
-1. Username'in tam email adresi olduğundan emin olun: `support@synax.vip`
+1. Username'in tam email adresi olduğundan emin olun: `support@synax.live`
 2. Password'un doğru olduğundan emin olun
 3. Email hesabının aktif olduğundan emin olun (Status: ON)
 
@@ -351,7 +351,7 @@ Sender Name: Synax Support
 ```
 Server name: localhost
 Port: 25
-Username: support@synax.vip
+Username: support@synax.live
 Password: [şifre]
 ```
 
@@ -359,7 +359,7 @@ Password: [şifre]
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (veya 465)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [şifre]
 ```
 
@@ -371,9 +371,9 @@ SMTP Password: [şifre]
    ```env
    SMTP_HOST=mail.privateemail.com
    SMTP_PORT=587
-   SMTP_USER=support@synax.vip
+   SMTP_USER=support@synax.live
    SMTP_PASSWORD=[şifreniz]
-   SMTP_FROM=support@synax.vip
+   SMTP_FROM=support@synax.live
    ```
 
 2. Vercel Environment Variables ekleyin (yukarıdaki değerlerle)
@@ -391,7 +391,7 @@ SMTP Password: [şifre]
 1. **localhost kullanmayın!** - Bu sadece email client için
 2. **mail.privateemail.com kullanın** - Web uygulaması için
 3. **Port 587 veya 465 kullanın** - Port 25 genellikle çalışmaz
-4. **Username tam email adresi olmalı:** `support@synax.vip`
+4. **Username tam email adresi olmalı:** `support@synax.live`
 5. **Password email hesabının şifresi olmalı**
 
 

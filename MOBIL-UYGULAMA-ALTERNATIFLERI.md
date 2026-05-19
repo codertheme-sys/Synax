@@ -7,14 +7,14 @@
 ### Nasıl Kullanılır?
 
 #### iOS (iPhone/iPad):
-1. Safari'de synax.vip'i açın
+1. Safari'de synax.live'i açın
 2. Paylaş butonuna tıklayın (alt kısımda)
 3. "Ana Ekrana Ekle" seçeneğini bulun
 4. İsim verin ve "Ekle" butonuna tıklayın
 5. Artık uygulama ana ekranda görünecek!
 
 #### Android:
-1. Chrome'da synax.vip'i açın
+1. Chrome'da synax.live'i açın
 2. Menü butonuna (3 nokta) tıklayın
 3. "Ana ekrana ekle" veya "Add to Home screen" seçeneğini bulun
 4. İsim verin ve "Ekle" butonuna tıklayın

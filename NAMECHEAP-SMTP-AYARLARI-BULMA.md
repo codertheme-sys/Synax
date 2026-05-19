@@ -9,7 +9,7 @@
 **SMTP Server (Outgoing Mail):**
 - **SMTP Host:** `mail.privateemail.com` ⚠️ (localhost DEĞİL!)
 - **SMTP Port:** `587` (TLS/STARTTLS) veya `465` (SSL)
-- **SMTP Username:** Tam email adresiniz (örn: `support@synax.vip`)
+- **SMTP Username:** Tam email adresiniz (örn: `support@synax.live`)
 - **SMTP Password:** Email hesabınızın şifresi
 - **Encryption:** TLS (port 587) veya SSL (port 465)
 
@@ -32,15 +32,15 @@
 ### Yöntem 1: Email Hesabı Ayarlarından
 
 1. **Namecheap Dashboard'a giriş yapın**
-2. **Domain List** → `synax.vip` seçin
+2. **Domain List** → `synax.live` seçin
 3. Sol menüden **"Private Email"** seçin (zaten oradasınız - resim 3)
-4. Mailbox listesinde **"support@synax.vip"** mailbox'ına tıklayın
+4. Mailbox listesinde **"support@synax.live"** mailbox'ına tıklayın
 5. Açılan sayfada **"Email Client Settings"** veya **"Configure Email Client"** sekmesine bakın
 6. Orada SMTP ayarları gösterilir
 
 ### Yöntem 2: Webmail Üzerinden
 
-1. **Namecheap Dashboard** → **Private Email** → `support@synax.vip`
+1. **Namecheap Dashboard** → **Private Email** → `support@synax.live`
 2. **"Open Webmail"** butonuna tıklayın
 3. Webmail'e giriş yapın
 4. Webmail içinde **"Settings"** veya **"Preferences"** → **"Email Accounts"** veya **"Mail Settings"**
@@ -63,7 +63,7 @@ Namecheap Private Email için **genellikle** şu ayarlar kullanılır:
 ```
 SMTP Server: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip (tam email adresiniz)
+SMTP Username: support@synax.live (tam email adresiniz)
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587 için) veya SSL (port 465 için)
 Authentication: Required (Yes)
@@ -89,9 +89,9 @@ Namecheap'ten aldığınız SMTP bilgilerini şu şekilde yapılandırın:
 # Namecheap Private Email SMTP Configuration
 SMTP_HOST=mail.privateemail.com
 SMTP_PORT=587
-SMTP_USER=support@synax.vip
+SMTP_USER=support@synax.live
 SMTP_PASSWORD=your_email_password_here
-SMTP_FROM=support@synax.vip
+SMTP_FROM=support@synax.live
 ```
 
 **Not:** 
@@ -105,9 +105,9 @@ SMTP_FROM=support@synax.vip
 2. Her bir değişkeni ekleyin:
    - `SMTP_HOST` = `mail.privateemail.com`
    - `SMTP_PORT` = `587` (veya `465`)
-   - `SMTP_USER` = `support@synax.vip`
+   - `SMTP_USER` = `support@synax.live`
    - `SMTP_PASSWORD` = [email hesabınızın şifresi]
-   - `SMTP_FROM` = `support@synax.vip`
+   - `SMTP_FROM` = `support@synax.live`
 3. **Save** butonuna tıklayın
 4. Projeyi yeniden deploy edin
 
@@ -130,9 +130,9 @@ Namecheap Private Email bilgilerinizi girin:
 
 - **SMTP Host:** `mail.privateemail.com`
 - **SMTP Port:** `587` (TLS) veya `465` (SSL)
-- **SMTP User:** `support@synax.vip`
+- **SMTP User:** `support@synax.live`
 - **SMTP Password:** Email hesabınızın şifresi
-- **Sender Email:** `support@synax.vip`
+- **Sender Email:** `support@synax.live`
 - **Sender Name:** `Synax Support`
 
 ### Adım 4: Test Email Gönderme
@@ -158,7 +158,7 @@ Namecheap Private Email bilgilerinizi girin:
 ### Yöntem 3: Yeni Kullanıcı Kaydı
 1. Yeni bir kullanıcı kaydı oluşturun
 2. Email confirmation mailinin geldiğini kontrol edin
-3. Email'in `support@synax.vip` adresinden geldiğini kontrol edin
+3. Email'in `support@synax.live` adresinden geldiğini kontrol edin
 
 ---
 
@@ -168,7 +168,7 @@ Namecheap Private Email bilgilerinizi girin:
 **Çözüm:**
 1. Namecheap'in genel SMTP ayarlarını kullanın: `mail.privateemail.com`
 2. Port `587` (TLS) veya `465` (SSL) deneyin
-3. Username olarak tam email adresinizi kullanın: `support@synax.vip`
+3. Username olarak tam email adresinizi kullanın: `support@synax.live`
 4. Password olarak email hesabınızın şifresini kullanın
 
 ### Problem: Email gönderilemiyor
@@ -180,7 +180,7 @@ Namecheap Private Email bilgilerinizi girin:
 
 ### Problem: "Authentication failed" hatası
 **Çözüm:**
-1. Username'in tam email adresi olduğundan emin olun: `support@synax.vip`
+1. Username'in tam email adresi olduğundan emin olun: `support@synax.live`
 2. Password'un doğru olduğundan emin olun
 3. Email hesabının şifresini sıfırlayıp tekrar deneyin
 
@@ -199,7 +199,7 @@ Namecheap Private Email bilgilerinizi girin:
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587) veya SSL (port 465)
 Authentication: Required
@@ -211,7 +211,7 @@ Authentication: Required
 
 ## 9. Hızlı Kurulum Checklist
 
-- [ ] Namecheap'te email hesabı oluşturuldu (`support@synax.vip`)
+- [ ] Namecheap'te email hesabı oluşturuldu (`support@synax.live`)
 - [ ] Email hesabı aktif (Status: ON)
 - [ ] SMTP host not edildi: `mail.privateemail.com`
 - [ ] SMTP port seçildi: `587` veya `465`
@@ -229,19 +229,19 @@ Eğer SMTP ayarlarını bulamıyorsanız veya yukarıdaki ayarlar çalışmıyor
 
 1. Namecheap Support'a başvurun
 2. **"Private Email SMTP Settings"** için bilgi isteyin
-3. Domain adınızı belirtin: `synax.vip`
-4. Email adresinizi belirtin: `support@synax.vip`
+3. Domain adınızı belirtin: `synax.live`
+4. Email adresinizi belirtin: `support@synax.live`
 5. Size özel SMTP ayarlarını isteyin
 
 ---
 
 ## Önemli Notlar
 
-1. **Username her zaman tam email adresi olmalı:** `support@synax.vip` (sadece `support` değil)
+1. **Username her zaman tam email adresi olmalı:** `support@synax.live` (sadece `support` değil)
 2. **Port 587 ve 465'i deneyin:** Hangisi çalışıyorsa onu kullanın
 3. **Email hesabının aktif olduğundan emin olun:** Resim 3'te "ON" durumunda görünüyor, bu iyi
 4. **Password doğru olmalı:** Email hesabınızın şifresini kullanın
-5. **Catch-All mailbox kullanıyorsanız:** `support@synax.vip` için özel bir mailbox oluşturmanız önerilir (SMTP için daha güvenilir)
+5. **Catch-All mailbox kullanıyorsanız:** `support@synax.live` için özel bir mailbox oluşturmanız önerilir (SMTP için daha güvenilir)
 
 
 ## 1. Namecheap Private Email SMTP Ayarları
@@ -253,7 +253,7 @@ Eğer SMTP ayarlarını bulamıyorsanız veya yukarıdaki ayarlar çalışmıyor
 **SMTP Server (Outgoing Mail):**
 - **SMTP Host:** `mail.privateemail.com` ⚠️ (localhost DEĞİL!)
 - **SMTP Port:** `587` (TLS/STARTTLS) veya `465` (SSL)
-- **SMTP Username:** Tam email adresiniz (örn: `support@synax.vip`)
+- **SMTP Username:** Tam email adresiniz (örn: `support@synax.live`)
 - **SMTP Password:** Email hesabınızın şifresi
 - **Encryption:** TLS (port 587) veya SSL (port 465)
 
@@ -276,15 +276,15 @@ Eğer SMTP ayarlarını bulamıyorsanız veya yukarıdaki ayarlar çalışmıyor
 ### Yöntem 1: Email Hesabı Ayarlarından
 
 1. **Namecheap Dashboard'a giriş yapın**
-2. **Domain List** → `synax.vip` seçin
+2. **Domain List** → `synax.live` seçin
 3. Sol menüden **"Private Email"** seçin (zaten oradasınız - resim 3)
-4. Mailbox listesinde **"support@synax.vip"** mailbox'ına tıklayın
+4. Mailbox listesinde **"support@synax.live"** mailbox'ına tıklayın
 5. Açılan sayfada **"Email Client Settings"** veya **"Configure Email Client"** sekmesine bakın
 6. Orada SMTP ayarları gösterilir
 
 ### Yöntem 2: Webmail Üzerinden
 
-1. **Namecheap Dashboard** → **Private Email** → `support@synax.vip`
+1. **Namecheap Dashboard** → **Private Email** → `support@synax.live`
 2. **"Open Webmail"** butonuna tıklayın
 3. Webmail'e giriş yapın
 4. Webmail içinde **"Settings"** veya **"Preferences"** → **"Email Accounts"** veya **"Mail Settings"**
@@ -307,7 +307,7 @@ Namecheap Private Email için **genellikle** şu ayarlar kullanılır:
 ```
 SMTP Server: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip (tam email adresiniz)
+SMTP Username: support@synax.live (tam email adresiniz)
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587 için) veya SSL (port 465 için)
 Authentication: Required (Yes)
@@ -333,9 +333,9 @@ Namecheap'ten aldığınız SMTP bilgilerini şu şekilde yapılandırın:
 # Namecheap Private Email SMTP Configuration
 SMTP_HOST=mail.privateemail.com
 SMTP_PORT=587
-SMTP_USER=support@synax.vip
+SMTP_USER=support@synax.live
 SMTP_PASSWORD=your_email_password_here
-SMTP_FROM=support@synax.vip
+SMTP_FROM=support@synax.live
 ```
 
 **Not:** 
@@ -349,9 +349,9 @@ SMTP_FROM=support@synax.vip
 2. Her bir değişkeni ekleyin:
    - `SMTP_HOST` = `mail.privateemail.com`
    - `SMTP_PORT` = `587` (veya `465`)
-   - `SMTP_USER` = `support@synax.vip`
+   - `SMTP_USER` = `support@synax.live`
    - `SMTP_PASSWORD` = [email hesabınızın şifresi]
-   - `SMTP_FROM` = `support@synax.vip`
+   - `SMTP_FROM` = `support@synax.live`
 3. **Save** butonuna tıklayın
 4. Projeyi yeniden deploy edin
 
@@ -374,9 +374,9 @@ Namecheap Private Email bilgilerinizi girin:
 
 - **SMTP Host:** `mail.privateemail.com`
 - **SMTP Port:** `587` (TLS) veya `465` (SSL)
-- **SMTP User:** `support@synax.vip`
+- **SMTP User:** `support@synax.live`
 - **SMTP Password:** Email hesabınızın şifresi
-- **Sender Email:** `support@synax.vip`
+- **Sender Email:** `support@synax.live`
 - **Sender Name:** `Synax Support`
 
 ### Adım 4: Test Email Gönderme
@@ -402,7 +402,7 @@ Namecheap Private Email bilgilerinizi girin:
 ### Yöntem 3: Yeni Kullanıcı Kaydı
 1. Yeni bir kullanıcı kaydı oluşturun
 2. Email confirmation mailinin geldiğini kontrol edin
-3. Email'in `support@synax.vip` adresinden geldiğini kontrol edin
+3. Email'in `support@synax.live` adresinden geldiğini kontrol edin
 
 ---
 
@@ -412,7 +412,7 @@ Namecheap Private Email bilgilerinizi girin:
 **Çözüm:**
 1. Namecheap'in genel SMTP ayarlarını kullanın: `mail.privateemail.com`
 2. Port `587` (TLS) veya `465` (SSL) deneyin
-3. Username olarak tam email adresinizi kullanın: `support@synax.vip`
+3. Username olarak tam email adresinizi kullanın: `support@synax.live`
 4. Password olarak email hesabınızın şifresini kullanın
 
 ### Problem: Email gönderilemiyor
@@ -424,7 +424,7 @@ Namecheap Private Email bilgilerinizi girin:
 
 ### Problem: "Authentication failed" hatası
 **Çözüm:**
-1. Username'in tam email adresi olduğundan emin olun: `support@synax.vip`
+1. Username'in tam email adresi olduğundan emin olun: `support@synax.live`
 2. Password'un doğru olduğundan emin olun
 3. Email hesabının şifresini sıfırlayıp tekrar deneyin
 
@@ -443,7 +443,7 @@ Namecheap Private Email bilgilerinizi girin:
 ```
 SMTP Host: mail.privateemail.com
 SMTP Port: 587 (TLS) veya 465 (SSL)
-SMTP Username: support@synax.vip
+SMTP Username: support@synax.live
 SMTP Password: [email hesabınızın şifresi]
 Encryption: TLS (port 587) veya SSL (port 465)
 Authentication: Required
@@ -455,7 +455,7 @@ Authentication: Required
 
 ## 9. Hızlı Kurulum Checklist
 
-- [ ] Namecheap'te email hesabı oluşturuldu (`support@synax.vip`)
+- [ ] Namecheap'te email hesabı oluşturuldu (`support@synax.live`)
 - [ ] Email hesabı aktif (Status: ON)
 - [ ] SMTP host not edildi: `mail.privateemail.com`
 - [ ] SMTP port seçildi: `587` veya `465`
@@ -473,17 +473,17 @@ Eğer SMTP ayarlarını bulamıyorsanız veya yukarıdaki ayarlar çalışmıyor
 
 1. Namecheap Support'a başvurun
 2. **"Private Email SMTP Settings"** için bilgi isteyin
-3. Domain adınızı belirtin: `synax.vip`
-4. Email adresinizi belirtin: `support@synax.vip`
+3. Domain adınızı belirtin: `synax.live`
+4. Email adresinizi belirtin: `support@synax.live`
 5. Size özel SMTP ayarlarını isteyin
 
 ---
 
 ## Önemli Notlar
 
-1. **Username her zaman tam email adresi olmalı:** `support@synax.vip` (sadece `support` değil)
+1. **Username her zaman tam email adresi olmalı:** `support@synax.live` (sadece `support` değil)
 2. **Port 587 ve 465'i deneyin:** Hangisi çalışıyorsa onu kullanın
 3. **Email hesabının aktif olduğundan emin olun:** Resim 3'te "ON" durumunda görünüyor, bu iyi
 4. **Password doğru olmalı:** Email hesabınızın şifresini kullanın
-5. **Catch-All mailbox kullanıyorsanız:** `support@synax.vip` için özel bir mailbox oluşturmanız önerilir (SMTP için daha güvenilir)
+5. **Catch-All mailbox kullanıyorsanız:** `support@synax.live` için özel bir mailbox oluşturmanız önerilir (SMTP için daha güvenilir)
 

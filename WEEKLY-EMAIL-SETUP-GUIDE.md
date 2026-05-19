@@ -27,9 +27,9 @@ Add the following environment variables to your Vercel project (or hosting platf
    - Your SMTP server port
    - Example: `587` (TLS) or `465` (SSL)
 
-4. **SMTP_USER** (Optional - defaults to support@synax.vip)
+4. **SMTP_USER** (Optional - defaults to support@synax.live)
    - Your SMTP username/email
-   - Example: `support@synax.vip`
+   - Example: `support@synax.live`
 
 5. **SMTP_PASS** (Required)
    - Your SMTP password

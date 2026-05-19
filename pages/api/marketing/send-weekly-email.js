@@ -1,14 +1,15 @@
 // pages/api/marketing/send-weekly-email.js - Weekly marketing email system
 import { createServerClient } from '../../../lib/supabase';
 import nodemailer from 'nodemailer';
+import { getSiteUrl, getSupportEmail } from '../../../lib/site-config';
 
 const SMTP_CONFIG = {
-  host: process.env.SMTP_HOST || 'smtp.office365.com',
+  host: process.env.SMTP_HOST || 'mail.privateemail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: process.env.SMTP_USER || 'support@synax.vip',
-    pass: process.env.SMTP_PASS || '',
+    user: process.env.SMTP_USER || getSupportEmail(),
+    pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || '',
   },
 };
 
@@ -77,7 +78,7 @@ export default async function handler(req, res) {
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 40px 30px; text-align: center;">
-                    <img src="https://synax.vip/images/logo.png" alt="Synax" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+                    <img src="${getSiteUrl('/images/logo.png')}" alt="Synax" style="max-width: 120px; height: auto; margin-bottom: 20px;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Weekly Update from Synax</h1>
                   </td>
                 </tr>
@@ -106,7 +107,7 @@ export default async function handler(req, res) {
                     </p>
                     
                     <div style="text-align: center; margin: 40px 0;">
-                      <a href="https://synax.vip/trade" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
+                      <a href="${getSiteUrl('/trade')}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
                         Start Trading Now
                       </a>
                     </div>
@@ -124,9 +125,9 @@ export default async function handler(req, res) {
                       © ${new Date().getFullYear()} Synax. All rights reserved.
                     </p>
                     <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                      <a href="https://synax.vip/contact" style="color: #3b82f6; text-decoration: none;">Contact Support</a> | 
-                      <a href="https://synax.vip/terms" style="color: #3b82f6; text-decoration: none;">Terms of Use</a> | 
-                      <a href="https://synax.vip/privacy" style="color: #3b82f6; text-decoration: none;">Privacy Policy</a>
+                      <a href="${getSiteUrl('/contact')}" style="color: #3b82f6; text-decoration: none;">Contact Support</a> | 
+                      <a href="${getSiteUrl('/terms')}" style="color: #3b82f6; text-decoration: none;">Terms of Use</a> | 
+                      <a href="${getSiteUrl('/privacy')}" style="color: #3b82f6; text-decoration: none;">Privacy Policy</a>
                     </p>
                   </td>
                 </tr>

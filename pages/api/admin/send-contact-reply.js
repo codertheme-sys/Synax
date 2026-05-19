@@ -1,5 +1,6 @@
 // pages/api/admin/send-contact-reply.js - Send email reply to user
 import { createServerClient } from '../../../lib/supabase';
+import { getSupportEmail } from '../../../lib/site-config';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -100,7 +101,7 @@ This is an automated response. Please do not reply to this email.
     const smtpPort = process.env.SMTP_PORT;
     const smtpUser = process.env.SMTP_USER;
     const smtpPassword = process.env.SMTP_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || 'support@synax.vip';
+    const smtpFrom = process.env.SMTP_FROM || getSupportEmail();
 
     // Debug: Log SMTP configuration (without password)
     console.log('=== SMTP Configuration Check ===');

@@ -27,7 +27,7 @@ Confirm Change of Email Address
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); padding: 40px 30px; text-align: center;">
-              <img src="https://synax.vip/images/logo.png" alt="Synax" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+              <img src="https://synax.live/images/logo.png" alt="Synax" style="max-width: 120px; height: auto; margin-bottom: 20px;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Confirm Email Change</h1>
             </td>
           </tr>
@@ -73,9 +73,9 @@ Confirm Change of Email Address
                 © 2024 Synax. All rights reserved.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                <a href="https://synax.vip/contact" style="color: #3b82f6; text-decoration: none;">Contact Support</a> | 
-                <a href="https://synax.vip/terms" style="color: #3b82f6; text-decoration: none;">Terms of Use</a> | 
-                <a href="https://synax.vip/privacy" style="color: #3b82f6; text-decoration: none;">Privacy Policy</a>
+                <a href="https://synax.live/contact" style="color: #3b82f6; text-decoration: none;">Contact Support</a> | 
+                <a href="https://synax.live/terms" style="color: #3b82f6; text-decoration: none;">Terms of Use</a> | 
+                <a href="https://synax.live/privacy" style="color: #3b82f6; text-decoration: none;">Privacy Policy</a>
               </p>
             </td>
           </tr>

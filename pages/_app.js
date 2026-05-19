@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
+import { getSiteUrl } from '../lib/site-config';
 import { isBlockedEmail } from '../lib/blocked-users';
 import ChatWidget from '../components/ChatWidget';
 
@@ -780,22 +781,22 @@ function MyApp({ Component, pageProps }) {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://synax.vip/" />
+        <meta property="og:url" content={getSiteUrl('/')} />
         <meta property="og:title" content="Synax - Crypto & Gold Trading Platform" />
         <meta property="og:description" content="Professional cryptocurrency and gold trading platform with real-time prices, instant trading, and secure transactions." />
-        <meta property="og:image" content="https://synax.vip/images/logo.png" />
+        <meta property="og:image" content={getSiteUrl('/images/logo.png')} />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://synax.vip/" />
+        <meta name="twitter:url" content={getSiteUrl('/')} />
         <meta name="twitter:title" content="Synax - Crypto & Gold Trading Platform" />
         <meta name="twitter:description" content="Professional cryptocurrency and gold trading platform with real-time prices, instant trading, and secure transactions." />
-        <meta name="twitter:image" content="https://synax.vip/images/logo.png" />
+        <meta name="twitter:image" content={getSiteUrl('/images/logo.png')} />
         
         {/* Additional SEO */}
         <meta name="robots" content="index, follow" />
         <meta name="theme-color" content="#0b0c1a" />
-        <link rel="canonical" href="https://synax.vip/" />
+        <link rel="canonical" href={getSiteUrl('/')} />
       </Head>
       <Component {...pageProps} />
       <Toaster
