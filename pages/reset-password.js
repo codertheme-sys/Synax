@@ -128,18 +128,25 @@ function ResetPasswordPage() {
         return;
       }
 
-      // PKCE flow (Supabase client flowType: 'pkce') — link uses ?code=
+      // PKCE ?code= links need code_verifier in the same browser that requested reset.
+      // Prefer implicit-flow emails (#access_token). If only ?code= is present, ask for a new link.
       const code = queryParams.get('code');
       if (code) {
-        console.log('🔐 [RESET PASSWORD] Exchanging PKCE code for session...');
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (exchangeError) {
+        const hasVerifier = Object.keys(localStorage).some((key) =>
+          key.includes('code-verifier')
+        );
+        if (hasVerifier) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (cancelled) return;
+          if (!exchangeError) {
+            markSuccess();
+            return;
+          }
           console.error('🔐 [RESET PASSWORD] exchangeCodeForSession error:', exchangeError);
-          markFailure(exchangeError.message);
-          return;
         }
-        markSuccess();
+        markFailure(
+          'Open the reset link in the same browser where you requested it, or request a new reset link from Forgot Password.'
+        );
         return;
       }
 
@@ -178,8 +185,8 @@ function ResetPasswordPage() {
         return;
       }
 
-      // detectSessionInUrl may still be processing
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      // detectSessionInUrl (implicit hash) may still be processing
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       const { data: { session } } = await supabase.auth.getSession();
       if (cancelled) return;
       if (session) {
