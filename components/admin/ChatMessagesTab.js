@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { FiSend, FiMessageCircle, FiUser, FiClock, FiFile, FiImage, FiDownload, FiPaperclip, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import ChatMessageBody from '../ChatMessageBody';
 
 const ChatMessagesTab = () => {
   const [conversations, setConversations] = useState([]);
@@ -589,10 +590,9 @@ const ChatMessagesTab = () => {
                         color: '#ffffff',
                         fontSize: '14px',
                         lineHeight: '1.5',
-                        wordWrap: 'break-word',
                       }}
                     >
-                      {message.message}
+                      {message.message ? <ChatMessageBody text={message.message} /> : null}
                       {message.attachment_url && (
                         <div style={{ 
                           marginTop: '8px', 

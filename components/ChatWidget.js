@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { FiMessageCircle, FiX, FiSend, FiMinimize2, FiPaperclip, FiFile, FiImage } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import ChatMessageBody from './ChatMessageBody';
 
 const GREETING_MESSAGE = 'Hello Sir! How can we help you today?';
 const WAITING_MESSAGE = 'Our Live Customer Service agents will reply you soon please wait a moment.';
@@ -737,10 +738,9 @@ const ChatWidget = ({ user }) => {
                           color: '#ffffff',
                           fontSize: isMobile ? '11px' : '14px',
                           lineHeight: '1.5',
-                          wordWrap: 'break-word',
                         }}
                       >
-                        {message.message}
+                        {message.message ? <ChatMessageBody text={message.message} /> : null}
                         {message.attachment_url && (
                           <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
                             {message.attachment_type?.startsWith('image/') ? (
