@@ -4,6 +4,11 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import { isBlockedEmail } from '../lib/blocked-users';
+import { getSiteUrl } from '../lib/site-config';
+import {
+  restoreRecoveryCodeVerifier,
+  clearRecoveryCodeVerifierCookie,
+} from '../lib/auth-pkce-recovery';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -42,6 +47,69 @@ function LoginPage() {
       if (typeof window !== 'undefined') {
         const hash = window.location.hash;
         const searchParams = new URLSearchParams(window.location.search);
+
+        const queryType = searchParams.get('type');
+
+        // PKCE: Supabase redirects with ?code= after /auth/v1/verify
+        const code = searchParams.get('code');
+        if (code) {
+          try {
+            restoreRecoveryCodeVerifier();
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+              console.error('Signup code exchange error:', error);
+              toast.error(
+                'Could not complete email confirmation. Open the link in the same browser where you signed up, or request a new confirmation email.'
+              );
+            } else {
+              await supabase.auth.signOut();
+              clearRecoveryCodeVerifierCookie();
+              toast.success('Email confirmed successfully! Please log in with your credentials.');
+            }
+            window.history.replaceState(null, '', '/login');
+          } catch (err) {
+            console.error('Signup code exchange error:', err);
+            toast.error('Could not confirm email. Please try again or contact support.');
+            window.history.replaceState(null, '', '/login');
+          }
+          return;
+        }
+
+        // Direct confirm link (custom email template: token_hash or token)
+        const tokenHash = searchParams.get('token_hash');
+        const token = searchParams.get('token');
+        const confirmToken = tokenHash || token;
+        if (confirmToken && queryType === 'signup') {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+          // PKCE tokens (pkce_...) cannot use verifyOtp — redirect through Supabase verify
+          if (confirmToken.startsWith('pkce_') && supabaseUrl) {
+            const redirectTo = encodeURIComponent(getSiteUrl('/login?confirmed=true'));
+            window.location.replace(
+              `${supabaseUrl}/auth/v1/verify?token=${encodeURIComponent(confirmToken)}&type=signup&redirect_to=${redirectTo}`
+            );
+            return;
+          }
+
+          try {
+            const { error } = await supabase.auth.verifyOtp({
+              type: 'signup',
+              token_hash: confirmToken,
+            });
+            if (error) {
+              toast.error(error.message || 'Invalid or expired confirmation link.');
+            } else {
+              await supabase.auth.signOut();
+              toast.success('Email confirmed successfully! Please log in with your credentials.');
+            }
+            window.history.replaceState(null, '', '/login');
+          } catch (err) {
+            console.error('Signup token_hash verification error:', err);
+            toast.error('Could not confirm email. Please try again or contact support.');
+            window.history.replaceState(null, '', '/login');
+          }
+          return;
+        }
         
         // Check for access_token in hash (successful confirmation)
         if (hash.includes('access_token=')) {

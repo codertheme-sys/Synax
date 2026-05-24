@@ -128,6 +128,10 @@ function ForgotPasswordPage() {
           toast.error('Request timeout. Please check your internet connection and try again. If the problem persists, the email service may be temporarily unavailable.');
         } else if (error.status === 429) {
           toast.error('Too many requests. Please wait a few minutes and try again.');
+        } else if (error.status === 500) {
+          toast.error(
+            'Could not send reset email. Supabase mail (SMTP) may be misconfigured — check port 465 + SSL in Supabase Dashboard → Authentication → SMTP.'
+          );
         } else {
           toast.error(error.message || 'Failed to send password reset email. Please try again later.');
         }

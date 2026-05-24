@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabase';
 import { isBlockedEmail } from '../lib/blocked-users';
+import { getSiteUrl } from '../lib/site-config';
+import { saveRecoveryCodeVerifier } from '../lib/auth-pkce-recovery';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 
@@ -120,9 +122,7 @@ function SignUpPage() {
 
     try {
       // Sign up with Supabase
-      const emailRedirectTo = typeof window !== 'undefined' 
-        ? `${window.location.origin}/login`
-        : undefined;
+      const emailRedirectTo = getSiteUrl('/login');
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
@@ -132,15 +132,25 @@ function SignUpPage() {
             full_name: `${name} ${surname}`,
             username: username,
           },
-          emailRedirectTo: emailRedirectTo || `${window.location.origin}/login?confirmed=true`,
+          emailRedirectTo,
           // Force email confirmation
           captchaToken: undefined, // Remove if you're not using captcha
         }
       });
 
+      if (!signUpError) {
+        saveRecoveryCodeVerifier();
+      }
+
       if (signUpError) {
         console.error('Signup error:', signUpError);
-        toast.error(signUpError.message || 'Failed to create account');
+        if (signUpError.status === 500 && /confirmation|recovery|email/i.test(signUpError.message || '')) {
+          toast.error(
+            'Could not send confirmation email. Please try again later or contact support@synax.live.'
+          );
+        } else {
+          toast.error(signUpError.message || 'Failed to create account');
+        }
         setLoading(false);
         return;
       }
