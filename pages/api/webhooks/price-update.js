@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Webhook secret kontrolü (güvenlik için)
+    // Webhook secret check (for security)
     const webhookSecret = req.headers['x-webhook-secret'];
     const expectedSecret = process.env.WEBHOOK_SECRET || 'synax-webhook-secret-2024';
 
@@ -37,10 +37,10 @@ export default async function handler(req, res) {
       } = priceData;
 
       if (!asset_type || !asset_id || !price) {
-        continue; // Geçersiz veri, atla
+        continue; // Invalid data, skip
       }
 
-      // Manuel override kontrolü - eğer aktif manuel override varsa, webhook fiyatını override'a kaydet ama kullanma
+      // Manual override check - if an active override exists, store webhook price but do not apply it
       const { data: existingOverride } = await supabaseAdmin
         .from('price_overrides')
         .select('*')
@@ -51,11 +51,11 @@ export default async function handler(req, res) {
 
       // Update price override (save price from webhook but don't use if not active)
       if (existingOverride) {
-        // Override var ama webhook'tan gelen fiyatı kaydet (manuel müdahale için referans)
+        // Override exists; store webhook price as reference for manual intervention
         await supabaseAdmin
           .from('price_overrides')
           .update({
-            manual_price: parseFloat(price), // Webhook fiyatını kaydet
+            manual_price: parseFloat(price), // Store webhook price
             manual_price_change_24h: parseFloat(price_change_24h),
             manual_price_change_percent_24h: parseFloat(price_change_percent_24h),
             source: source,
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
           })
           .eq('id', existingOverride.id);
       } else {
-        // Override yoksa, webhook fiyatını otomatik olarak kullan
+        // If no override exists, apply webhook price automatically
         await supabaseAdmin
           .from('price_overrides')
           .upsert({
@@ -74,9 +74,9 @@ export default async function handler(req, res) {
             manual_price: parseFloat(price),
             manual_price_change_24h: parseFloat(price_change_24h),
             manual_price_change_percent_24h: parseFloat(price_change_percent_24h),
-            is_active: false, // Webhook'tan gelen fiyat otomatik, manuel değil
+            is_active: false, // Webhook price is automatic, not manual
             source: source,
-            created_by: null // Sistem tarafından
+            created_by: null // System-generated
           }, {
             onConflict: 'asset_id,asset_type'
           });

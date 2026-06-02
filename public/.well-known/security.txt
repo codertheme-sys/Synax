@@ -1,0 +1,6 @@
+Contact: mailto:support@synax.live
+Expires: 2027-06-02T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://synax.live/.well-known/security.txt
+Policy: https://synax.live/privacy
+Hiring: https://synax.live/contact

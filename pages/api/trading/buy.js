@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid quantity or price' });
     }
 
-    // KYC kontrolü
+    // KYC check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('balance, kyc_verified, kyc_status')
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
     // Toplam tutar hesapla
     const totalAmount = parseFloat(quantity) * parseFloat(price);
-    const fee = totalAmount * 0.005; // %0.5 işlem ücreti
+    const fee = totalAmount * 0.005; // 0.5% trading fee
     const totalWithFee = totalAmount + fee;
 
     // Balance check
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Mevcut portföyü kontrol et
+    // Check existing portfolio
     const { data: existing } = await supabaseAdmin
       .from('portfolio')
       .select('*')
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
       newAveragePrice = (oldTotalCost + newTotalCost) / newQuantity;
     }
 
-    // Güncel fiyatı al
+    // Get current price
     const currentPrice = parseFloat(price);
     const totalValue = newQuantity * currentPrice;
     const profitLoss = totalValue - (newQuantity * newAveragePrice);

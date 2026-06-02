@@ -3,8 +3,10 @@ import React from 'react';
 import Head from 'next/head';
 import Header from '../components/Header';
 import Link from 'next/link';
+import { getSupportEmail } from '../lib/site-config';
 
 export default function About() {
+  const supportEmail = getSupportEmail();
   return (
     <>
       <Head>
@@ -56,7 +58,7 @@ export default function About() {
 
               <h2 style={{ fontSize: '28px', fontWeight: 600, marginBottom: '20px', marginTop: '32px' }}>Contact Information</h2>
               <p style={{ fontSize: '16px', lineHeight: '1.8', color: '#e5e7eb', marginBottom: '12px' }}>
-                For any inquiries, please contact us through our support chat or email.
+                For any inquiries, please contact us through our support chat or email at <a href={`mailto:${supportEmail}`} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{supportEmail}</a>.
               </p>
               <p style={{ fontSize: '16px', lineHeight: '1.8', color: '#e5e7eb' }}>
                 We are committed to providing excellent service and ensuring your trading experience is secure and enjoyable.

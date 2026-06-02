@@ -51,8 +51,8 @@ export default async function handler(req, res) {
     const userMap = new Map();
     const unreadMap = {};
 
-    // Önce: yalnızca kullanıcı (is_admin=false) mesajlarıyla konuşma açılıyordu;
-    // sadece admin yazdıysa konuşma listede yoktu. Tüm satırlarda user_id konuşma anahtarıdır.
+    // Previously, conversations were created only from user (is_admin=false) messages.
+    // Include conversations even if only admin has sent messages; user_id is the conversation key.
     (allMessages || []).forEach((msg) => {
       const uid = msg.user_id;
       if (!uid) return;

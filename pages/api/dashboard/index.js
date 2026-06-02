@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth token kontrolü
+    // Auth token check
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       watchlist = [];
     }
 
-    // 5. Open Positions (portfolio'dan pozitif quantity olanlar, USDT hariç)
+    // 5. Open positions (positive portfolio quantities, excluding USDT)
     const openPositions = (portfolio || []).filter(p => 
       parseFloat(p.quantity) > 0 && 
       p.asset_symbol?.toUpperCase() !== 'USDT' && 

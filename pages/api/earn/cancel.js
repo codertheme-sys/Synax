@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Auth token kontrolü
+    // Auth token check
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Unauthorized' });

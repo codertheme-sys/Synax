@@ -1,4 +1,4 @@
-// pages/api/admin/price-override.js - Admin Manuel Fiyat Müdahalesi
+// pages/api/admin/price-override.js - Admin manual price override
 import { createServerClient } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Admin kontrolü
+  // Admin check
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('is_admin')
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
-  // GET - Tüm price overrides'ı getir
+  // GET - Fetch all price overrides
   if (req.method === 'GET') {
     try {
       const { active_only } = req.query;
@@ -80,11 +80,11 @@ export default async function handler(req, res) {
         });
       }
 
-      // asset_id ve asset_name'i asset_symbol'den türet (opsiyonel, veritabanı için)
+      // Derive asset_id and asset_name from asset_symbol (optional, for database)
       const asset_id = asset_symbol.toLowerCase();
       const asset_name = asset_symbol;
 
-      // Mevcut override'ı kontrol et
+      // Check existing override
       const { data: existing } = await supabaseAdmin
         .from('price_overrides')
         .select('*')
@@ -167,7 +167,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // DELETE - Price override'ı sil (deaktive et)
+  // DELETE - Deactivate a price override
   if (req.method === 'DELETE') {
     try {
       const { asset_symbol, asset_type } = req.query;
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // Silmek yerine deaktive et
+      // Deactivate instead of deleting
       const { error } = await supabaseAdmin
         .from('price_overrides')
         .update({

@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         .single();
 
       if (deposit) {
-        // Deposit'i completed olarak işaretle
+        // Mark deposit as completed
         await supabaseAdmin
           .from('deposits')
           .update({
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     case 'payment_intent.payment_failed':
       const failedPayment = event.data.object;
       
-      // Deposit'i failed olarak işaretle
+      // Mark deposit as failed
       await supabaseAdmin
         .from('deposits')
         .update({

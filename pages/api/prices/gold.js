@@ -1,4 +1,4 @@
-// pages/api/prices/gold.js - Altın Fiyat API
+// pages/api/prices/gold.js - Gold price API
 import { createServerClient } from '../../../lib/supabase';
 
 const CACHE_DURATION = 5; // 5 dakika
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const { currency = 'usd' } = req.query;
     const supabaseAdmin = createServerClient();
 
-    // Önce manuel override kontrolü
+    // Check manual override first
     const { data: goldOverride } = await supabaseAdmin
       .from('price_overrides')
       .select('*')
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       .eq('is_active', true)
       .single();
 
-    // Cache kontrolü
+    // Cache check
     const { data: cachedData } = await supabaseAdmin
       .from('price_history')
       .select('*')
@@ -59,8 +59,8 @@ export default async function handler(req, res) {
     let priceChange24h = 0;
 
     try {
-      // CoinGecko'da altın için farklı ID'ler dene
-      // Not: CoinGecko'da "gold" ID'si yok, alternatifler kullanılmalı
+      // Try alternative IDs for gold on CoinGecko
+      // Note: CoinGecko has no direct "gold" ID, so alternatives are used
       const coinGeckoUrls = [
         'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd&include_24hr_change=true',
         'https://api.coingecko.com/api/v3/simple/price?ids=tether-gold&vs_currencies=usd&include_24hr_change=true'
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
             const goldData = cgData['pax-gold'] || cgData['tether-gold'];
             if (goldData && goldData.usd) {
               const price = parseFloat(goldData.usd);
-              // Fiyat mantıklı mı kontrol et (100-5000 arası)
+              // Validate price range (between 100 and 5000)
               if (price >= 100 && price <= 5000) {
                 goldPrice = price;
                 priceChange24h = goldData.usd_24h_change || 0;
@@ -87,10 +87,10 @@ export default async function handler(req, res) {
         }
       }
       
-      // Eğer hala fiyat yoksa, fallback kullan
+      // Use fallback if no price is available
       if (!goldPrice || goldPrice < 100 || goldPrice > 5000) {
         console.log('CoinGecko gold price invalid, using fallback: $2050');
-        goldPrice = 2050; // Ortalama altın fiyatı (per oz)
+        goldPrice = 2050; // Average gold price (per oz)
         priceChange24h = 0;
       }
     } catch (err) {
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
       price_change_percentage_24h: finalChangePercent,
       currency: currency.toUpperCase(),
       last_updated: new Date().toISOString(),
-      price_source: goldOverride?.is_active ? 'manual' : 'auto' // Fiyat kaynağı bilgisi
+      price_source: goldOverride?.is_active ? 'manual' : 'auto' // Price source info
     };
 
     // Cache'e kaydet (hata yakalama ile)
@@ -138,12 +138,12 @@ export default async function handler(req, res) {
           onConflict: 'asset_id,asset_type'
         });
       
-      // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
+      // Log only critical errors (ignore fetch/network noise)
       if (error && !error.message?.includes('fetch failed') && !error.message?.includes('ERR_INTERNET_DISCONNECTED')) {
         console.error('Gold cache error:', error.message);
       }
     } catch (cacheError) {
-      // Sadece kritik hataları logla (fetch failed gibi network hatalarını ignore et)
+      // Log only critical errors (ignore fetch/network noise)
       if (cacheError.message && !cacheError.message.includes('fetch failed') && !cacheError.message.includes('ERR_INTERNET_DISCONNECTED')) {
         console.error('Gold cache error:', cacheError.message);
       }

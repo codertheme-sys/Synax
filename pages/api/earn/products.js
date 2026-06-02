@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         name: coin.name,
         type: coin.type,
         apr: `${coin.apr}%`,
-        // Minimum amount USD cinsinden 500 olarak sabitlenir (UI'de de bu gösterilecek)
+        // Keep minimum amount fixed at 500 USD (also shown in UI)
         minDeposit: '500',
         duration: coin.days ? `${coin.days} days` : 'Flexible',
         days: coin.days || null

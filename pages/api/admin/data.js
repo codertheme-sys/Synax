@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Admin kontrolü
+    // Admin check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('is_admin')
@@ -218,7 +218,7 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       .slice(0, 10);
 
-    // İstatistikler hesapla - use filtered users
+    // Calculate metrics - use filtered users
     const totalUsers = filteredAllUsers.length || 0;
     const activeUsers = filteredAllUsers?.filter(u => u.kyc_status === 'approved').length || 0;
     const totalVolume = recentTrades?.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) || 0;

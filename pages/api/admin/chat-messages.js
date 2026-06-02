@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    // asc+limit önce en eski N satırı döndürüyordu; 100+ mesajda güncel mesajlar görünmüyordu.
+    // asc+limit previously returned the oldest N rows; recent messages were hidden past 100+ entries.
     const CHAT_LIMIT = 300;
     const { data: messages, error } = await supabaseAdmin
       .from('chat_messages')

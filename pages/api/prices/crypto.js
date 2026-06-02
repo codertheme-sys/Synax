@@ -42,21 +42,21 @@ export default async function handler(req, res) {
     const { ids, vs_currency = 'usd', force_update } = req.query;
     const supabaseAdmin = createServerClient();
 
-    // Önce manuel override kontrolü
+    // Check manual override first
     const { data: priceOverrides } = await supabaseAdmin
       .from('price_overrides')
       .select('*')
       .eq('asset_type', 'crypto')
       .eq('is_active', true);
 
-    // Cache kontrolü - sadece belirli coin'ler için (ids varsa)
-    // Cron job'dan çağrıldığında cache'i atla ve her zaman güncelle
+    // Cache check - only for selected coins (when ids exist)
+    // When called from cron, bypass cache and always refresh
     let cachedData = null;
     let isCacheValid = false;
     
-    // Cron job ise cache'i atla
+    // Bypass cache for cron jobs
     if (!isCronJob && !force_update && ids) {
-      // Belirli coin'ler isteniyorsa cache kontrolü yap
+      // If selected coins are requested, apply cache check
       const cacheKey = ids;
       const { data: cached } = await supabaseAdmin
         .from('price_history')
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // Cache geçerliyse ve belirli coin isteniyorsa cache'den dön (cron job değilse)
+    // Return cached response when valid and selected coins are requested (non-cron)
     if (!isCronJob && isCacheValid && cachedData && ids) {
       return res.status(200).json({
         success: true,
@@ -94,9 +94,9 @@ export default async function handler(req, res) {
       });
     }
     
-    // Cache yoksa veya geçersizse yeni veri çek
+    // Fetch fresh data when cache is missing or stale
 
-    // Fetch prices from Binance ONLY (CoinGecko kaldırıldı)
+    // Fetch prices from Binance ONLY (CoinGecko removed)
     let allData;
     try {
       console.log('Fetching prices from Binance...');
@@ -109,10 +109,10 @@ export default async function handler(req, res) {
       // Validate data structure
       if (!allData || !allData.prices || typeof allData.prices !== 'object') {
         console.error('Invalid data structure from getAllPricesFromMultipleSources:', allData);
-        allData = null; // Fallback'e git
+        allData = null; // Continue with fallback
       }
       
-      // Eğer Binance başarısız olduysa veya boşsa, price_history'den al
+      // If Binance fails or is empty, load from price_history
       if (!allData || !allData.prices || Object.keys(allData.prices).length === 0) {
         console.warn('Binance API failed or returned no data, fetching from price_history...');
         const { data: cachedPrices, error: cacheError } = await supabaseAdmin
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
           .order('last_updated', { ascending: false });
         
         if (!cacheError && cachedPrices && cachedPrices.length > 0) {
-          // price_history formatını Binance formatına çevir
+          // Convert price_history format into Binance-like format
           const pricesFromHistory = {};
           cachedPrices.forEach(price => {
             const symbol = `${price.asset_symbol}USDT`; // BTC -> BTCUSDT
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
             }
           };
         } else {
-          // Hiçbir kaynak yok, boş döndür
+          // No source available, return empty result
           console.error('No price data available from Binance or price_history');
           return res.status(200).json({
             success: true,
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Coin ID mapping (symbol -> coinId) - CoinGecko ID'leri
+    // Coin ID mapping (symbol -> coinId) - CoinGecko IDs
     const SYMBOL_TO_COIN_ID = {
       'BTCUSDT': { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
       'ETHUSDT': { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
@@ -207,10 +207,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // İstenen coin'leri filtrele
+    // Filter requested coins
     let requestedIds = ids ? ids.split(',') : null;
     
-    // Markets data formatına çevir
+    // Convert to markets data format
     const marketsData = Object.entries(allData.prices)
       .map(([symbol, priceData]) => {
         // Validate priceData
@@ -218,14 +218,14 @@ export default async function handler(req, res) {
           return null;
         }
 
-        // Coin ID bul (varsa)
+        // Resolve coin ID (if available)
         const coinInfo = SYMBOL_TO_COIN_ID[symbol] || {
           id: symbol.toLowerCase().replace('usdt', ''),
           name: symbol.replace('USDT', ''),
           symbol: symbol.replace('USDT', '')
         };
         
-        // Eğer belirli coin'ler isteniyorsa, filtrele
+        // Filter when selected coins are requested
         if (requestedIds && !requestedIds.includes(coinInfo.id)) {
           return null;
         }
@@ -261,11 +261,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Veriyi formatla ve cache'e kaydet
+    // Format data and persist cache
     const formattedData = marketsData
       .map((coin) => {
         try {
-          // Manuel override kontrolü
+          // Manual override check
           const override = (priceOverrides?.data || priceOverrides || [])?.find(o => o.asset_id === coin.id);
           
           const priceData = {
@@ -283,13 +283,13 @@ export default async function handler(req, res) {
             price_source: override?.is_active ? 'manual' : 'auto'
           };
 
-          // OPTIMIZATION: Sadece değişen fiyatları yaz (disk IO azaltmak için)
-          // Önce mevcut fiyatı kontrol et, değişmişse yaz
+          // OPTIMIZATION: write only changed prices (reduce disk IO)
+          // Check current price first, then write if changed
           (async () => {
             try {
               const assetIdForPriceHistory = priceData.symbol.toUpperCase();
               
-              // Önce mevcut fiyatı kontrol et
+              // Check current price first
               const { data: existingPrice } = await supabaseAdmin
                 .from('price_history')
                 .select('price, last_updated')
@@ -297,16 +297,16 @@ export default async function handler(req, res) {
                 .eq('asset_type', 'crypto')
                 .maybeSingle();
               
-              // Fiyat değişmemişse ve son 5 dakika içinde güncellenmişse yazma (disk IO tasarrufu)
+              // Skip writes when unchanged and updated within the last 5 minutes
               const currentPrice = parseFloat(priceData.current_price || 0);
               const existingPriceValue = existingPrice ? parseFloat(existingPrice.price || 0) : 0;
-              const priceChanged = Math.abs(currentPrice - existingPriceValue) > 0.01; // %0.01'den fazla değişmişse
+              const priceChanged = Math.abs(currentPrice - existingPriceValue) > 0.01; // more than 0.01% change
               
               const lastUpdated = existingPrice?.last_updated ? new Date(existingPrice.last_updated) : null;
               const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
               const recentlyUpdated = lastUpdated && lastUpdated > fiveMinutesAgo;
               
-              // Sadece fiyat değişmişse veya 5 dakikadan eskiyse yaz
+              // Write only if changed or older than 5 minutes
               if (priceChanged || !recentlyUpdated || !existingPrice) {
                 const { data, error } = await supabaseAdmin
                   .from('price_history')
@@ -332,7 +332,7 @@ export default async function handler(req, res) {
                   console.log(`[Price History] ✅ Updated: ${assetIdForPriceHistory} = ${currentPrice} USDT (was ${existingPriceValue})`);
                 }
               }
-              // Fiyat değişmemişse sessizce skip et (disk IO tasarrufu)
+              // Silently skip unchanged prices
             } catch (cacheError) {
               console.error(`[Price History] ❌ Exception saving ${priceData.symbol}:`, cacheError.message);
             }

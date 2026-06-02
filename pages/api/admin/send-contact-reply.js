@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Admin kontrolü
+    // Admin check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('is_admin')
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Email içeriği
+    // Email content
     const emailSubject = `Re: ${subject || 'Your Contact Request'}`;
     const emailBodyHTML = `
 <!DOCTYPE html>
@@ -134,9 +134,9 @@ This is an automated response. Please do not reply to this email.
             pass: smtpPassword,
           },
           tls: {
-            // Outlook/Hotmail için önerilen TLS ayarları
+            // Recommended TLS settings for Outlook/Hotmail
             ciphers: 'SSLv3',
-            rejectUnauthorized: false, // Self-signed sertifikalar için
+            rejectUnauthorized: false, // For self-signed certificates
           },
           debug: true, // Enable debug output
           logger: true, // Log to console

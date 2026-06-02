@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Payment method required' });
     }
 
-    // KYC kontrolü
+    // KYC check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('balance, kyc_verified, kyc_status')
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // Payment method'a göre gerekli alanları kontrol et
+    // Validate required fields by payment method
     if (finalPaymentMethod === 'bank_transfer' && !bank_account) {
       return res.status(400).json({ error: 'Bank account required for bank transfer' });
     }
@@ -181,7 +181,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Crypto address and network required' });
     }
 
-    // Withdrawal kaydı oluştur (pending)
+    // Create withdrawal record (pending)
     const withdrawalCurrency = isCryptoWithdrawal ? finalCoin : 'USD';
     const { data: withdrawal, error: withdrawalError } = await supabaseAdmin
       .from('withdrawals')
@@ -222,7 +222,7 @@ export default async function handler(req, res) {
 
     // Freeze balance (in pending status)
     // Note: In real application, balance is only deducted when admin approves
-    // Şimdilik sadece withdrawal kaydı oluşturuyoruz
+    // For now, only create a withdrawal record
 
     return res.status(200).json({
       success: true,

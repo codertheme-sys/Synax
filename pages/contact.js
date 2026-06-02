@@ -3,8 +3,10 @@ import React from 'react';
 import Head from 'next/head';
 import Header from '../components/Header';
 import Link from 'next/link';
+import { getSupportEmail } from '../lib/site-config';
 
 export default function Contact() {
+  const supportEmail = getSupportEmail();
   return (
     <>
       <Head>
@@ -15,6 +17,27 @@ export default function Contact() {
         <meta property="og:title" content="Contact Us - Synax" />
         <meta property="og:description" content="Contact Synax support team for assistance." />
         <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://synax.live/contact" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'ContactPage',
+              name: 'Synax Contact',
+              url: 'https://synax.live/contact',
+              inLanguage: 'en',
+              contactPoint: [
+                {
+                  '@type': 'ContactPoint',
+                  contactType: 'customer support',
+                  email: supportEmail,
+                  availableLanguage: ['en'],
+                },
+              ],
+            }),
+          }}
+        />
       </Head>
       <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white">
         <Header />
@@ -40,6 +63,13 @@ export default function Contact() {
                 <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>Support Chat</h3>
                 <p style={{ fontSize: '16px', lineHeight: '1.8', color: '#e5e7eb' }}>
                   Use the chat widget in the bottom right corner of any page for instant support. Our team is available 24/7 to assist you.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>Support Email</h3>
+                <p style={{ fontSize: '16px', lineHeight: '1.8', color: '#e5e7eb' }}>
+                  You can reach us at <a href={`mailto:${supportEmail}`} style={{ color: '#60a5fa', textDecoration: 'underline' }}>{supportEmail}</a> for account and compliance-related requests.
                 </p>
               </div>
 

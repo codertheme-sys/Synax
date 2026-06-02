@@ -281,7 +281,7 @@ export default function Home() {
   const checkUser = async () => {
     let user = null;
     try {
-      // Mobilde yavaş / kesilen ağda getUser() reject veya uzun süre askıda kalabiliyor; loading hiç kapanmamasın diye:
+      // On slow/interrupted mobile networks, getUser() may reject or hang; avoid endless loading:
       const AUTH_MS = 12000;
       const result = await Promise.race([
         supabase.auth.getUser(),

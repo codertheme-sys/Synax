@@ -28,7 +28,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import { getSiteUrl } from '../lib/site-config';
+import { getSiteUrl, getSupportEmail } from '../lib/site-config';
 import { isBlockedEmail } from '../lib/blocked-users';
 import ChatWidget from '../components/ChatWidget';
 
@@ -37,6 +37,32 @@ function MyApp({ Component, pageProps }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [lastCheckedAlerts, setLastCheckedAlerts] = useState(new Set());
+  const supportEmail = getSupportEmail();
+  const currentPath = (router.asPath || '/').split('?')[0].split('#')[0] || '/';
+  const canonicalUrl = getSiteUrl(currentPath);
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Synax',
+    url: getSiteUrl('/'),
+    email: supportEmail,
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        email: supportEmail,
+        availableLanguage: ['en'],
+      },
+    ],
+    sameAs: [],
+  };
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Synax',
+    url: canonicalUrl,
+    inLanguage: 'en',
+  };
 
   useEffect(() => {
     // Clean up TradingView widgets when navigating away from trade page
@@ -78,7 +104,7 @@ function MyApp({ Component, pageProps }) {
 
     const elements = Array.from(document.querySelectorAll('[data-reveal]'));
 
-    // Home sayfası: animasyon kapalı, içerik direkt görünür
+    // Home page: animations are disabled, content is visible immediately
     if (router.pathname === '/') {
       document.body.classList.add('home');
       elements.forEach((el) => el.classList.add('reveal-show'));
@@ -781,22 +807,33 @@ function MyApp({ Component, pageProps }) {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={getSiteUrl('/')} />
+        <meta property="og:site_name" content="Synax" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content="Synax - Crypto & Gold Trading Platform" />
         <meta property="og:description" content="Professional cryptocurrency and gold trading platform with real-time prices, instant trading, and secure transactions." />
         <meta property="og:image" content={getSiteUrl('/images/logo.png')} />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={getSiteUrl('/')} />
+        <meta name="twitter:url" content={canonicalUrl} />
         <meta name="twitter:title" content="Synax - Crypto & Gold Trading Platform" />
         <meta name="twitter:description" content="Professional cryptocurrency and gold trading platform with real-time prices, instant trading, and secure transactions." />
         <meta name="twitter:image" content={getSiteUrl('/images/logo.png')} />
         
         {/* Additional SEO */}
         <meta name="robots" content="index, follow" />
+        <meta name="format-detection" content="telephone=no,address=no,email=no" />
         <meta name="theme-color" content="#0b0c1a" />
-        <link rel="canonical" href={getSiteUrl('/')} />
+        <link rel="canonical" href={canonicalUrl} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
       </Head>
       <Component {...pageProps} />
       <Toaster

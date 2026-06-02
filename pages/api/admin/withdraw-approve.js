@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Admin kontrolü
+    // Admin check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('is_admin')
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
           .eq('id', withdrawal.user_id);
       }
 
-      // Withdrawal'ı onayla (processed_at and processed_by columns don't exist in schema)
+      // Approve withdrawal (processed_at and processed_by columns do not exist in schema)
       await supabaseAdmin
         .from('withdrawals')
         .update({
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         message: 'Withdrawal approved successfully'
       });
     } else if (action === 'reject') {
-      // Withdrawal'ı reddet (processed_at and processed_by columns don't exist in schema)
+      // Reject withdrawal (processed_at and processed_by columns do not exist in schema)
       await supabaseAdmin
         .from('withdrawals')
         .update({

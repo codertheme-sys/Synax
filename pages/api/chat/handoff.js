@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       }
       subjectId = targetUserId;
     }
-    // Kullanıcı kendi hesabında AI'yı tekrar açabilir; başka kullanıcı için sadece admin
+    // User can re-enable AI on their own account; admin only for other users
     if (!admin && humanHandoff === false && subjectId !== user.id) {
       return res.status(403).json({ success: false, error: 'Admin only' });
     }

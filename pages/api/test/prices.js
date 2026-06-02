@@ -1,5 +1,5 @@
 // pages/api/test/prices.js - Test Endpoint
-// Binance ve CoinGecko API'lerini test etmek için
+// For testing Binance and CoinGecko APIs
 
 import { getAllBinancePrices } from '../../../lib/binance-api';
 import { getAllPricesFromMultipleSources } from '../../../lib/multi-source-api';

@@ -3,7 +3,7 @@ import { isBlockedEmail } from '../../../lib/blocked-users';
 import { CHAT_AI_SYSTEM_PROMPT } from '../../../lib/chat-ai-system-prompt';
 
 const HANDOFF_REGEX =
-  /müşteri\s*temsilcisi|canlı\s*destek|insanla|operatör|yetkili|şikayet|canlı\s*temsilci|human\s*agent|live\s*agent|speak\s*to\s*(a\s*)?(person|human)|real\s*person|talk\s*to\s*(a\s*)?(human|agent)|representative|manager/i;
+  /human\s*agent|live\s*agent|speak\s*to\s*(a\s*)?(person|human)|real\s*person|talk\s*to\s*(a\s*)?(human|agent)|representative|manager/i;
 
 const MAX_CONTEXT_MESSAGES = 24;
 const MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         user_email: user.email || profile?.email,
         user_name: profile?.full_name || profile?.username || user.email?.split('@')[0],
         message:
-          'Anladım — talebinizi canlı destek ekibimize ilettim. Bir temsilci müsait olduğunda size buradan yazacaktır. / I have routed your request to our live team; an agent will reply here shortly.',
+          'I have routed your request to our live team; an agent will reply here shortly.',
         is_admin: false,
         is_ai: true,
         is_read: false,

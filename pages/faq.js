@@ -140,9 +140,33 @@ export default function FAQPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#080915] via-[#0b0c1a] to-[#0d0f25] text-white">
       <Head>
+        <title>FAQ - Synax</title>
+        <meta
+          name="description"
+          content="Find answers to common questions about Synax account setup, KYC, deposits, withdrawals, security, and trading."
+        />
+        <link rel="canonical" href="https://synax.live/faq" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap" rel="stylesheet" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              inLanguage: 'en',
+              mainEntity: faqs.map((item) => ({
+                '@type': 'Question',
+                name: item.q,
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: item.a,
+                },
+              })),
+            }),
+          }}
+        />
       </Head>
       <Header />
 

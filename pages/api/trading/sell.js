@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid quantity or price' });
     }
 
-    // Portföyü kontrol et - asset_id ve asset_symbol ile esnek arama
+    // Check portfolio with flexible asset_id/asset_symbol matching
     let { data: portfolio } = await supabaseAdmin
       .from('portfolio')
       .select('*')
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       .eq('asset_type', asset_type)
       .single();
 
-    // Eğer bulunamazsa, asset_symbol ile dene
+    // If not found, retry with asset_symbol
     if (!portfolio) {
       const { data: portfolioBySymbol } = await supabaseAdmin
         .from('portfolio')
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
     // Toplam tutar hesapla
     const totalAmount = sellQuantity * parseFloat(price);
-    const fee = totalAmount * 0.005; // %0.5 işlem ücreti
+    const fee = totalAmount * 0.005; // 0.5% trading fee
     const totalAfterFee = totalAmount - fee;
 
     // Yeni miktar
@@ -96,13 +96,13 @@ export default async function handler(req, res) {
 
     // Update or delete portfolio
     if (newQuantity === 0) {
-      // Tümü satıldı, portföyden sil
+      // All units sold, remove from portfolio
       await supabaseAdmin
         .from('portfolio')
         .delete()
         .eq('id', portfolio.id);
     } else {
-      // Güncel fiyatı al
+      // Get current price
       const currentPrice = parseFloat(price);
       const totalValue = newQuantity * currentPrice;
       const profitLoss = totalValue - (newQuantity * parseFloat(portfolio.average_price));

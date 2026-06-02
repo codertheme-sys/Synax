@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Admin kontrolü
+    // Admin check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('is_admin')

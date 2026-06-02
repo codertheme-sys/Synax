@@ -1,4 +1,4 @@
-// pages/api/admin/price-override-history.js - Fiyat Değişiklik Geçmişi
+// pages/api/admin/price-override-history.js - Price change history
 import { createServerClient } from '../../../lib/supabase';
 
 export default async function handler(req, res) {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Admin kontrolü
+  // Admin check
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('is_admin')

@@ -1,4 +1,4 @@
-// pages/api/payments/create-intent.js - Stripe Payment Intent Oluştur
+// pages/api/payments/create-intent.js - Create Stripe Payment Intent
 import Stripe from 'stripe';
 import { createServerClient } from '../../../lib/supabase';
 
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    // KYC kontrolü
+    // KYC check
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('kyc_verified, kyc_status')
@@ -46,9 +46,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Stripe Payment Intent oluştur
+    // Create Stripe Payment Intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe cent cinsinden çalışır
+      amount: Math.round(amount * 100), // Stripe uses cents
       currency: currency.toLowerCase(),
       metadata: {
         user_id: user.id,
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       },
     });
 
-    // Deposit kaydı oluştur (pending)
+    // Create deposit record (pending)
     const { data: deposit, error: depositError } = await supabaseAdmin
       .from('deposits')
       .insert({
